@@ -1,6 +1,6 @@
 """SDR Simulator - Generates mock SDR data for testing"""
 
-from .main import (
+from .app.main import (
     get_mode,
     generate_test_data,
     generate_random_data,
