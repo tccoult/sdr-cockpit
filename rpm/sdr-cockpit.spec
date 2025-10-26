@@ -1,0 +1,84 @@
+Name:           sdr-cockpit
+Version:        0.1.0
+Release:        1%{?dist}
+Summary:        SDR Cockpit Web Application
+
+License:        TBD
+URL:            https://github.com/tccoult/sdr-cockpit
+Source0:        sdr-cockpit-image.tar
+Source1:        sdr-cockpit.service
+
+BuildArch:      noarch
+Requires:       podman >= 3.0
+Requires:       redis >= 6.0
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+
+%description
+SDR Cockpit provides a modern web interface for controlling and monitoring
+Software Defined Radio (SDR) systems with real-time visualizations and
+multi-user support. This package contains the containerized application
+for air-gapped deployment.
+
+%prep
+# No prep needed - sources are already in the right format
+
+%build
+# No build needed - container image is pre-built
+
+%install
+# Create directories
+install -d %{buildroot}%{_datadir}/sdr-cockpit
+install -d %{buildroot}%{_unitdir}
+
+# Install container image
+install -m 644 %{SOURCE0} %{buildroot}%{_datadir}/sdr-cockpit/sdr-cockpit-image.tar
+
+# Install systemd service (modified for RPM install)
+install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/sdr-cockpit.service
+
+%pre
+# Create service user if it doesn't exist
+if ! id -u sdr >/dev/null 2>&1; then
+    useradd -r -s /bin/false -d %{_sharedstatedir}/sdr-cockpit -c "SDR Cockpit Service" sdr
+fi
+
+%post
+# Create data directory
+mkdir -p %{_sharedstatedir}/sdr-cockpit
+chown sdr:sdr %{_sharedstatedir}/sdr-cockpit
+
+# Load container image
+echo "Loading SDR Cockpit container image..."
+podman load -i %{_datadir}/sdr-cockpit/sdr-cockpit-image.tar
+
+# Tag the image appropriately
+podman tag localhost/sdr-cockpit:latest sdr-cockpit:latest
+
+# Reload systemd
+%systemd_post sdr-cockpit.service
+
+echo "SDR Cockpit installed successfully!"
+echo "Start the service: sudo systemctl start sdr-cockpit"
+echo "Enable at boot: sudo systemctl enable sdr-cockpit"
+echo "Access at: http://localhost:8000"
+
+%preun
+%systemd_preun sdr-cockpit.service
+
+%postun
+%systemd_postun_with_restart sdr-cockpit.service
+
+# Remove container image on full uninstall
+if [ $1 -eq 0 ]; then
+    podman rmi sdr-cockpit:latest 2>/dev/null || true
+fi
+
+%files
+%{_datadir}/sdr-cockpit/sdr-cockpit-image.tar
+%{_unitdir}/sdr-cockpit.service
+
+%changelog
+* Sun Oct 26 2025 SDR Cockpit Team
+- Initial RPM package for air-gapped deployment

@@ -39,27 +39,48 @@ Runs the built production image locally for testing before deployment.
 
 ## Deployment (Alma Linux)
 
+### Internet-Connected Deployment
+
 **`deploy-systemd.sh`** - Deploy as systemd service
 
-Sets up SDR Cockpit as a systemd service on Alma Linux. This script:
+Sets up SDR Cockpit to pull and run from container registry. This script:
 - Creates a dedicated `sdr` user
 - Installs Redis and Podman if needed
 - Installs the systemd service
-- Configures auto-start and auto-restart
+- Auto-pulls latest image on start
 
 ```bash
 sudo ./scripts/deploy-systemd.sh
+sudo systemctl start sdr-cockpit
 ```
 
-**`sdr-cockpit.service`** - systemd service definition
+### Air-Gapped Deployment
 
-The systemd unit file that defines how the service runs:
-- Auto-pulls latest image on start
-- Runs with security hardening
-- Depends on Redis
-- Automatically restarts on failure
+**`build-rpm.sh`** - Build RPM with bundled container
 
-After deployment, manage with systemctl:
+Creates an RPM package that includes the container image as a tar file.
+Perfect for systems without internet access.
+
+```bash
+./scripts/build-rpm.sh
+# Transfer sdr-cockpit-*.rpm to target system
+```
+
+On target system:
+```bash
+sudo dnf install sdr-cockpit-*.rpm
+sudo systemctl start sdr-cockpit
+```
+
+The RPM:
+- Bundles the container image (no registry pull needed)
+- Installs systemd service
+- Creates `sdr` user
+- Requires podman and redis (specify in install docs)
+
+### Managing the Service
+
+After deployment (either method):
 ```bash
 sudo systemctl start sdr-cockpit
 sudo systemctl stop sdr-cockpit

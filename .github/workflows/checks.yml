@@ -112,23 +112,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build frontend image
+      - name: Build app image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/frontend.Dockerfile
+          file: docker/sdr-cockpit.Dockerfile
           push: false
-          tags: sdr-cockpit-frontend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/backend.Dockerfile
-          push: false
-          tags: sdr-cockpit-backend:test
+          tags: sdr-cockpit:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

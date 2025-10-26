@@ -79,3 +79,7 @@ coverage/
 
 # OS
 Thumbs.db
+
+# RPM packaging
+rpmbuild/
+*.rpm

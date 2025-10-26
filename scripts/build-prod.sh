@@ -21,7 +21,7 @@ cd "$PROJECT_ROOT"
 
 # Build the image
 docker build \
-    -f docker/backend.Dockerfile \
+    -f docker/sdr-cockpit.Dockerfile \
     -t "$IMAGE_NAME:$IMAGE_TAG" \
     -t "$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" \
     .

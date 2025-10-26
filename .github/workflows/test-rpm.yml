@@ -1,0 +1,59 @@
+name: Test RPM Installation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - trunk
+    paths:
+      - 'rpm/**'
+      - 'scripts/build-rpm.sh'
+
+jobs:
+  test-rpm-install:
+    name: Test RPM Installation on Alma Linux
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:9
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          dnf install -y rpm-build podman redis
+
+      - name: Build RPM
+        run: |
+          ./scripts/build-rpm.sh
+
+      - name: Install RPM
+        run: |
+          dnf install -y ./sdr-cockpit*.rpm
+
+      - name: Start Redis
+        run: |
+          systemctl start redis
+          systemctl status redis
+
+      - name: Start SDR Cockpit service
+        run: |
+          systemctl start sdr-cockpit
+          sleep 10
+          systemctl status sdr-cockpit
+
+      - name: Test service is responding
+        run: |
+          curl -f http://localhost:8000/api/health || exit 1
+          echo "Service health check passed!"
+
+      - name: Test frontend is served
+        run: |
+          curl -f http://localhost:8000/ | grep -q "<!doctype html>" || exit 1
+          echo "Frontend check passed!"
+
+      - name: Check logs
+        if: failure()
+        run: |
+          journalctl -u sdr-cockpit -n 50

@@ -80,29 +80,32 @@ cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
 
 ### Production
 
-**Build the container:**
+**Build and test:**
 ```bash
-./scripts/build-prod.sh
+./scripts/build-prod.sh        # Build container
+./scripts/run-prod-local.sh    # Test locally at http://localhost:8000
 ```
 
-**Test locally:**
-```bash
-./scripts/run-prod-local.sh
-# Access at http://localhost:8000
-```
-
-**Deploy with systemd (Alma Linux):**
+**Deploy (Internet-connected):**
 ```bash
 sudo ./scripts/deploy-systemd.sh
 sudo systemctl start sdr-cockpit
-# Access at http://localhost:8000
+# Pulls latest image from registry and starts service
 ```
 
-The systemd service:
-- Runs as dedicated `sdr` user
-- Auto-pulls latest image on start
-- Automatically restarts on failure
-- Integrates with system logging
+**Deploy (Air-gapped):**
+```bash
+./scripts/build-rpm.sh         # Build RPM with bundled container
+# Transfer .rpm to target system
+sudo dnf install sdr-cockpit-*.rpm
+sudo systemctl start sdr-cockpit
+```
+
+Both deployment methods:
+- Run as dedicated `sdr` user
+- Automatically restart on failure
+- Integrate with systemd logging
+- Require podman and redis
 
 ## Development & Testing
 
