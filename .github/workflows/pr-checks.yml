@@ -10,3 +10,8 @@ jobs:
   checks:
     name: Run All Checks
     uses: ./.github/workflows/checks.yml
+
+  integration-tests:
+    name: Integration Tests
+    needs: checks
+    uses: ./.github/workflows/integration-tests.yml
