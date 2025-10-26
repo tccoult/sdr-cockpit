@@ -25,37 +25,21 @@ SDR Cockpit provides a sleek, intuitive interface for tasking SDR hardware, visu
 
 ## Technology Stack
 
-### Frontend
-- **React 18** with **TypeScript**
-- **Vite** for fast development and building
-- **Vitest** for testing
-- WebSocket for real-time data streaming
-
-### Backend
-- **Python 3.11** with **FastAPI**
-- **Uvicorn** async server
-- **Pytest** for testing
-- WebSocket support for real-time data
-- SigMF file handling (future)
-
-### Simulator
-- **Python 3.11** with **NumPy**
-- Mock SDR data generator for testing
-- Configurable modes (test/random/realistic)
-
-### Development Environment
-- **VSCode Dev Container** (Alma Linux 9)
-- **Docker** for containerization
-- **GitHub Actions** for CI/CD
+- **Frontend**: React 18 + TypeScript + Vite
+- **Backend**: Python 3.11 + FastAPI (serves both API and built frontend)
+- **Simulator**: Python 3.11 + NumPy (mock SDR data generator)
+- **Development**: VSCode Dev Container (Alma Linux 9)
+- **Deployment**: Single Docker container + systemd service
 
 ## Project Structure
 
 ```
 sdr-cockpit/
 ├── frontend/          # React + TypeScript + Vite
-├── backend/           # FastAPI Python server
+├── backend/           # FastAPI server (serves API + built frontend)
 ├── simulator/         # Mock SDR data generator
 ├── docker/            # Container definitions
+├── scripts/           # Development and deployment scripts
 ├── .github/workflows/ # CI/CD pipelines
 └── .devcontainer/     # VSCode dev container
 ```
@@ -72,32 +56,53 @@ sdr-cockpit/
 3. Wait for container to build (first time only)
 4. You now have a full Alma Linux 9 environment with Node 20 + Python 3.11
 
-### Running Services
+### Development
 
-#### Frontend Development
+Use the provided script for a smooth development experience:
+
 ```bash
-cd frontend
-npm install          # First time only
-npm run dev          # Start dev server on http://localhost:3000
+./scripts/dev.sh
 ```
 
-#### Backend Development
+This starts both the frontend dev server (with hot reload) and the backend API:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+
+Or run services manually:
+
 ```bash
-cd backend
-pip install -r requirements.txt  # First time only
-uvicorn app.main:app --reload    # Start API on http://localhost:8000
+# Frontend (in one terminal)
+cd frontend && npm install && npm run dev
+
+# Backend (in another terminal)
+cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
 ```
 
-#### Full Stack with Docker Compose
-```bash
-# Start all services (frontend, backend, simulator, Redis)
-docker compose up
+### Production
 
-# Access the app
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# Backend health: http://localhost:8000/health
+**Build the container:**
+```bash
+./scripts/build-prod.sh
 ```
+
+**Test locally:**
+```bash
+./scripts/run-prod-local.sh
+# Access at http://localhost:8000
+```
+
+**Deploy with systemd (Alma Linux):**
+```bash
+sudo ./scripts/deploy-systemd.sh
+sudo systemctl start sdr-cockpit
+# Access at http://localhost:8000
+```
+
+The systemd service:
+- Runs as dedicated `sdr` user
+- Auto-pulls latest image on start
+- Automatically restarts on failure
+- Integrates with system logging
 
 ## Development & Testing
 

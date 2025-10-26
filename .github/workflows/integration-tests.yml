@@ -36,7 +36,7 @@ jobs:
 
           # Check if all expected containers are running
           RUNNING=$(docker compose -f docker-compose.ci.yml ps --services --filter "status=running" | wc -l)
-          EXPECTED=4  # frontend, backend, simulator, redis
+          EXPECTED=3  # backend, simulator, redis
 
           if [ "$RUNNING" -ne "$EXPECTED" ]; then
             echo "Error: Expected $EXPECTED containers running, but found $RUNNING"
@@ -46,15 +46,15 @@ jobs:
 
           echo "All containers are running successfully!"
 
-      - name: Test backend health endpoint
+      - name: Test backend API health endpoint
         run: |
           # Wait a bit more for backend to be ready
           sleep 5
 
           # Try to reach the backend health endpoint
           for i in {1..10}; do
-            if curl -f http://localhost:8000/health; then
-              echo "Backend health check passed!"
+            if curl -f http://localhost:8000/api/health; then
+              echo "Backend API health check passed!"
               exit 0
             fi
             echo "Attempt $i failed, retrying..."
@@ -65,12 +65,12 @@ jobs:
           docker compose -f docker-compose.ci.yml logs backend
           exit 1
 
-      - name: Test frontend is serving
+      - name: Test frontend is being served by backend
         run: |
-          # Try to reach the frontend
+          # Try to reach the frontend (served by backend)
           for i in {1..10}; do
-            if curl -f http://localhost:3000; then
-              echo "Frontend is serving successfully!"
+            if curl -f http://localhost:8000/ | grep -q "<!doctype html>"; then
+              echo "Frontend is being served successfully by backend!"
               exit 0
             fi
             echo "Attempt $i failed, retrying..."
@@ -78,7 +78,7 @@ jobs:
           done
 
           echo "Frontend check failed after 10 attempts"
-          docker compose -f docker-compose.ci.yml logs frontend
+          docker compose -f docker-compose.ci.yml logs backend
           exit 1
 
       - name: Collect logs on failure
