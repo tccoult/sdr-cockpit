@@ -161,24 +161,6 @@ GitHub Actions automatically runs on every PR and merge:
    - Trigger manually from any branch
    - Optionally publish images to registry
 
-### Troubleshooting
-
-**Frontend tests fail:**
-- Run `npm install` to ensure dependencies are current
-- Check `npm run type-check` for TypeScript errors
-
-**Backend tests fail:**
-- Use `python -m pytest` (not just `pytest`)
-- Run `pip install -r requirements.txt` to update dependencies
-
-**Simulator tests fail:**
-- Run from project root: `python -m pytest simulator/tests/`
-- Ensure NumPy is installed: `pip install -r simulator/requirements.txt`
-
-**Docker build fails:**
-- Ensure you're building from project root
-- Check that paths in Dockerfile match actual structure
-
 ## Documentation
 
 - **[DESIGN.md](./DESIGN.md)** - Architecture, design decisions, and requirements
