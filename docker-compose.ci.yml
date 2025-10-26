@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - sdr-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - simulator
+    networks:
+      - sdr-network
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  simulator:
+    build:
+      context: .
+      dockerfile: docker/simulator.Dockerfile
+    environment:
+      - SDR_MODE=test
+    networks:
+      - sdr-network
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - sdr-network
+
+networks:
+  sdr-network:
+    driver: bridge
