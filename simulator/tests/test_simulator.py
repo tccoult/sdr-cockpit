@@ -1,7 +1,7 @@
 """Tests for SDR simulator"""
 import pytest
 import numpy as np
-from main import generate_data, get_mode, generate_test_data, generate_random_data
+from simulator import generate_data, get_mode, generate_test_data, generate_random_data
 
 
 def test_generate_test_data():
