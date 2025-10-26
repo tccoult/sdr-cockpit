@@ -81,26 +81,53 @@ Create a modern, intuitive web application for controlling and monitoring custom
 │  │  - REST client (control API)                        │   │
 │  └─────────────────────────────────────────────────────┘   │
 └───────────────────────┬─────────────────────────────────────┘
-                        │ HTTP/WebSocket
+                        │ HTTP/WebSocket (Binary frames)
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
-│                  FastAPI Backend (Python)                   │
+│        FastAPI Backend (Python) - runs on SDR SBC           │
 │  ┌────────────────────────────────────────────────────┐    │
 │  │  REST API (task control, config, file upload)      │    │
 │  │  WebSocket API (real-time FFT/spectrogram data)    │    │
-│  │  Authentication & Authorization                     │    │
-│  │  SigMF file handling                                │    │
+│  │  - Multi-threaded queue pattern                    │    │
+│  │  - ADPCM compression for FFT data                   │    │
+│  │  SigMF file handling (local filesystem)            │    │
+│  └────────────────────────────────────────────────────┘    │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  SDR Integration Layer                             │    │
+│  │  - ZMQ client (protobuf commands)                  │    │
+│  │  - Redis subscriber (protobuf data products)       │    │
+│  │  - POSIX shared memory reader                      │    │
 │  └────────────────────────────────────────────────────┘    │
 └───────────────────────┬─────────────────────────────────────┘
-                        │ SoapySDR / Custom API
+                        │ ZMQ (commands)
+                        │ Redis Pub/Sub + Shared Memory (data)
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
-│                    SDR Hardware/Software                    │
-│  - Multiple RX/TX tasks                                     │
-│  - Hardware-accelerated FFT                                 │
-│  - Task data streams                                        │
+│        Existing SDR Control Software (on SBC)               │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  - ZMQ server (receives task commands)             │    │
+│  │  - Task manager (create/destroy RX/TX tasks)       │    │
+│  │  - Redis publisher (publishes FFT/IQ data)         │    │
+│  │  - Shared memory manager (POSIX shm)               │    │
+│  └────────────────────────────────────────────────────┘    │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+┌───────────────────────▼─────────────────────────────────────┐
+│                   SDR Hardware (RHEL9 SBC)                  │
+│  - RF Frontend (RX/TX)                                      │
+│  - Hardware-accelerated FFT (up to 8K, configurable)        │
+│  - Rational resampling (arbitrary sample rates)             │
+│  - Multiple simultaneous RX tasks                           │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Key Architecture Notes:**
+- Backend runs on the same SBC as SDR control software (localhost communication)
+- Redis pub/sub carries metadata + POSIX shared memory handles (protobuf)
+- Backend reads FFT data directly from shared memory for zero-copy efficiency
+- One Redis channel per RX task (backend subscribes based on task ID)
+- ZMQ for command/control (create/destroy tasks)
+- WebSocket for browser communication (ADPCM-compressed FFT)
 
 ### Component Design
 
@@ -212,24 +239,26 @@ backend/
 
 ### Backend
 - **FastAPI**: Fast, modern, async Python framework
-- **WebSockets**: Real-time bidirectional communication
+- **WebSockets**: Real-time bidirectional communication (binary frames)
 - **Pydantic**: Data validation and serialization
-- **SoapySDR**: Open standard for SDR control (if compatible)
-- **NumPy**: FFT processing and data manipulation
+- **PyZMQ**: ZeroMQ client for SDR control commands
+- **Redis-py**: Redis client for pub/sub data streams
+- **Protobuf**: Message serialization (matches existing SDR software)
+- **NumPy**: FFT data processing and manipulation
+- **POSIX Shared Memory**: Zero-copy access to FFT/IQ data (via mmap/shm_open)
 - **SigMF**: Standard metadata format for RF recordings
 
 ### Development
 - **VSCode Dev Container**: Consistent development environment
-- **Alma Linux 9**: Stable, enterprise-ready base (alternative: Ubuntu)
-- **Docker Compose**: Multi-container orchestration
+- **Alma Linux 9**: Matches production RHEL9 SBC environment
+- **Docker Compose**: Multi-container orchestration (frontend + backend + Redis for dev)
 - **ESLint/Prettier**: Frontend code quality
 - **Black/Ruff**: Python code quality
 
 ### Optional/Future
-- **PostgreSQL**: User/task metadata storage (if needed)
-- **Redis**: Session management, real-time pub/sub
+- **PostgreSQL**: User/session metadata (if auth is added)
 - **Nginx**: Reverse proxy for production
-- **Prometheus**: Advanced telemetry export
+- **Prometheus**: Advanced telemetry export (alternative to basic health metrics)
 
 ## Key Design Decisions
 
@@ -248,68 +277,67 @@ backend/
 - Lower latency for real-time data
 - Better support for binary data (compressed FFT)
 
-### Decision 3: SoapySDR Integration
-**Choice**: SoapySDR abstraction layer (if compatible with custom SDR)
+### Decision 3: SDR Control Protocol
+**Choice**: ZMQ + Protobuf for commands, Redis + Shared Memory for data
 **Rationale**:
-- Industry standard, portable
-- Fallback: Custom protocol adapter if SDR has proprietary API
-- Allows testing with commercial SDRs (HackRF, LimeSDR, etc.)
+- Matches existing SDR control software architecture
+- ZMQ provides reliable, async messaging
+- Redis pub/sub for real-time data distribution
+- POSIX shared memory for zero-copy FFT/IQ access
+- Can add SoapySDR compatibility layer in future
 
-### Decision 4: Authentication Approach
-**Choice**: JWT tokens with HTTP-only cookies (start simple)
-**Rationale**:
-- Industry standard, well-understood
-- Stateless, scalable
-- Can add OAuth2/OIDC later if needed
-
-### Decision 5: Visualization Technology
+### Decision 4: Visualization Technology
 **Choice**: Canvas 2D API (start), WebGL (future optimization)
 **Rationale**:
 - Canvas sufficient for initial 10+ FPS target
 - Easier to implement and debug
 - WebGL for 60 FPS or multi-user loads
 
-## Open Questions
+## Design Decisions (Resolved)
 
-### 1. SDR Hardware Interface
-**Question**: How does your custom SDR expose its API currently?
-- REST API?
-- gRPC?
-- Custom protocol?
-- Already SoapySDR compatible?
+### 1. SDR Hardware Interface ✅
+**Decision**: ZMQ + Redis + POSIX Shared Memory
+**Details**:
+- Commands sent via ZMQ (protobuf messages)
+- Data products published via Redis pub/sub (protobuf metadata + shm handles)
+- FFT data read from POSIX shared memory (zero-copy, efficient)
+- Not SoapySDR compatible (custom solution)
+- Future: May add REST API alongside ZMQ for easier web integration
+- Future: SoapySDR compatibility as alternative backend API
 
-**Impact**: Determines backend SDR control implementation
+### 2. Task Persistence ✅
+**Decision**: Ephemeral (task state lives in SDR software)
+**Details**:
+- No database required for task storage
+- Tasks created/destroyed via ZMQ commands
+- Backend discovers existing tasks by querying SDR control software
+- Web app can attach to any active task (even if not created by web app)
 
-### 2. Task Persistence
-**Question**: Should tasks persist across server restarts?
-- SQLite/PostgreSQL for task storage?
-- Or ephemeral, task state lives in SDR only?
+### 3. Authentication Requirements ✅
+**Decision**: No authentication for Phase 1
+**Details**:
+- Skip auth initially to simplify development
+- Multi-user support in UI, but no access control
+- Add authentication in Phase 5+ if needed
+- LAN deployment assumption (trusted network)
 
-**Impact**: Database requirements, complexity
+### 4. Data Streaming Strategy ✅
+**Decision**: ADPCM-compressed FFT over binary WebSocket
+**Details**:
+- FFT sizes: up to 8K (hardware), higher possible in software
+- Target frame rate: 30 FPS for display
+- Sample rates: variable (arbitrary rational resampling in hardware)
+- Network: LAN primary, occasionally WAN
+- Compression: ADPCM (inspired by OpenWebRx) reduces bandwidth ~4x
+- Data flow: Hardware FFT → Shared Memory → Backend (compress) → WebSocket → Browser
 
-### 3. Authentication Requirements
-**Question**: How important is multi-user security vs. simplicity?
-- Start with basic auth (username/password)?
-- No auth for initial development?
-- Full OAuth2/OIDC from the start?
-
-**Impact**: Development timeline, complexity
-
-### 4. Data Streaming Strategy
-**Question**: What's the expected data rate and latency?
-- FFT size, update rate?
-- Network bandwidth constraints?
-- Need for data compression?
-
-**Impact**: WebSocket message format, performance
-
-### 5. Recording Storage
-**Question**: Where should SigMF recordings be stored?
-- Local filesystem on SDR host?
-- Shared network storage?
-- User downloads immediately?
-
-**Impact**: Storage architecture, file management
+### 5. Recording Storage ✅
+**Decision**: Local filesystem on SDR SBC
+**Details**:
+- SigMF recordings stored in designated directory on SBC
+- Backend subscribes to Redis IQ stream and writes to file
+- Files available for download via REST API
+- Metadata stored in SigMF JSON sidecar files
 
 ## Development Roadmap
 
