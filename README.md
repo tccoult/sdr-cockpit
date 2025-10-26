@@ -52,42 +52,12 @@ SDR Cockpit provides a sleek, intuitive interface for tasking SDR hardware, visu
 
 ```
 sdr-cockpit/
-├── .github/workflows/   # CI/CD pipelines
-│   ├── checks.yml       # Reusable test/lint/build workflow
-│   ├── pr-checks.yml    # PR validation
-│   ├── ci.yml           # Trunk CI with container publishing
-│   └── integration-tests.yml  # Full stack integration tests
-├── frontend/            # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── App.tsx      # Main component
-│   │   ├── App.test.tsx # Tests
-│   │   └── main.tsx     # Entry point
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tsconfig.json
-├── backend/             # FastAPI Python server
-│   ├── app/
-│   │   └── main.py      # FastAPI application
-│   ├── tests/
-│   │   └── test_health.py
-│   ├── requirements.txt
-│   ├── pyproject.toml
-│   └── pytest.ini
-├── simulator/           # Mock SDR data generator
-│   ├── app/
-│   │   └── main.py      # Simulator logic
-│   ├── tests/
-│   │   └── test_simulator.py
-│   ├── requirements.txt
-│   ├── pyproject.toml
-│   └── pytest.ini
-├── docker/              # Container definitions
-│   ├── frontend.Dockerfile
-│   ├── backend.Dockerfile
-│   └── simulator.Dockerfile
-├── .devcontainer/       # VSCode dev container
-├── docker-compose.yml   # Local development stack
-└── docker-compose.ci.yml  # CI testing stack
+├── frontend/          # React + TypeScript + Vite
+├── backend/           # FastAPI Python server
+├── simulator/         # Mock SDR data generator
+├── docker/            # Container definitions
+├── .github/workflows/ # CI/CD pipelines
+└── .devcontainer/     # VSCode dev container
 ```
 
 ## Getting Started
