@@ -16,7 +16,6 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 
 **Goal:** Working end-to-end demo with mocked SDR data
 
-**Duration:** 1-2 weeks
 
 ### Tasks
 
@@ -92,99 +91,21 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 
 ---
 
-## Phase 2: SDR Integration
-
-**Goal:** Connect to real SDR hardware via ZMQ/Redis
-
-**Duration:** 1-2 weeks
-
-### Tasks
-
-#### 2.1 Protobuf Integration
-- [ ] Add `.proto` files from SDR control software
-- [ ] Generate Python protobuf classes
-- [ ] Create Python modules for protobuf handling
-  - `app/models/sdr_proto.py`
-
-#### 2.2 ZMQ Command Client
-- [ ] Implement `SDRCommandClient` service
-  - Create RX task
-  - Destroy task
-  - Query task list (if supported)
-- [ ] Error handling and retries
-- [ ] Configuration for ZMQ endpoint
-- [ ] Integration tests (mock ZMQ server)
-
-#### 2.3 Redis Data Subscriber
-- [ ] Implement `SDRDataSubscriber` service
-  - Subscribe to task channels
-  - Parse protobuf messages
-  - Handle Redis connection errors
-- [ ] POSIX shared memory reader
-  - Open shared memory handles
-  - Read FFT data as numpy arrays
-  - Handle cleanup on task destroy
-- [ ] Threading model for Redis subscriber
-
-#### 2.4 Replace Mock with Real Data
-- [ ] Swap mock SDR generator with real Redis subscriber
-- [ ] Configuration flag to toggle mock vs. real
-- [ ] Update task creation API to call ZMQ
-- [ ] Update WebSocket streamer to use real FFT data
-
-#### 2.5 Task Discovery
-- [ ] Implement "discover existing tasks" feature
-  - Query SDR control for active tasks
-  - Populate task list on backend startup
-- [ ] Auto-attach to tasks created outside web app
-
-#### 2.6 ADPCM Compression
-- [ ] Implement ADPCM compression for FFT data
-  - Research Python ADPCM libraries (audioop or custom)
-  - Compress before WebSocket send
-- [ ] Frontend ADPCM decoder
-  - JavaScript ADPCM implementation
-  - Decode before rendering
-
-#### 2.7 Performance Tuning
-- [ ] Profile backend data pipeline
-- [ ] Optimize shared memory reads
-- [ ] Benchmark WebSocket throughput
-- [ ] Test with multiple concurrent users
-
-### Deliverables
-
-- Backend connects to real SDR via ZMQ/Redis
-- Frontend displays real FFT data from hardware
-- Can create/destroy tasks via web UI
-- Can attach to existing tasks
-
-### Success Criteria
-
-- [ ] Create RX task from UI → appears on SDR
-- [ ] Waterfall shows real RF environment
-- [ ] Destroying task from UI stops SDR task
-- [ ] Can see tasks created by other processes
-- [ ] ADPCM compression working (reduced bandwidth)
-
----
-
-## Phase 3: Enhanced Visualization & Controls
+## Phase 2: Enhanced Visualization & Controls
 
 **Goal:** Polished UI with full interaction features
 
-**Duration:** 2 weeks
 
 ### Tasks
 
-#### 3.1 Interactive Waterfall
+#### 2.1 Interactive Waterfall
 - [ ] Mouse wheel zoom (frequency span)
 - [ ] Click-drag panning (horizontal and vertical)
 - [ ] Frequency scale (dynamic labels)
 - [ ] Power scale (dB axis)
 - [ ] Hover tooltip (frequency, power, time)
 
-#### 3.2 Frequency Control
+#### 2.2 Frequency Control
 - [ ] Frequency input component
   - Text input with validation
   - Increment/decrement buttons
@@ -193,13 +114,13 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 - [ ] Sample rate control
 - [ ] Apply changes to task (retune)
 
-#### 3.3 FFT Line Plot
+#### 2.3 FFT Line Plot
 - [ ] Current spectrum overlay (line plot)
 - [ ] Min/Max/Average hold modes
 - [ ] Peak detection and markers
 - [ ] Adjustable averaging
 
-#### 3.4 Color Map Selector
+#### 2.4 Color Map Selector
 - [ ] Multiple color map options
   - Google Turbo (default)
   - Viridis
@@ -209,7 +130,7 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 - [ ] Auto-level controls
 - [ ] Manual min/max dB adjustment
 
-#### 3.5 Task Management UI
+#### 2.5 Task Management UI
 - [ ] Enhanced task cards
   - Task parameters display
   - Edit task settings
@@ -221,14 +142,14 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
   - Switch between tasks
   - Picture-in-picture waterfalls (optional)
 
-#### 3.6 System Status Display
+#### 2.6 System Status Display
 - [ ] SDR connection status indicator
 - [ ] Backend health status
 - [ ] Data rate meter (KB/s)
 - [ ] Frame rate meter
 - [ ] Task resource usage (if available)
 
-#### 3.7 Responsive Design
+#### 2.7 Responsive Design
 - [ ] Mobile-friendly layout
 - [ ] Touch gesture support
 - [ ] Collapsible sidebar
@@ -251,11 +172,86 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 
 ---
 
+## Phase 3: SDR Integration
+
+**Goal:** Connect to real SDR hardware via ZMQ/Redis
+
+
+### Tasks
+
+#### 3.1 Protobuf Integration
+- [ ] Add `.proto` files from SDR control software
+- [ ] Generate Python protobuf classes
+- [ ] Create Python modules for protobuf handling
+  - `app/models/sdr_proto.py`
+
+#### 3.2 ZMQ Command Client
+- [ ] Implement `SDRCommandClient` service
+  - Create RX task
+  - Destroy task
+  - Query task list (if supported)
+- [ ] Error handling and retries
+- [ ] Configuration for ZMQ endpoint
+- [ ] Integration tests (mock ZMQ server)
+
+#### 3.3 Redis Data Subscriber
+- [ ] Implement `SDRDataSubscriber` service
+  - Subscribe to task channels
+  - Parse protobuf messages
+  - Handle Redis connection errors
+- [ ] POSIX shared memory reader
+  - Open shared memory handles
+  - Read FFT data as numpy arrays
+  - Handle cleanup on task destroy
+- [ ] Threading model for Redis subscriber
+
+#### 3.4 Replace Mock with Real Data
+- [ ] Swap mock SDR generator with real Redis subscriber
+- [ ] Configuration flag to toggle mock vs. real
+- [ ] Update task creation API to call ZMQ
+- [ ] Update WebSocket streamer to use real FFT data
+
+#### 3.5 Task Discovery
+- [ ] Implement "discover existing tasks" feature
+  - Query SDR control for active tasks
+  - Populate task list on backend startup
+- [ ] Auto-attach to tasks created outside web app
+
+#### 3.6 ADPCM Compression
+- [ ] Implement ADPCM compression for FFT data
+  - Research Python ADPCM libraries (audioop or custom)
+  - Compress before WebSocket send
+- [ ] Frontend ADPCM decoder
+  - JavaScript ADPCM implementation
+  - Decode before rendering
+
+#### 3.7 Performance Tuning
+- [ ] Profile backend data pipeline
+- [ ] Optimize shared memory reads
+- [ ] Benchmark WebSocket throughput
+- [ ] Test with multiple concurrent users
+
+### Deliverables
+
+- Backend connects to real SDR via ZMQ/Redis
+- Frontend displays real FFT data from hardware
+- Can create/destroy tasks via web UI
+- Can attach to existing tasks
+
+### Success Criteria
+
+- [ ] Create RX task from UI → appears on SDR
+- [ ] Waterfall shows real RF environment
+- [ ] Destroying task from UI stops SDR task
+- [ ] Can see tasks created by other processes
+- [ ] ADPCM compression working (reduced bandwidth)
+
+---
+
 ## Phase 4: Recording & Playback (SigMF)
 
 **Goal:** Record IQ data and playback TX files
 
-**Duration:** 2 weeks
 
 ### Tasks
 
@@ -328,7 +324,6 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 
 **Goal:** Production-ready with multi-user support
 
-**Duration:** 2 weeks
 
 ### Tasks
 
@@ -397,7 +392,6 @@ This roadmap outlines the phased development approach for SDR Cockpit. Each phas
 
 **Goal:** Advanced capabilities and optimizations
 
-**Duration:** Ongoing
 
 ### Potential Features
 
