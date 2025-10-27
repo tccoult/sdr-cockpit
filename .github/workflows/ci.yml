@@ -50,16 +50,34 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      - name: Build image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          load: true
+          tags: sdr-cockpit:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag and push to registry
+        run: |
+          for tag in ${{ steps.meta.outputs.tags }}; do
+            docker tag sdr-cockpit:latest $tag
+            docker push $tag
+          done
+
+      - name: Save image as tar for RPM build
+        run: |
+          docker save sdr-cockpit:latest -o /tmp/sdr-cockpit-image.tar
+
+      - name: Upload image tar for RPM build
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdr-cockpit-image
+          path: /tmp/sdr-cockpit-image.tar
+          retention-days: 1
 
   build-and-push-simulator:
     name: Build and Push Simulator Image
@@ -103,23 +121,67 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-rpm:
-    name: Build RPM Package
-    needs: [checks, integration-tests]
+  build-and-test-rpm:
+    name: Build and Test RPM Package
+    needs: [checks, integration-tests, build-and-push-app]
     runs-on: ubuntu-latest
+    container:
+      image: almalinux:9
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install RPM build tools
+      - name: Download container image tar
+        uses: actions/download-artifact@v4
+        with:
+          name: sdr-cockpit-image
+
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm
+          dnf install -y rpm-build podman redis
 
       - name: Build RPM
         run: |
-          ./scripts/build-rpm.sh
+          BUILD_DIR="$PWD/rpmbuild"
+          mkdir -p "$BUILD_DIR/SOURCES" "$BUILD_DIR/SPECS"
+
+          cp sdr-cockpit-image.tar "$BUILD_DIR/SOURCES/"
+          cp rpm/sdr-cockpit.service "$BUILD_DIR/SOURCES/"
+          cp rpm/sdr-cockpit.spec "$BUILD_DIR/SPECS/"
+
+          rpmbuild \
+            --define "_topdir $BUILD_DIR" \
+            --define "_version 0.1.0" \
+            --define "_release 1" \
+            -bb "$BUILD_DIR/SPECS/sdr-cockpit.spec"
+
+          cp "$BUILD_DIR/RPMS/noarch/"*.rpm .
+
+      - name: Install RPM
+        run: |
+          dnf install -y ./sdr-cockpit*.rpm
+
+      - name: Start Redis
+        run: |
+          systemctl start redis
+          systemctl status redis
+
+      - name: Start SDR Cockpit service
+        run: |
+          systemctl start sdr-cockpit
+          sleep 10
+          systemctl status sdr-cockpit
+
+      - name: Test service is responding
+        run: |
+          curl -f http://localhost:8000/api/health || exit 1
+          echo "Service health check passed!"
+
+      - name: Test frontend is served
+        run: |
+          curl -f http://localhost:8000/ | grep -q "<!doctype html>" || exit 1
+          echo "Frontend check passed!"
 
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
@@ -127,3 +189,8 @@ jobs:
           name: sdr-cockpit-rpm
           path: sdr-cockpit*.rpm
           retention-days: 90
+
+      - name: Check logs on failure
+        if: failure()
+        run: |
+          journalctl -u sdr-cockpit -n 50
