@@ -2,12 +2,18 @@ name: Test RPM Installation
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'rpm/**'
+      - 'scripts/build-rpm.sh'
+      - 'docker/sdr-cockpit.Dockerfile'
   push:
     branches:
       - trunk
     paths:
       - 'rpm/**'
       - 'scripts/build-rpm.sh'
+      - 'docker/sdr-cockpit.Dockerfile'
 
 jobs:
   test-rpm-install:
