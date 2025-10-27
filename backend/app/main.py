@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -21,6 +21,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/")
+async def root():
+    """Root API endpoint"""
+    return {
+        "message": "SDR Cockpit API",
+        "version": "0.1.0",
+        "status": "running"
+    }
 
 
 @app.get("/api/health")
@@ -42,9 +52,9 @@ if static_dir.exists():
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         """Serve frontend application"""
-        # If path starts with /api, it's not a frontend route
+        # If path starts with /api, it's an API route - let FastAPI handle it
         if full_path.startswith("api/"):
-            return {"error": "Not found"}, 404
+            raise HTTPException(status_code=404, detail="Not found")
 
         # Try to serve the file if it exists
         file_path = static_dir / full_path
