@@ -14,7 +14,7 @@ RUN ln -sf /usr/bin/python3.11 /usr/local/bin/python && \
     ln -sf /usr/bin/pip3.11 /usr/local/bin/pip
 
 # Install git and common tools
-RUN dnf install -y git wget vim
+RUN dnf install -y git git-lfs wget vim
 
 WORKDIR /workspace
 
