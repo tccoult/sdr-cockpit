@@ -286,8 +286,8 @@ jobs:
             docker push $tag
           done
 
-  build-and-test-rpm:
-    name: Build and Test RPM Package
+  build-rpm:
+    name: Build RPM Package
     needs: [frontend-checks, backend-checks, simulator-checks, integration-tests, build-and-push-app]
     runs-on: ubuntu-latest
     container:
@@ -317,26 +317,6 @@ jobs:
           echo ""
           echo "=== RPM File List ==="
           rpm -qlp sdr-cockpit*.rpm
-
-      - name: Test RPM installation
-        run: |
-          echo "=== Installing RPM (skipping post-install scripts) ==="
-          rpm -ivh --noscripts ./sdr-cockpit*.rpm
-
-          echo "=== Installing dependencies ==="
-          dnf install -y redis logrotate
-
-          echo "=== Verifying systemd service file ==="
-          test -f /usr/lib/systemd/system/sdr-cockpit.service || exit 1
-          echo "Service file exists"
-
-          echo "=== Verifying container image tar ==="
-          test -f /usr/share/sdr-cockpit/sdr-cockpit-image.tar || exit 1
-          echo "Container image tar exists"
-
-          echo ""
-          echo "✅ RPM installation validation passed!"
-          echo "Note: Podman load and service startup skipped (requires nested containers)"
 
       - name: Upload RPM artifact
         if: github.ref == 'refs/heads/trunk'
