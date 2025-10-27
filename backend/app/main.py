@@ -1,6 +1,10 @@
 """FastAPI application entry point"""
-from fastapi import FastAPI
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI(
     title="SDR Cockpit API",
@@ -8,30 +12,46 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Configure CORS
+# Configure CORS (for dev when frontend runs on separate port)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.get("/")
+@app.get("/api/")
 async def root():
-    """Root endpoint"""
-    return {
-        "message": "SDR Cockpit API",
-        "version": "0.1.0",
-        "status": "running"
-    }
+    """Root API endpoint"""
+    return {"message": "SDR Cockpit API", "version": "0.1.0", "status": "running"}
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "backend"
-    }
+    return {"status": "healthy", "service": "backend"}
+
+
+# Mount static files and serve frontend (only if static directory exists)
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    # Serve static assets
+    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+
+    # Catch-all route to serve index.html for client-side routing
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve frontend application"""
+        # If path starts with /api, it's an API route - let FastAPI handle it
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+
+        # Try to serve the file if it exists
+        file_path = static_dir / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+
+        # Otherwise serve index.html for client-side routing
+        return FileResponse(static_dir / "index.html")

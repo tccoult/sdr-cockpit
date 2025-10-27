@@ -1,0 +1,25 @@
+[Unit]
+Description=SDR Cockpit Web Application
+After=network-online.target redis.service
+Wants=network-online.target
+Requires=redis.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+
+# Run the container (image is preloaded from RPM)
+ExecStart=/usr/bin/podman run \
+    --rm \
+    --name sdr-cockpit \
+    --network host \
+    -e REDIS_HOST=localhost \
+    -e REDIS_PORT=6379 \
+    sdr-cockpit:latest
+
+# Stop the container
+ExecStop=/usr/bin/podman stop -t 10 sdr-cockpit
+
+[Install]
+WantedBy=multi-user.target

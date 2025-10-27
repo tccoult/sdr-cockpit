@@ -25,37 +25,21 @@ SDR Cockpit provides a sleek, intuitive interface for tasking SDR hardware, visu
 
 ## Technology Stack
 
-### Frontend
-- **React 18** with **TypeScript**
-- **Vite** for fast development and building
-- **Vitest** for testing
-- WebSocket for real-time data streaming
-
-### Backend
-- **Python 3.11** with **FastAPI**
-- **Uvicorn** async server
-- **Pytest** for testing
-- WebSocket support for real-time data
-- SigMF file handling (future)
-
-### Simulator
-- **Python 3.11** with **NumPy**
-- Mock SDR data generator for testing
-- Configurable modes (test/random/realistic)
-
-### Development Environment
-- **VSCode Dev Container** (Alma Linux 9)
-- **Docker** for containerization
-- **GitHub Actions** for CI/CD
+- **Frontend**: React 18 + TypeScript + Vite
+- **Backend**: Python 3.11 + FastAPI (serves both API and built frontend)
+- **Simulator**: Python 3.11 + NumPy (mock SDR data generator)
+- **Development**: VSCode Dev Container (Alma Linux 9)
+- **Deployment**: Single Docker container + systemd service
 
 ## Project Structure
 
 ```
 sdr-cockpit/
 ├── frontend/          # React + TypeScript + Vite
-├── backend/           # FastAPI Python server
+├── backend/           # FastAPI server (serves API + built frontend)
 ├── simulator/         # Mock SDR data generator
 ├── docker/            # Container definitions
+├── scripts/           # Development and deployment scripts
 ├── .github/workflows/ # CI/CD pipelines
 └── .devcontainer/     # VSCode dev container
 ```
@@ -72,71 +56,78 @@ sdr-cockpit/
 3. Wait for container to build (first time only)
 4. You now have a full Alma Linux 9 environment with Node 20 + Python 3.11
 
-### Running Services
+### Development
 
-#### Frontend Development
+**Quick start:**
 ```bash
-cd frontend
-npm install          # First time only
-npm run dev          # Start dev server on http://localhost:3000
+./scripts/setup.sh    # Install dependencies (first time only)
+./scripts/dev.sh      # Start dev environment
 ```
 
-#### Backend Development
+This starts both the frontend dev server (with hot reload) and the backend API:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+
+**Run tests:**
 ```bash
-cd backend
-pip install -r requirements.txt  # First time only
-uvicorn app.main:app --reload    # Start API on http://localhost:8000
+./scripts/test.sh     # Run all test suites (frontend, backend, simulator)
 ```
 
-#### Full Stack with Docker Compose
-```bash
-# Start all services (frontend, backend, simulator, Redis)
-docker compose up
+### Production
 
-# Access the app
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# Backend health: http://localhost:8000/health
+**Build and test:**
+```bash
+./scripts/build-prod.sh        # Build container
+./scripts/run-prod-local.sh    # Test locally at http://localhost:8000
 ```
+
+**Deploy (Internet-connected):**
+```bash
+sudo ./scripts/deploy-systemd.sh
+sudo systemctl start sdr-cockpit
+# Pulls latest image from registry and starts service
+```
+
+**Deploy (Air-gapped):**
+```bash
+./scripts/build-rpm.sh         # Build RPM with bundled container
+# Transfer .rpm to target system
+sudo dnf install sdr-cockpit-*.rpm
+sudo systemctl start sdr-cockpit
+```
+
+Both deployment methods:
+- Automatically restart on failure
+- Integrate with systemd logging
+- Require podman and redis
 
 ## Development & Testing
 
-### Running Tests
+### Quick Tests (Tests Only)
 
-#### Frontend Tests
+**Run all tests:**
 ```bash
-cd frontend
-npm test              # Run all tests
-npm run type-check    # TypeScript validation
-npm run lint          # ESLint (warnings only)
-npm run build         # Production build
+./scripts/test.sh     # Fast: runs tests only
 ```
 
-#### Backend Tests
+### Full Checks (Same as CI)
+
+**Run all checks (lint, type-check, test, build):**
 ```bash
-cd backend
-python -m pytest -v   # Run all tests
-mypy app/             # Type checking
-ruff check .          # Linting (warnings only)
-black --check .       # Format checking (warnings only)
+./scripts/check.sh    # Runs exactly what CI runs
 ```
 
-#### Simulator Tests
-```bash
-cd simulator
-python -m pytest -v   # Run all tests
-```
-
-**Important:** Always use `python -m pytest` (not just `pytest`) to ensure proper import resolution.
+This runs the same checks that CI runs:
+- Frontend: lint + type-check + test + build
+- Backend: lint + format check + type-check + test
+- Simulator: test
 
 ### Pre-Commit Checklist
 
-Before committing changes, run tests for the components you modified:
-
-- **Frontend changes**: `npm test && npm run type-check && npm run build`
-- **Backend changes**: `python -m pytest -v && mypy app/`
-- **Simulator changes**: `python -m pytest -v`
-- **Docker changes**: Test affected image builds
+Before committing:
+```bash
+./scripts/check.sh    # Ensure all CI checks pass locally
+```
 
 ### CI/CD Pipeline
 
