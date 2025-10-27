@@ -124,10 +124,17 @@ This runs the same checks that CI runs:
 
 ### Pre-Commit Checklist
 
-Before committing:
+**IMPORTANT:** Before every commit, run:
 ```bash
 ./scripts/check.sh    # Ensure all CI checks pass locally
 ```
+
+This runs the same checks that CI runs:
+- Frontend: lint + type-check + test + build
+- Backend: lint + format check + type-check + test
+- Simulator: test
+
+**Claude Code Agents:** Always run `./scripts/check.sh` before committing any changes.
 
 ### CI/CD Pipeline
 
