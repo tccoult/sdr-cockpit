@@ -102,7 +102,6 @@ sudo systemctl start sdr-cockpit
 ```
 
 Both deployment methods:
-- Run as dedicated `sdr` user
 - Automatically restart on failure
 - Integrate with systemd logging
 - Require podman and redis

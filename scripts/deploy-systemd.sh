@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy SDR Cockpit as a systemd service on Alma Linux
-# This script sets up the service, user, and dependencies
+# This script sets up the service and dependencies
 
 set -e
 
@@ -13,17 +13,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "🚀 Deploying SDR Cockpit systemd service..."
 echo ""
-
-# Create service user if it doesn't exist
-if ! id -u sdr &>/dev/null; then
-    echo "📝 Creating sdr user..."
-    useradd -r -s /bin/false -d /var/lib/sdr-cockpit sdr
-fi
-
-# Create data directory
-echo "📁 Creating data directory..."
-mkdir -p /var/lib/sdr-cockpit
-chown sdr:sdr /var/lib/sdr-cockpit
 
 # Install Redis if not already installed
 if ! systemctl is-enabled redis &>/dev/null; then

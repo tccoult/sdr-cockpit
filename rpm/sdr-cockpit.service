@@ -6,8 +6,6 @@ Requires=redis.service
 
 [Service]
 Type=simple
-User=sdr
-Group=sdr
 Restart=always
 RestartSec=10
 
@@ -22,13 +20,6 @@ ExecStart=/usr/bin/podman run \
 
 # Stop the container
 ExecStop=/usr/bin/podman stop -t 10 sdr-cockpit
-
-# Security hardening
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/lib/sdr-cockpit
 
 [Install]
 WantedBy=multi-user.target

@@ -38,17 +38,7 @@ install -m 644 %{SOURCE0} %{buildroot}%{_datadir}/sdr-cockpit/sdr-cockpit-image.
 # Install systemd service (modified for RPM install)
 install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/sdr-cockpit.service
 
-%pre
-# Create service user if it doesn't exist
-if ! id -u sdr >/dev/null 2>&1; then
-    useradd -r -s /bin/false -d %{_sharedstatedir}/sdr-cockpit -c "SDR Cockpit Service" sdr
-fi
-
 %post
-# Create data directory
-mkdir -p %{_sharedstatedir}/sdr-cockpit
-chown sdr:sdr %{_sharedstatedir}/sdr-cockpit
-
 # Load container image
 echo "Loading SDR Cockpit container image..."
 podman load -i %{_datadir}/sdr-cockpit/sdr-cockpit-image.tar

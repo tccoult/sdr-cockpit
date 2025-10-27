@@ -44,7 +44,6 @@ Runs the built production image locally for testing before deployment.
 **`deploy-systemd.sh`** - Deploy as systemd service
 
 Sets up SDR Cockpit to pull and run from container registry. This script:
-- Creates a dedicated `sdr` user
 - Installs Redis and Podman if needed
 - Installs the systemd service
 - Auto-pulls latest image on start
@@ -75,8 +74,7 @@ sudo systemctl start sdr-cockpit
 The RPM:
 - Bundles the container image (no registry pull needed)
 - Installs systemd service
-- Creates `sdr` user
-- Requires podman and redis (specify in install docs)
+- Requires podman and redis
 
 ### Managing the Service
 
