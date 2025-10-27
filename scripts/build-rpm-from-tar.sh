@@ -43,9 +43,6 @@ else
     exit 1
 fi
 
-echo "Using container runtime: $CONTAINER_CMD"
-echo ""
-
 # Create build directory
 BUILD_DIR="$PROJECT_ROOT/rpmbuild"
 mkdir -p "$BUILD_DIR"/{SOURCES,SPECS,RPMS,SRPMS,BUILD}
@@ -56,22 +53,35 @@ cp "$IMAGE_TAR" "$BUILD_DIR/SOURCES/sdr-cockpit-image.tar"
 cp "$PROJECT_ROOT/rpm/sdr-cockpit.service" "$BUILD_DIR/SOURCES/"
 cp "$PROJECT_ROOT/rpm/sdr-cockpit.spec" "$BUILD_DIR/SPECS/"
 
-# Build RPM in container
+# Build RPM
 echo ""
 echo "🔨 Building RPM package..."
 echo ""
 
-$CONTAINER_CMD run --rm \
-    -v "$BUILD_DIR":/rpmbuild:Z \
-    almalinux:9 \
-    bash -c "
-        dnf install -y rpm-build
-        rpmbuild \
-            --define '_topdir /rpmbuild' \
-            --define '_version $VERSION' \
-            --define '_release $RELEASE' \
-            -bb /rpmbuild/SPECS/sdr-cockpit.spec
-    "
+# Check if rpmbuild is available natively (e.g., in CI)
+if command -v rpmbuild &> /dev/null; then
+    echo "Using native rpmbuild"
+    rpmbuild \
+        --define "_topdir $BUILD_DIR" \
+        --define "_version $VERSION" \
+        --define "_release $RELEASE" \
+        -bb "$BUILD_DIR/SPECS/sdr-cockpit.spec"
+else
+    echo "Using container runtime: $CONTAINER_CMD"
+    echo ""
+
+    $CONTAINER_CMD run --rm \
+        -v "$BUILD_DIR":/rpmbuild:Z \
+        almalinux:9 \
+        bash -c "
+            dnf install -y rpm-build
+            rpmbuild \
+                --define '_topdir /rpmbuild' \
+                --define '_version $VERSION' \
+                --define '_release $RELEASE' \
+                -bb /rpmbuild/SPECS/sdr-cockpit.spec
+        "
+fi
 
 # Copy RPM to project root
 echo ""
