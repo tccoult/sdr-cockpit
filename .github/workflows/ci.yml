@@ -218,9 +218,9 @@ jobs:
       - name: Tag and push to registry
         if: github.ref == 'refs/heads/trunk'
         run: |
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            docker tag sdr-cockpit:latest $tag
-            docker push $tag
+          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+            docker tag sdr-cockpit:latest "$tag"
+            docker push "$tag"
           done
 
       - name: Save image as tar for RPM build
@@ -281,9 +281,9 @@ jobs:
       - name: Tag and push to registry
         if: github.ref == 'refs/heads/trunk'
         run: |
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            docker tag sdr-cockpit-simulator:test $tag
-            docker push $tag
+          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+            docker tag sdr-cockpit-simulator:test "$tag"
+            docker push "$tag"
           done
 
   build-rpm:
