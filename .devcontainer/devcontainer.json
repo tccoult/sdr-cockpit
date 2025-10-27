@@ -3,9 +3,6 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
   "customizations": {
     "vscode": {
       "settings": {
@@ -35,8 +32,7 @@
         "ms-python.mypy-type-checker",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "bradlc.vscode-tailwindcss",
-        "ms-azuretools.vscode-docker"
+        "bradlc.vscode-tailwindcss"
       ]
     }
   },

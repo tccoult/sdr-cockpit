@@ -13,16 +13,11 @@ RUN dnf install -y python3.11 python3.11-pip python3.11-devel
 RUN ln -sf /usr/bin/python3.11 /usr/local/bin/python && \
     ln -sf /usr/bin/pip3.11 /usr/local/bin/pip
 
-# Install Docker CLI
-RUN dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
-    dnf install -y docker-ce-cli docker-compose-plugin
-
 # Install git and common tools
 RUN dnf install -y git curl wget vim
 
 # Create a non-root user
-RUN useradd -m -s /bin/bash node && \
-    usermod -aG docker node || true
+RUN useradd -m -s /bin/bash node
 
 # Switch to non-root user
 USER node
