@@ -12,13 +12,28 @@ Installs dependencies for frontend, backend, and simulator. Creates virtual envi
 ./scripts/setup.sh
 ```
 
-**`test.sh`** - Run all test suites
+**`test.sh`** - Run all test suites (fast)
 
-Runs frontend, backend, and simulator tests. Automatically calls `setup.sh` to ensure dependencies are installed.
+Runs frontend, backend, and simulator tests only. No linting or type-checking. Automatically calls `setup.sh` to ensure dependencies are installed.
 
 ```bash
 ./scripts/test.sh
 ```
+
+**`check.sh`** - Run all checks (same as CI)
+
+Runs the exact same checks that CI runs: lint + type-check + test + build. Use this before committing to ensure CI will pass.
+
+```bash
+./scripts/check.sh
+```
+
+**Component check scripts:**
+- `check-frontend.sh` - Frontend checks (lint, type-check, test, build)
+- `check-backend.sh` - Backend checks (lint, format, type-check, test)
+- `check-simulator.sh` - Simulator checks (test)
+
+These are called by both `check.sh` and CI workflows.
 
 **`dev.sh`** - Start development environment
 

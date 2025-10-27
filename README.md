@@ -103,30 +103,30 @@ Both deployment methods:
 
 ## Development & Testing
 
-### Running Tests
+### Quick Tests (Tests Only)
 
 **Run all tests:**
 ```bash
-./scripts/test.sh
+./scripts/test.sh     # Fast: runs tests only
 ```
 
-**Or run tests individually:**
+### Full Checks (Same as CI)
+
+**Run all checks (lint, type-check, test, build):**
 ```bash
-# Frontend
-cd frontend && npm test && npm run type-check
-
-# Backend
-cd backend && source .venv/bin/activate && python -m pytest -v && mypy app/
-
-# Simulator
-cd simulator && source .venv/bin/activate && python -m pytest -v
+./scripts/check.sh    # Runs exactly what CI runs
 ```
+
+This runs the same checks that CI runs:
+- Frontend: lint + type-check + test + build
+- Backend: lint + format check + type-check + test
+- Simulator: test
 
 ### Pre-Commit Checklist
 
-Before committing, run tests:
+Before committing:
 ```bash
-./scripts/test.sh
+./scripts/check.sh    # Ensure all CI checks pass locally
 ```
 
 ### CI/CD Pipeline

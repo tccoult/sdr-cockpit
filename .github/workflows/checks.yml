@@ -7,9 +7,6 @@ jobs:
   frontend-checks:
     name: Frontend Checks
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
       - name: Checkout code
@@ -23,27 +20,16 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          cd frontend
+          npm ci
 
-      - name: Lint (continue on error)
-        run: npm run lint || true
-        continue-on-error: true
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Run tests
-        run: npm test
-
-      - name: Build
-        run: npm run build
+      - name: Run frontend checks
+        run: ./scripts/check-frontend.sh
 
   backend-checks:
     name: Backend Checks
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
 
     steps:
       - name: Checkout code
@@ -58,29 +44,18 @@ jobs:
 
       - name: Install dependencies
         run: |
+          cd backend
+          python -m venv .venv
+          source .venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Lint with ruff (continue on error)
-        run: ruff check . || true
-        continue-on-error: true
-
-      - name: Format check with black (continue on error)
-        run: black --check . || true
-        continue-on-error: true
-
-      - name: Type check with mypy
-        run: mypy app/
-
-      - name: Run tests
-        run: pytest -v
+      - name: Run backend checks
+        run: ./scripts/check-backend.sh
 
   simulator-checks:
     name: Simulator Checks
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: simulator
 
     steps:
       - name: Checkout code
@@ -95,11 +70,14 @@ jobs:
 
       - name: Install dependencies
         run: |
+          cd simulator
+          python -m venv .venv
+          source .venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest -v
+      - name: Run simulator checks
+        run: ./scripts/check-simulator.sh
 
   docker-build:
     name: Docker Build Verification

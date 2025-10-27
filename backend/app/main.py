@@ -1,5 +1,4 @@
 """FastAPI application entry point"""
-import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -26,20 +25,13 @@ app.add_middleware(
 @app.get("/api/")
 async def root():
     """Root API endpoint"""
-    return {
-        "message": "SDR Cockpit API",
-        "version": "0.1.0",
-        "status": "running"
-    }
+    return {"message": "SDR Cockpit API", "version": "0.1.0", "status": "running"}
 
 
 @app.get("/api/health")
 async def health():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "backend"
-    }
+    return {"status": "healthy", "service": "backend"}
 
 
 # Mount static files and serve frontend (only if static directory exists)
