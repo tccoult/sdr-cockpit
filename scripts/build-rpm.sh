@@ -7,6 +7,16 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Detect container runtime (docker or podman)
+if command -v docker &> /dev/null; then
+    CONTAINER_CMD="docker"
+elif command -v podman &> /dev/null; then
+    CONTAINER_CMD="podman"
+else
+    echo "❌ Neither docker nor podman found. Please install one."
+    exit 1
+fi
+
 # Configuration
 IMAGE_NAME="${IMAGE_NAME:-sdr-cockpit}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
@@ -28,13 +38,13 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$SOURCES_DIR" "$SPECS_DIR" "$RPMS_DIR"
 
 # Step 1: Build the container image
-echo "🏗️  Building container image..."
+echo "🏗️  Building container image with $CONTAINER_CMD..."
 cd "$PROJECT_ROOT"
-docker build -f docker/sdr-cockpit.Dockerfile -t "$IMAGE_NAME:$IMAGE_TAG" .
+$CONTAINER_CMD build -f docker/sdr-cockpit.Dockerfile -t "$IMAGE_NAME:$IMAGE_TAG" .
 
 # Step 2: Export container image as tar
 echo "💾 Exporting container image..."
-docker save "$IMAGE_NAME:$IMAGE_TAG" -o "$SOURCES_DIR/sdr-cockpit-image.tar"
+$CONTAINER_CMD save "$IMAGE_NAME:$IMAGE_TAG" -o "$SOURCES_DIR/sdr-cockpit-image.tar"
 
 # Step 3: Copy systemd service file
 echo "📋 Copying systemd service file..."
