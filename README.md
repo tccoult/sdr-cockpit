@@ -58,24 +58,19 @@ sdr-cockpit/
 
 ### Development
 
-Use the provided script for a smooth development experience:
-
+**Quick start:**
 ```bash
-./scripts/dev.sh
+./scripts/setup.sh    # Install dependencies (first time only)
+./scripts/dev.sh      # Start dev environment
 ```
 
 This starts both the frontend dev server (with hot reload) and the backend API:
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000
 
-Or run services manually:
-
+**Run tests:**
 ```bash
-# Frontend (in one terminal)
-cd frontend && npm install && npm run dev
-
-# Backend (in another terminal)
-cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
+./scripts/test.sh     # Run all test suites (frontend, backend, simulator)
 ```
 
 ### Production
@@ -110,40 +105,29 @@ Both deployment methods:
 
 ### Running Tests
 
-#### Frontend Tests
+**Run all tests:**
 ```bash
-cd frontend
-npm test              # Run all tests
-npm run type-check    # TypeScript validation
-npm run lint          # ESLint (warnings only)
-npm run build         # Production build
+./scripts/test.sh
 ```
 
-#### Backend Tests
+**Or run tests individually:**
 ```bash
-cd backend
-python -m pytest -v   # Run all tests
-mypy app/             # Type checking
-ruff check .          # Linting (warnings only)
-black --check .       # Format checking (warnings only)
-```
+# Frontend
+cd frontend && npm test && npm run type-check
 
-#### Simulator Tests
-```bash
-cd simulator
-python -m pytest -v   # Run all tests
-```
+# Backend
+cd backend && source .venv/bin/activate && python -m pytest -v && mypy app/
 
-**Important:** Always use `python -m pytest` (not just `pytest`) to ensure proper import resolution.
+# Simulator
+cd simulator && source .venv/bin/activate && python -m pytest -v
+```
 
 ### Pre-Commit Checklist
 
-Before committing changes, run tests for the components you modified:
-
-- **Frontend changes**: `npm test && npm run type-check && npm run build`
-- **Backend changes**: `python -m pytest -v && mypy app/`
-- **Simulator changes**: `python -m pytest -v`
-- **Docker changes**: Test affected image builds
+Before committing, run tests:
+```bash
+./scripts/test.sh
+```
 
 ### CI/CD Pipeline
 

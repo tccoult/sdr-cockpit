@@ -10,31 +10,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "🚀 Starting SDR Cockpit development environment..."
 echo ""
 
-# Check if we're in the dev container or have the right tools
-if ! command -v node &> /dev/null; then
-    echo "❌ Node.js not found. Please use the dev container or install Node.js 20+"
-    exit 1
-fi
-
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python not found. Please use the dev container or install Python 3.11+"
-    exit 1
-fi
-
-# Check if dependencies are installed
-if [ ! -d "$PROJECT_ROOT/frontend/node_modules" ]; then
-    echo "📦 Installing frontend dependencies..."
-    cd "$PROJECT_ROOT/frontend"
-    npm install
-fi
-
-if [ ! -d "$PROJECT_ROOT/backend/.venv" ]; then
-    echo "📦 Installing backend dependencies..."
-    cd "$PROJECT_ROOT/backend"
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-fi
+# Ensure dependencies are installed
+"$SCRIPT_DIR/setup.sh"
 
 echo ""
 echo "Starting services:"

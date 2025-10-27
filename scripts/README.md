@@ -2,11 +2,27 @@
 
 Utility scripts for development, building, and deployment.
 
-## Development
+## Setup & Development
+
+**`setup.sh`** - Install all dependencies
+
+Installs dependencies for frontend, backend, and simulator. Creates virtual environments for Python components.
+
+```bash
+./scripts/setup.sh
+```
+
+**`test.sh`** - Run all test suites
+
+Runs frontend, backend, and simulator tests. Automatically calls `setup.sh` to ensure dependencies are installed.
+
+```bash
+./scripts/test.sh
+```
 
 **`dev.sh`** - Start development environment
 
-Runs frontend dev server (with hot reload) and backend API concurrently.
+Runs frontend dev server (with hot reload) and backend API concurrently. Automatically calls `setup.sh` first.
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000
 
