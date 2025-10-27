@@ -9,26 +9,55 @@ describe('App', () => {
     expect(heading).toBeInTheDocument()
   })
 
-  it('renders the counter button with initial count', () => {
+  it('renders Spectrum Analyzer subheading', () => {
     render(<App />)
-    const button = screen.getByRole('button')
-    expect(button).toHaveTextContent('count is 0')
+    const subheading = screen.getByText(/Software Defined Radio Spectrum Analyzer/i)
+    expect(subheading).toBeInTheDocument()
   })
 
-  it('increments counter when button is clicked', () => {
+  it('renders FPS counter', () => {
     render(<App />)
-    const button = screen.getByRole('button')
-
-    fireEvent.click(button)
-    expect(button).toHaveTextContent('count is 1')
-
-    fireEvent.click(button)
-    expect(button).toHaveTextContent('count is 2')
+    const fpsCounter = screen.getByText(/FPS/i)
+    expect(fpsCounter).toBeInTheDocument()
   })
 
-  it('displays success message', () => {
+  it('renders Pause button initially', () => {
     render(<App />)
-    const message = screen.getByText(/Frontend is running successfully!/i)
-    expect(message).toBeInTheDocument()
+    const pauseButton = screen.getByRole('button', { name: /Pause/i })
+    expect(pauseButton).toBeInTheDocument()
+  })
+
+  it('toggles between Pause and Resume when button is clicked', () => {
+    render(<App />)
+
+    // Initially shows Pause
+    const pauseButton = screen.getByRole('button', { name: /Pause/i })
+    expect(pauseButton).toBeInTheDocument()
+
+    // Click to pause
+    fireEvent.click(pauseButton)
+
+    // Now shows Resume
+    const resumeButton = screen.getByRole('button', { name: /Resume/i })
+    expect(resumeButton).toBeInTheDocument()
+
+    // Click to resume
+    fireEvent.click(resumeButton)
+
+    // Back to Pause
+    const pauseButtonAgain = screen.getByRole('button', { name: /Pause/i })
+    expect(pauseButtonAgain).toBeInTheDocument()
+  })
+
+  it('renders Spectrum Analyzer display header', () => {
+    render(<App />)
+    const spectrumAnalyzerHeader = screen.getByRole('heading', { name: /Spectrum Analyzer/i })
+    expect(spectrumAnalyzerHeader).toBeInTheDocument()
+  })
+
+  it('renders controls instructions', () => {
+    render(<App />)
+    const instructions = screen.getByText(/Mouse wheel to zoom/i)
+    expect(instructions).toBeInTheDocument()
   })
 })
