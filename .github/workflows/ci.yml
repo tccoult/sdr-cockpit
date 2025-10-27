@@ -258,6 +258,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
+        if: github.ref == 'refs/heads/trunk'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -266,16 +267,24 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      - name: Build image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: docker/simulator.Dockerfile
-          push: ${{ github.ref == 'refs/heads/trunk' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          load: true
+          tags: sdr-cockpit-simulator:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag and push to registry
+        if: github.ref == 'refs/heads/trunk'
+        run: |
+          for tag in ${{ steps.meta.outputs.tags }}; do
+            docker tag sdr-cockpit-simulator:test $tag
+            docker push $tag
+          done
 
   build-and-test-rpm:
     name: Build and Test RPM Package
