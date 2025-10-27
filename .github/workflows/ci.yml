@@ -304,24 +304,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          dnf install -y rpm-build podman
+          dnf install -y podman
 
       - name: Build RPM
         run: |
-          BUILD_DIR="$PWD/rpmbuild"
-          mkdir -p "$BUILD_DIR/SOURCES" "$BUILD_DIR/SPECS"
-
-          cp sdr-cockpit-image.tar "$BUILD_DIR/SOURCES/"
-          cp rpm/sdr-cockpit.service "$BUILD_DIR/SOURCES/"
-          cp rpm/sdr-cockpit.spec "$BUILD_DIR/SPECS/"
-
-          rpmbuild \
-            --define "_topdir $BUILD_DIR" \
-            --define "_version 0.1.0" \
-            --define "_release 1" \
-            -bb "$BUILD_DIR/SPECS/sdr-cockpit.spec"
-
-          cp "$BUILD_DIR/RPMS/noarch/"*.rpm .
+          ./scripts/build-rpm-from-tar.sh sdr-cockpit-image.tar 0.1.0 1
 
       - name: Verify RPM contents
         run: |
