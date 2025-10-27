@@ -1,14 +1,15 @@
 import '@testing-library/jest-dom'
 
 // Mock ResizeObserver which is used by Recharts but not available in test environment
-global.ResizeObserver = class ResizeObserver {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 }
 
 // Mock HTMLCanvasElement.getContext which is used by waterfall display
-HTMLCanvasElement.prototype.getContext = function() {
+const mockGetContext = function() {
   return {
     fillRect: () => {},
     clearRect: () => {},
@@ -34,4 +35,7 @@ HTMLCanvasElement.prototype.getContext = function() {
     rect: () => {},
     clip: () => {},
   } as unknown as CanvasRenderingContext2D
-}
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(HTMLCanvasElement.prototype.getContext as any) = mockGetContext
