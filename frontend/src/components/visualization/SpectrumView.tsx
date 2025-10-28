@@ -173,21 +173,20 @@ export const SpectrumView = memo(function SpectrumView({
             onClick={autoRange}
             style={{
               padding: "6px 12px",
-              background: "rgba(102, 208, 255, 0.1)",
-              border: "1px solid rgba(102, 208, 255, 0.5)",
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
               borderRadius: 4,
-              color: "#66d0ff",
+              color: "white",
               fontSize: 12,
               cursor: "pointer",
               transition: "all 0.2s",
+              fontWeight: 500,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(102, 208, 255, 0.2)";
-              e.currentTarget.style.borderColor = "#66d0ff";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(102, 208, 255, 0.1)";
-              e.currentTarget.style.borderColor = "rgba(102, 208, 255, 0.5)";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
             }}
           >
             Auto Range
