@@ -87,9 +87,9 @@ export function TaskSidebar({
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: 'rgba(0, 229, 255, 0.2)',
-            border: '1px solid rgba(0, 229, 255, 0.4)',
-            color: '#00e5ff',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            color: 'white',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -98,11 +98,11 @@ export function TaskSidebar({
             padding: 0,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
-            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+            e.currentTarget.style.transform = 'scale(1.05)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
             e.currentTarget.style.transform = 'scale(1)';
           }}
           title="Create new task"
@@ -131,14 +131,14 @@ export function TaskSidebar({
               fontWeight: 600,
               background:
                 filter === filterType
-                  ? 'rgba(0, 229, 255, 0.2)'
+                  ? 'rgba(255, 255, 255, 0.12)'
                   : 'rgba(255, 255, 255, 0.05)',
               border:
                 filter === filterType
-                  ? '1px solid rgba(0, 229, 255, 0.4)'
-                  : '1px solid rgba(255, 255, 255, 0.1)',
+                  ? '1px solid rgba(255, 255, 255, 0.2)'
+                  : '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: 6,
-              color: filter === filterType ? '#00e5ff' : 'rgba(255, 255, 255, 0.6)',
+              color: filter === filterType ? 'white' : 'rgba(255, 255, 255, 0.6)',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               textTransform: 'uppercase',
@@ -225,18 +225,18 @@ export function TaskSidebar({
                   padding: '10px 20px',
                   fontSize: 13,
                   fontWeight: 600,
-                  background: 'rgba(0, 229, 255, 0.2)',
-                  border: '1px solid rgba(0, 229, 255, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   borderRadius: 6,
-                  color: '#00e5ff',
+                  color: 'white',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 + Create Task

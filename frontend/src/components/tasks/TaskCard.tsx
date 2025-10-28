@@ -51,12 +51,6 @@ export function TaskCard({
     return null;
   };
 
-  const getAccentColor = () => {
-    if (task.type === 'tx') return '#ff9800'; // Orange for TX
-    if (task.owner === 'external') return '#7c4dff'; // Purple for external
-    return '#00e5ff'; // Cyan for own RX
-  };
-
   const formatDuration = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -85,7 +79,6 @@ export function TaskCard({
   };
 
   const statusColor = getStatusColor();
-  const accentColor = getAccentColor();
   const statusBadge = getStatusBadge();
 
   return (
@@ -93,31 +86,31 @@ export function TaskCard({
       onClick={() => onSelect(task.id)}
       style={{
         background: isSelected
-          ? 'rgba(30, 30, 45, 0.95)'
-          : 'rgba(20, 20, 30, 0.4)',
-        borderLeft: `${isSelected ? 6 : 3}px solid ${accentColor}`,
-        borderTop: isSelected ? `1px solid ${accentColor}40` : '1px solid rgba(255, 255, 255, 0.05)',
-        borderRight: isSelected ? `1px solid ${accentColor}40` : '1px solid rgba(255, 255, 255, 0.05)',
-        borderBottom: isSelected ? `1px solid ${accentColor}40` : '1px solid rgba(255, 255, 255, 0.05)',
+          ? 'rgba(255, 255, 255, 0.1)'
+          : 'rgba(255, 255, 255, 0.04)',
+        borderLeft: `${isSelected ? 4 : 2}px solid ${isSelected ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'}`,
+        borderTop: `1px solid ${isSelected ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)'}`,
+        borderRight: `1px solid ${isSelected ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)'}`,
+        borderBottom: `1px solid ${isSelected ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)'}`,
         borderRadius: 8,
         padding: isSelected ? 12 : 10,
         marginBottom: 8,
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         boxShadow: isSelected
-          ? `0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px ${accentColor}40, inset 0 0 40px ${accentColor}08`
+          ? '0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 0 40px rgba(255, 255, 255, 0.02)'
           : '0 2px 4px rgba(0, 0, 0, 0.2)',
         opacity: isSelected ? 1 : 0.7,
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = 'rgba(25, 25, 38, 0.6)';
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
           e.currentTarget.style.opacity = '0.85';
         }
       }}
       onMouseLeave={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = 'rgba(20, 20, 30, 0.4)';
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
           e.currentTarget.style.opacity = '0.7';
         }
       }}
@@ -251,7 +244,7 @@ export function TaskCard({
                   style={{
                     width: `${task.playback.progress * 100}%`,
                     height: '100%',
-                    background: accentColor,
+                    background: 'rgba(255, 255, 255, 0.6)',
                     transition: 'width 0.3s ease',
                   }}
                 />
@@ -305,8 +298,8 @@ export function TaskCard({
                     flex: 1,
                     padding: '8px 10px',
                     fontSize: 12,
-                    background: 'rgba(255, 193, 7, 0.2)',
-                    border: '1px solid rgba(255, 193, 7, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
@@ -314,10 +307,10 @@ export function TaskCard({
                     fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.3)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                   }}
                 >
                   {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
@@ -329,8 +322,8 @@ export function TaskCard({
                     flex: 1,
                     padding: '8px 10px',
                     fontSize: 12,
-                    background: 'rgba(244, 67, 54, 0.2)',
-                    border: '1px solid rgba(244, 67, 54, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
@@ -338,10 +331,10 @@ export function TaskCard({
                     fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                   }}
                 >
                   ⏹ Stop
@@ -352,8 +345,8 @@ export function TaskCard({
                   style={{
                     padding: '8px 12px',
                     fontSize: 12,
-                    background: 'rgba(0, 229, 255, 0.2)',
-                    border: '1px solid rgba(0, 229, 255, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
@@ -361,10 +354,10 @@ export function TaskCard({
                     fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                   }}
                 >
                   ⚙
@@ -376,8 +369,8 @@ export function TaskCard({
                     style={{
                       padding: '8px 12px',
                       fontSize: 12,
-                      background: 'rgba(244, 67, 54, 0.3)',
-                      border: '1px solid rgba(244, 67, 54, 0.5)',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                       borderRadius: 6,
                       color: 'white',
                       cursor: 'pointer',
@@ -385,10 +378,10 @@ export function TaskCard({
                       fontWeight: 500,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.4)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                     }}
                   >
                     ⏹ Stop Rec
@@ -399,8 +392,8 @@ export function TaskCard({
                     style={{
                       padding: '8px 12px',
                       fontSize: 12,
-                      background: 'rgba(244, 67, 54, 0.2)',
-                      border: '1px solid rgba(244, 67, 54, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                       borderRadius: 6,
                       color: 'white',
                       cursor: 'pointer',
@@ -408,10 +401,10 @@ export function TaskCard({
                       fontWeight: 500,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                     }}
                   >
                     🎙️ Record
@@ -428,8 +421,8 @@ export function TaskCard({
                     flex: 1,
                     padding: '8px 10px',
                     fontSize: 12,
-                    background: 'rgba(255, 193, 7, 0.2)',
-                    border: '1px solid rgba(255, 193, 7, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
@@ -437,10 +430,10 @@ export function TaskCard({
                     fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.3)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                   }}
                 >
                   {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
@@ -452,8 +445,8 @@ export function TaskCard({
                     flex: 1,
                     padding: '8px 10px',
                     fontSize: 12,
-                    background: 'rgba(244, 67, 54, 0.2)',
-                    border: '1px solid rgba(244, 67, 54, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
@@ -461,10 +454,10 @@ export function TaskCard({
                     fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                   }}
                 >
                   ⏹ Stop
@@ -475,10 +468,10 @@ export function TaskCard({
                     style={{
                       padding: '8px 12px',
                       fontSize: 12,
-                      background: 'rgba(124, 77, 255, 0.2)',
-                      border: '1px solid rgba(124, 77, 255, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                       borderRadius: 6,
-                      color: 'white',
+                      color: 'rgba(255, 255, 255, 0.7)',
                       display: 'flex',
                       alignItems: 'center',
                       fontWeight: 500,
@@ -496,10 +489,10 @@ export function TaskCard({
                   flex: 1,
                   padding: '8px 10px',
                   fontSize: 12,
-                  background: 'rgba(124, 77, 255, 0.2)',
-                  border: '1px solid rgba(124, 77, 255, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
                   borderRadius: 6,
-                  color: 'white',
+                  color: 'rgba(255, 255, 255, 0.7)',
                   textAlign: 'center',
                   fontWeight: 500,
                 }}

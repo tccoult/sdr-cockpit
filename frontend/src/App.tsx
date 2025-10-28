@@ -284,8 +284,8 @@ function App() {
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <div
               style={{
-                background: 'rgba(0, 229, 255, 0.1)',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderRadius: 6,
                 padding: '8px 16px',
                 fontSize: 14,
@@ -383,18 +383,18 @@ function App() {
                   padding: '12px 24px',
                   fontSize: 14,
                   fontWeight: 600,
-                  background: 'rgba(0, 229, 255, 0.2)',
-                  border: '1px solid rgba(0, 229, 255, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   borderRadius: 8,
-                  color: '#00e5ff',
+                  color: 'white',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 + Create New Task

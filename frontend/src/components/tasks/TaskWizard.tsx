@@ -133,8 +133,8 @@ export function TaskWizard({
                 onClick={() => setMode('rx')}
                 style={{
                   padding: 20,
-                  background: 'rgba(0, 229, 255, 0.1)',
-                  border: '1px solid rgba(0, 229, 255, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   borderRadius: 8,
                   color: 'white',
                   cursor: 'pointer',
@@ -142,12 +142,12 @@ export function TaskWizard({
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
-                  e.currentTarget.style.borderColor = 'rgba(0, 229, 255, 0.5)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(0, 229, 255, 0.3)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                 }}
               >
                 <div style={{ fontSize: 18, marginBottom: 6 }}>📡 Receive Signal</div>
@@ -160,8 +160,8 @@ export function TaskWizard({
                 onClick={() => setMode('tx')}
                 style={{
                   padding: 20,
-                  background: 'rgba(255, 152, 0, 0.1)',
-                  border: '1px solid rgba(255, 152, 0, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   borderRadius: 8,
                   color: 'white',
                   cursor: 'pointer',
@@ -169,12 +169,12 @@ export function TaskWizard({
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 152, 0, 0.2)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 152, 0, 0.5)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 152, 0, 0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 152, 0, 0.3)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                 }}
               >
                 <div style={{ fontSize: 18, marginBottom: 6 }}>📤 Transmit File</div>
@@ -359,8 +359,8 @@ export function TaskWizard({
                   style={{
                     flex: 1,
                     padding: 12,
-                    background: 'rgba(0, 229, 255, 0.3)',
-                    border: '1px solid rgba(0, 229, 255, 0.5)',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
                     borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
@@ -409,11 +409,11 @@ export function TaskWizard({
                 </label>
                 <div
                   style={{
-                    border: '2px dashed rgba(255, 152, 0, 0.4)',
+                    border: '2px dashed rgba(255, 255, 255, 0.2)',
                     borderRadius: 8,
                     padding: 24,
                     textAlign: 'center',
-                    background: 'rgba(255, 152, 0, 0.05)',
+                    background: 'rgba(255, 255, 255, 0.05)',
                     cursor: 'pointer',
                   }}
                   onClick={() => document.getElementById('file-input')?.click()}
@@ -517,8 +517,8 @@ export function TaskWizard({
                   style={{
                     flex: 1,
                     padding: 12,
-                    background: txFile ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255, 255, 255, 0.05)',
-                    border: txFile ? '1px solid rgba(255, 152, 0, 0.5)' : '1px solid rgba(255, 255, 255, 0.2)',
+                    background: txFile ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                    border: txFile ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: 6,
                     color: txFile ? 'white' : 'rgba(255, 255, 255, 0.4)',
                     cursor: txFile ? 'pointer' : 'not-allowed',
