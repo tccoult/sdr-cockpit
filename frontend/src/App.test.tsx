@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import App from './App'
 
@@ -9,55 +9,42 @@ describe('App', () => {
     expect(heading).toBeInTheDocument()
   })
 
-  it('renders Spectrum Analyzer subheading', () => {
-    render(<App />)
-    const subheading = screen.getByText(/Software Defined Radio Spectrum Analyzer/i)
-    expect(subheading).toBeInTheDocument()
-  })
-
   it('renders FPS counter', () => {
     render(<App />)
     const fpsCounter = screen.getByText(/FPS/i)
     expect(fpsCounter).toBeInTheDocument()
   })
 
-  it('renders Pause button initially', () => {
+  it('shows task discovery state initially', () => {
     render(<App />)
-    const pauseButton = screen.getByRole('button', { name: /Pause/i })
-    expect(pauseButton).toBeInTheDocument()
+    const discoveringText = screen.getByText(/Discovering tasks/i)
+    expect(discoveringText).toBeInTheDocument()
   })
 
-  it('toggles between Pause and Resume when button is clicked', () => {
+  it('shows task sidebar', () => {
     render(<App />)
-
-    // Initially shows Pause
-    const pauseButton = screen.getByRole('button', { name: /Pause/i })
-    expect(pauseButton).toBeInTheDocument()
-
-    // Click to pause
-    fireEvent.click(pauseButton)
-
-    // Now shows Resume
-    const resumeButton = screen.getByRole('button', { name: /Resume/i })
-    expect(resumeButton).toBeInTheDocument()
-
-    // Click to resume
-    fireEvent.click(resumeButton)
-
-    // Back to Pause
-    const pauseButtonAgain = screen.getByRole('button', { name: /Pause/i })
-    expect(pauseButtonAgain).toBeInTheDocument()
+    const tasksHeading = screen.getByRole('heading', { name: /Tasks/i })
+    expect(tasksHeading).toBeInTheDocument()
   })
 
-  it('renders Spectrum Analyzer display header', () => {
+  it('shows create task button in sidebar', () => {
     render(<App />)
-    const spectrumAnalyzerHeader = screen.getByRole('heading', { name: /Spectrum Analyzer/i })
-    expect(spectrumAnalyzerHeader).toBeInTheDocument()
+    const createButton = screen.getByTitle(/Create new task/i)
+    expect(createButton).toBeInTheDocument()
   })
 
-  it('renders controls instructions', () => {
+  it('shows filter tabs (All, RX, TX)', () => {
     render(<App />)
-    const instructions = screen.getByText(/Mouse wheel to zoom/i)
-    expect(instructions).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^all$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^rx$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^tx$/i })).toBeInTheDocument()
+  })
+
+  it('loads demo tasks after discovery', async () => {
+    render(<App />)
+
+    // Wait for tasks to load (demo tasks appear after 1.5s)
+    const taskCards = await screen.findAllByText(/ISM Band Monitor/i, {}, { timeout: 2000 })
+    expect(taskCards.length).toBeGreaterThan(0)
   })
 })

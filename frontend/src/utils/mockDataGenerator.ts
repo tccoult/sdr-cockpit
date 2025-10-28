@@ -12,42 +12,37 @@ export class MockFFTGenerator {
   private time: number = 0;
   private signals: Signal[] = [];
 
-  constructor(centerFreq: number, sampleRate: number, fftSize: number = 2048) {
+  constructor(centerFreq: number, sampleRate: number, fftSize: number = 2048, seed: number = 0) {
     this.centerFreq = centerFreq;
     this.sampleRate = sampleRate;
     this.fftSize = fftSize;
 
-    // Initialize some mock signals
-    this.signals = [
-      {
-        offset: 0.2,          // 20% offset from center
-        strength: -35,        // Signal strength in dB
-        width: 0.01,         // Signal bandwidth (relative to sample rate)
-        drift: 0.0001,       // Slow frequency drift
-        modulation: 'am',    // AM modulation
-      },
-      {
-        offset: -0.3,
-        strength: -50,
-        width: 0.02,
-        drift: 0.00005,
-        modulation: 'fm',
-      },
-      {
-        offset: 0.0,
-        strength: -40,
-        width: 0.005,
-        drift: -0.0001,
-        modulation: 'cw',    // Continuous wave
-      },
-      {
-        offset: 0.45,
-        strength: -60,
-        width: 0.015,
-        drift: 0.00008,
-        modulation: 'noise',
-      },
-    ];
+    // Generate unique signals based on seed (use frequency as seed if not provided)
+    const effectiveSeed = seed || (centerFreq % 10000);
+    const random = (n: number) => {
+      // Simple seeded random function
+      const x = Math.sin(effectiveSeed * n + 12.9898) * 43758.5453123;
+      return x - Math.floor(x);
+    };
+
+    // Initialize some mock signals with variation based on seed
+    const numSignals = 2 + Math.floor(random(1) * 3); // 2-4 signals
+    this.signals = [];
+
+    for (let i = 0; i < numSignals; i++) {
+      const r1 = random(i * 4 + 1);
+      const r2 = random(i * 4 + 2);
+      const r3 = random(i * 4 + 3);
+      const r4 = random(i * 4 + 4);
+
+      this.signals.push({
+        offset: (r1 - 0.5) * 0.8,  // -0.4 to 0.4
+        strength: -30 - r2 * 40,   // -30 to -70 dB
+        width: 0.005 + r3 * 0.03,  // Varying widths
+        drift: (r4 - 0.5) * 0.0002,
+        modulation: ['am', 'fm', 'cw', 'noise'][Math.floor(r1 * 4)] as 'am' | 'fm' | 'cw' | 'noise',
+      });
+    }
   }
 
   /**
