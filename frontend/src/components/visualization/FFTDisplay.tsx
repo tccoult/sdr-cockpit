@@ -3,7 +3,7 @@
  * Shows real-time spectrum with zoom/pan capabilities
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import {
   LineChart,
   Line,
@@ -26,7 +26,7 @@ interface FFTDisplayProps {
   accentColor?: string;
 }
 
-export function FFTDisplay({
+export const FFTDisplay = memo(function FFTDisplay({
   width,
   height,
   minDb,
@@ -243,4 +243,4 @@ export function FFTDisplay({
       </ResponsiveContainer>
     </div>
   );
-}
+});

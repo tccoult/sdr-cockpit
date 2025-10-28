@@ -73,7 +73,8 @@ function App() {
   // FFT data generation loop
   useEffect(() => {
     intervalRef.current = window.setInterval(() => {
-      if (!selectedTask || selectedTask.status === 'paused') return;
+      // Pause FFT generation when wizard is open for better performance
+      if (!selectedTask || selectedTask.status === 'paused' || isWizardOpen) return;
 
       const generator = generatorsRef.current.get(selectedTask.id);
       if (generator) {
@@ -96,7 +97,7 @@ function App() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [selectedTask]);
+  }, [selectedTask, isWizardOpen]);
 
   // Update task uptimes and recordings
   useEffect(() => {
