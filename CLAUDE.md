@@ -5,11 +5,13 @@
 **MANDATORY:** Before every `git commit`, you MUST:
 
 1. Run all checks:
+
    ```bash
    ./scripts/check.sh
    ```
 
 2. Ensure all checks pass:
+
    - ✅ Frontend: lint, type-check, test, build
    - ✅ Backend: lint, format check, type-check, test
    - ✅ Simulator: test
@@ -19,6 +21,7 @@
 ## Workflow
 
 When making changes:
+
 1. Write/modify code
 2. Run `./scripts/check.sh`
 3. Fix any issues
@@ -34,7 +37,3 @@ When making changes:
   - `./scripts/check-frontend.sh`
   - `./scripts/check-backend.sh`
   - `./scripts/check-simulator.sh`
-
-## Never Bypass
-
-Do NOT use `git commit --no-verify` unless explicitly asked by the user.
