@@ -266,7 +266,7 @@ export const FFTDisplay = memo(function FFTDisplay({
         }
       });
       ctx.lineWidth = 2.0;
-      ctx.strokeStyle = accentColor;
+      ctx.strokeStyle = "#FF00FF";
       ctx.stroke(path);
     }
 
@@ -277,12 +277,12 @@ export const FFTDisplay = memo(function FFTDisplay({
       const selectionWidth = x2 - x1;
 
       // Semi-transparent selection box
-      ctx.fillStyle = "rgba(0, 229, 255, 0.15)";
+      ctx.fillStyle = "rgba(255, 0, 255, 0.05)";
       ctx.fillRect(x1, margin.top, selectionWidth, plotHeight);
 
       // Selection borders
-      ctx.strokeStyle = "rgba(0, 229, 255, 0.6)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255, 0, 255, 0.2)";
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([]);
       ctx.strokeRect(x1, margin.top, selectionWidth, plotHeight);
     }
@@ -292,7 +292,6 @@ export const FFTDisplay = memo(function FFTDisplay({
       const x = freqToX(cursorInfo.freq);
       const y = dbToY(cursorInfo.power);
 
-      // Vertical cursor line
       ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
@@ -301,13 +300,10 @@ export const FFTDisplay = memo(function FFTDisplay({
       ctx.lineTo(x, height - margin.bottom);
       ctx.stroke();
 
-      // Circular marker
-      ctx.fillStyle = accentColor;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.strokeStyle = "#FFFF00";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.fill();
       ctx.stroke();
     }
   }, [
