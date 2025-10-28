@@ -3,7 +3,7 @@
  * Provides synchronized zoom, pan, and controls
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { FFTDisplay } from './FFTDisplay';
 import { WaterfallDisplay } from './WaterfallDisplay';
 import { FrequencyRange } from '../../types/sdr';
@@ -16,7 +16,7 @@ interface SpectrumViewProps {
   onColorMapChange?: (colorMap: ColorMap) => void;
 }
 
-export function SpectrumView({
+export const SpectrumView = memo(function SpectrumView({
   centerFreq,
   sampleRate,
   colorMap,
@@ -159,7 +159,7 @@ export function SpectrumView({
       </div>
     </div>
   );
-}
+});
 
 function formatFrequency(freq: number): string {
   if (freq >= 1e9) return `${(freq / 1e9).toFixed(3)} GHz`;

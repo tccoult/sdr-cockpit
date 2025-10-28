@@ -3,7 +3,7 @@
  * Optimized for 30+ FPS real-time rendering
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { FFTData, FrequencyRange } from '../../types/sdr';
 import { ColorMap, buildColorLUT, dbToColorIndex } from '../../utils/colorMaps';
 
@@ -17,7 +17,7 @@ interface WaterfallDisplayProps {
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
 }
 
-export function WaterfallDisplay({
+export const WaterfallDisplay = memo(function WaterfallDisplay({
   width,
   height,
   colorMap,
@@ -257,7 +257,7 @@ export function WaterfallDisplay({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Format frequency for display
