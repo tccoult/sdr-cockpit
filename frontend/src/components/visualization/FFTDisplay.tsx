@@ -38,7 +38,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   maxDb,
   frequencyRange,
   onFrequencyRangeChange,
-  accentColor = "#00e5ff",
+  accentColor = "#66d0ff",
 }: FFTDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -248,7 +248,6 @@ export const FFTDisplay = memo(function FFTDisplay({
 
     // ===== FFT TRACE =====
     if (chartData.length > 0) {
-      ctx.strokeStyle = accentColor;
       ctx.lineWidth = 1.5;
       ctx.setLineDash([]);
 
@@ -263,7 +262,8 @@ export const FFTDisplay = memo(function FFTDisplay({
           path.lineTo(x, y);
         }
       });
-
+      ctx.lineWidth = 2.0;
+      ctx.strokeStyle = accentColor;
       ctx.stroke(path);
     }
 
