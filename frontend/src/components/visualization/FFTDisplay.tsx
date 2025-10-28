@@ -50,7 +50,10 @@ export const FFTDisplay = memo(function FFTDisplay({
   const [isSelecting, setIsSelecting] = useState(false);
 
   // Canvas margins for axes and labels
-  const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+  const margin = useMemo(
+    () => ({ top: 20, right: 30, bottom: 40, left: 60 }),
+    []
+  );
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
 
@@ -142,13 +145,13 @@ export const FFTDisplay = memo(function FFTDisplay({
     [minDb, maxDb, plotHeight, margin.top]
   );
 
-  const yToDb = useCallback(
-    (y: number): number => {
-      const normalized = (plotHeight - (y - margin.top)) / plotHeight;
-      return minDb + normalized * (maxDb - minDb);
-    },
-    [minDb, maxDb, plotHeight, margin.top]
-  );
+  // const yToDb = useCallback(
+  //   (y: number): number => {
+  //     const normalized = (plotHeight - (y - margin.top)) / plotHeight;
+  //     return minDb + normalized * (maxDb - minDb);
+  //   },
+  //   [minDb, maxDb, plotHeight, margin.top]
+  // );
 
   // Format frequency for display
   const formatFrequency = useCallback(
@@ -311,13 +314,10 @@ export const FFTDisplay = memo(function FFTDisplay({
     width,
     height,
     margin,
-    plotWidth,
     plotHeight,
     chartData,
     freqTicks,
     dbTicks,
-    minDb,
-    maxDb,
     accentColor,
     cursorInfo,
     zoomSelection,
