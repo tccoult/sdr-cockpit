@@ -221,12 +221,7 @@ function App() {
           tasks={tasks}
           selectedTaskId={selectedTaskId}
           isDiscovering={isDiscovering}
-          onSelectTask={(taskId) => {
-            handleSelectTask(taskId);
-            if (window.innerWidth < 1024) {
-              setIsSidebarOpen(false);
-            }
-          }}
+          onSelectTask={handleSelectTask}
           onCreateTask={() => setIsWizardOpen(true)}
           onPauseTask={handlePauseTask}
           onStopTask={handleStopTask}
