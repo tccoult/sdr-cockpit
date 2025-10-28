@@ -54,18 +54,34 @@ export const FFTDisplay = memo(function FFTDisplay({
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
 
-  // Listen for FFT data updates
+  const [smoothedFFT, setSmoothedFFT] = useState<Float32Array | null>(null);
+  const smoothingFactor = 0.9; // 0-1, higher = more smoothing (try 0.5-0.8)
+
   useEffect(() => {
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
-      setCurrentFFT(customEvent.detail);
+      const newFFT = customEvent.detail;
+
+      // Blend with previous frame
+      if (smoothedFFT && smoothedFFT.length === newFFT.bins.length) {
+        const blended = new Float32Array(newFFT.bins.length);
+        for (let i = 0; i < newFFT.bins.length; i++) {
+          blended[i] =
+            smoothedFFT[i] * smoothingFactor +
+            newFFT.bins[i] * (1 - smoothingFactor);
+        }
+        setCurrentFFT({ ...newFFT, bins: blended });
+        setSmoothedFFT(blended);
+      } else {
+        // First frame or size changed
+        setCurrentFFT(newFFT);
+        setSmoothedFFT(newFFT.bins);
+      }
     };
 
     window.addEventListener("fft-data", handleFFTData);
-    return () => {
-      window.removeEventListener("fft-data", handleFFTData);
-    };
-  }, []);
+    return () => window.removeEventListener("fft-data", handleFFTData);
+  }, [smoothedFFT]);
 
   // Convert FFT data to chart data format (same as recharts version)
   const chartData = useMemo(() => {
@@ -320,10 +336,31 @@ export const FFTDisplay = memo(function FFTDisplay({
     });
   }, [render]);
 
-  // Trigger render when dependencies change
   useEffect(() => {
     requestRender();
   }, [requestRender]);
+
+  // One-time DPI setup when dimensions change
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+
+    // Scale canvas for high-DPI
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+
+    // Scale back down via CSS
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    // Scale all drawing operations
+    ctx.scale(dpr, dpr);
+  }, [width, height]);
 
   // Mouse move handler - update cursor info
   const handleMouseMove = useCallback(
