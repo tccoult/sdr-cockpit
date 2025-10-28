@@ -87,8 +87,8 @@ export const FFTDisplay = memo(function FFTDisplay({
       Math.ceil((endFreq - centerFreq + sampleRate / 2) / binWidth)
     );
 
-    // Sample bins for display (limit to ~1000 points for performance)
-    const step = Math.max(1, Math.floor((endBin - startBin) / 1000));
+    // Sample bins for display (limit to ~512 points for performance)
+    const step = Math.max(1, Math.floor((endBin - startBin) / 512));
 
     for (let i = startBin; i < endBin; i += step) {
       const freq = centerFreq - sampleRate / 2 + i * binWidth;

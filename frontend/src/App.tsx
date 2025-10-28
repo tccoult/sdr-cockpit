@@ -1,21 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
-import { SpectrumView } from './components/visualization/SpectrumView';
-import { TaskSidebar } from './components/tasks/TaskSidebar';
-import { TaskWizard } from './components/tasks/TaskWizard';
-import { MockFFTGenerator, dispatchFFTData } from './utils/mockDataGenerator';
-import { PLASMA } from './utils/colorMaps';
-import { Task, CreateRxTaskParams, CreateTxTaskParams } from './types/sdr';
+import { useEffect, useRef, useState } from "react";
+import { TaskSidebar } from "./components/tasks/TaskSidebar";
+import { TaskWizard } from "./components/tasks/TaskWizard";
+import { SpectrumView } from "./components/visualization/SpectrumView";
+import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
+import { PLASMA } from "./utils/colorMaps";
+import { MockFFTGenerator, dispatchFFTData } from "./utils/mockDataGenerator";
 import {
-  generateDemoTasks,
   createMockRxTask,
   createMockTxTask,
-  updateTaskUptime,
-  updateTxProgress,
-  updateRecording,
-  toggleTaskPause,
+  generateDemoTasks,
   startRecording,
   stopRecording,
-} from './utils/mockTaskGenerator';
+  toggleTaskPause,
+  updateRecording,
+  updateTaskUptime,
+  updateTxProgress,
+} from "./utils/mockTaskGenerator";
 
 function App() {
   const colorMap = PLASMA;
@@ -74,7 +74,8 @@ function App() {
   useEffect(() => {
     intervalRef.current = window.setInterval(() => {
       // Pause FFT generation when wizard is open for better performance
-      if (!selectedTask || selectedTask.status === 'paused' || isWizardOpen) return;
+      if (!selectedTask || selectedTask.status === "paused" || isWizardOpen)
+        return;
 
       const generator = generatorsRef.current.get(selectedTask.id);
       if (generator) {
@@ -90,7 +91,7 @@ function App() {
           lastFpsUpdateRef.current = now;
         }
       }
-    }, 1000 / 30); // 30 FPS
+    }, 1000 / 60); // 30 FPS
 
     return () => {
       if (intervalRef.current !== null) {
@@ -107,7 +108,7 @@ function App() {
           let updatedTask = updateTaskUptime(task);
 
           // Update TX progress
-          if (task.type === 'tx' && task.status === 'transmitting') {
+          if (task.type === "tx" && task.status === "transmitting") {
             updatedTask = updateTxProgress(updatedTask, 1); // 1 second
           }
 
@@ -162,7 +163,9 @@ function App() {
     // If this was the selected task, select another
     if (taskId === selectedTaskId) {
       const remainingTasks = tasks.filter((t) => t.id !== taskId);
-      setSelectedTaskId(remainingTasks.length > 0 ? remainingTasks[0].id : null);
+      setSelectedTaskId(
+        remainingTasks.length > 0 ? remainingTasks[0].id : null
+      );
     }
   };
 
@@ -181,13 +184,13 @@ function App() {
   return (
     <div
       style={{
-        minHeight: '100vh',
-        display: 'flex',
-        background: '#0a0a0f',
-        color: 'white',
+        minHeight: "100vh",
+        display: "flex",
+        background: "#0a0a0f",
+        color: "white",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        position: 'relative',
+        position: "relative",
       }}
     >
       {/* Mobile overlay */}
@@ -195,14 +198,14 @@ function App() {
         <div
           onClick={() => setIsSidebarOpen(false)}
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
+            background: "rgba(0, 0, 0, 0.5)",
             zIndex: 999,
-            display: window.innerWidth < 1024 ? 'block' : 'none',
+            display: window.innerWidth < 1024 ? "block" : "none",
           }}
         />
       )}
@@ -210,12 +213,12 @@ function App() {
       {/* Task Sidebar */}
       <div
         style={{
-          position: window.innerWidth < 1024 ? 'fixed' : 'relative',
+          position: window.innerWidth < 1024 ? "fixed" : "relative",
           left: window.innerWidth < 1024 ? (isSidebarOpen ? 0 : -280) : 0,
           top: 0,
-          height: '100vh',
+          height: "100vh",
           zIndex: 1000,
-          transition: 'left 0.3s ease',
+          transition: "left 0.3s ease",
         }}
       >
         <TaskSidebar
@@ -232,37 +235,58 @@ function App() {
       </div>
 
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <div
           style={{
-            padding: '16px 24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'rgba(10, 10, 15, 0.8)',
-            backdropFilter: 'blur(12px)',
+            padding: "16px 24px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: "rgba(10, 10, 15, 0.8)",
+            backdropFilter: "blur(12px)",
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {/* Hamburger menu for mobile */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               style={{
-                display: window.innerWidth < 1024 ? 'flex' : 'none',
-                flexDirection: 'column',
+                display: window.innerWidth < 1024 ? "flex" : "none",
+                flexDirection: "column",
                 gap: 4,
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
                 padding: 8,
               }}
               aria-label="Toggle sidebar"
             >
-              <div style={{ width: 24, height: 2, background: 'white', borderRadius: 2 }} />
-              <div style={{ width: 24, height: 2, background: 'white', borderRadius: 2 }} />
-              <div style={{ width: 24, height: 2, background: 'white', borderRadius: 2 }} />
+              <div
+                style={{
+                  width: 24,
+                  height: 2,
+                  background: "white",
+                  borderRadius: 2,
+                }}
+              />
+              <div
+                style={{
+                  width: 24,
+                  height: 2,
+                  background: "white",
+                  borderRadius: 2,
+                }}
+              />
+              <div
+                style={{
+                  width: 24,
+                  height: 2,
+                  background: "white",
+                  borderRadius: 2,
+                }}
+              />
             </button>
 
             <div>
@@ -270,20 +294,27 @@ function App() {
                 SDR Cockpit
               </h1>
               {selectedTask && (
-                <p style={{ margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: 13 }}>
-                  {selectedTask.name} - {formatFrequency(selectedTask.frequency)}
+                <p
+                  style={{
+                    margin: "4px 0 0 0",
+                    color: "rgba(255, 255, 255, 0.6)",
+                    fontSize: 13,
+                  }}
+                >
+                  {selectedTask.name} -{" "}
+                  {formatFrequency(selectedTask.frequency)}
                 </p>
               )}
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
                 borderRadius: 6,
-                padding: '8px 16px',
+                padding: "8px 16px",
                 fontSize: 14,
               }}
             >
@@ -292,18 +323,20 @@ function App() {
 
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: 6,
-                padding: '8px 16px',
+                padding: "8px 16px",
                 background:
-                  selectedTask?.status === 'live' || selectedTask?.status === 'transmitting'
-                    ? 'rgba(76, 175, 80, 0.1)'
-                    : 'rgba(158, 158, 158, 0.1)',
+                  selectedTask?.status === "live" ||
+                  selectedTask?.status === "transmitting"
+                    ? "rgba(76, 175, 80, 0.1)"
+                    : "rgba(158, 158, 158, 0.1)",
                 border:
-                  selectedTask?.status === 'live' || selectedTask?.status === 'transmitting'
-                    ? '1px solid rgba(76, 175, 80, 0.3)'
-                    : '1px solid rgba(158, 158, 158, 0.3)',
+                  selectedTask?.status === "live" ||
+                  selectedTask?.status === "transmitting"
+                    ? "1px solid rgba(76, 175, 80, 0.3)"
+                    : "1px solid rgba(158, 158, 158, 0.3)",
                 borderRadius: 6,
                 fontSize: 14,
               }}
@@ -312,22 +345,24 @@ function App() {
                 style={{
                   width: 8,
                   height: 8,
-                  borderRadius: '50%',
+                  borderRadius: "50%",
                   background:
-                    selectedTask?.status === 'live' || selectedTask?.status === 'transmitting'
-                      ? '#4caf50'
-                      : '#9e9e9e',
+                    selectedTask?.status === "live" ||
+                    selectedTask?.status === "transmitting"
+                      ? "#4caf50"
+                      : "#9e9e9e",
                   animation:
-                    selectedTask?.status === 'live' || selectedTask?.status === 'transmitting'
-                      ? 'pulse 2s infinite'
-                      : 'none',
+                    selectedTask?.status === "live" ||
+                    selectedTask?.status === "transmitting"
+                      ? "pulse 2s infinite"
+                      : "none",
                 }}
               />
               <span>
-                {selectedTask?.status === 'live' && 'Live'}
-                {selectedTask?.status === 'transmitting' && 'Transmitting'}
-                {selectedTask?.status === 'paused' && 'Paused'}
-                {!selectedTask && 'No Task Selected'}
+                {selectedTask?.status === "live" && "Live"}
+                {selectedTask?.status === "transmitting" && "Transmitting"}
+                {selectedTask?.status === "paused" && "Paused"}
+                {!selectedTask && "No Task Selected"}
               </span>
             </div>
           </div>
@@ -337,19 +372,19 @@ function App() {
         <div
           style={{
             flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             padding: 20,
-            overflow: 'auto',
+            overflow: "auto",
           }}
         >
           {selectedTask ? (
             <div
               style={{
-                width: '100%',
+                width: "100%",
                 maxWidth: 1400,
-                animation: 'slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
               <SpectrumView
@@ -361,8 +396,8 @@ function App() {
           ) : (
             <div
               style={{
-                textAlign: 'center',
-                color: 'rgba(255, 255, 255, 0.6)',
+                textAlign: "center",
+                color: "rgba(255, 255, 255, 0.6)",
                 padding: 60,
               }}
             >
@@ -376,21 +411,22 @@ function App() {
               <button
                 onClick={() => setIsWizardOpen(true)}
                 style={{
-                  padding: '12px 24px',
+                  padding: "12px 24px",
                   fontSize: 14,
                   fontWeight: 600,
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: "rgba(255, 255, 255, 0.1)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
                   borderRadius: 8,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  color: "white",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.background =
+                    "rgba(255, 255, 255, 0.15)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
                 }}
               >
                 + Create New Task
