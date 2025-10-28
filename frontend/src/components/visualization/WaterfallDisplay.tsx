@@ -36,6 +36,11 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   );
   const lastMouseYRef = useRef<number>(0);
 
+  // Margins to match FFT display for horizontal alignment
+  const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+
   // Initialize waterfall image buffer
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -44,8 +49,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Create image buffer (width x height)
-    waterfallDataRef.current = ctx.createImageData(width, height);
+    // Create image buffer for plot area only
+    waterfallDataRef.current = ctx.createImageData(plotWidth, plotHeight);
 
     // Initialize to black
     const data = waterfallDataRef.current.data;
@@ -55,7 +60,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       data[i + 2] = 0; // B
       data[i + 3] = 255; // A
     }
-  }, [width, height]);
+  }, [plotWidth, plotHeight]);
 
   // Build color lookup table when colormap changes
   useEffect(() => {
@@ -76,7 +81,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       window.removeEventListener("fft-data", handleFFTData);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minDb, maxDb, frequencyRange, width]);
+  }, [minDb, maxDb, frequencyRange, plotWidth]);
 
   /**
    * Add a new FFT row to the waterfall
@@ -89,7 +94,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const data = imageData.data;
 
     // Shift existing data down by one row
-    shiftImageDown(data, width, height);
+    shiftImageDown(data, plotWidth, plotHeight);
 
     // Calculate which FFT bins to display based on frequency range
     const { startFreq, endFreq } = frequencyRange;
@@ -104,9 +109,9 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       Math.ceil((endFreq - centerFreq + fftData.sampleRate / 2) / binWidth)
     );
 
-    // Map FFT bins to display pixels
-    for (let x = 0; x < width; x++) {
-      const binIndex = Math.floor(startBin + (x / width) * (endBin - startBin));
+    // Map FFT bins to display pixels (plot area only)
+    for (let x = 0; x < plotWidth; x++) {
+      const binIndex = Math.floor(startBin + (x / plotWidth) * (endBin - startBin));
       if (binIndex >= 0 && binIndex < fftData.bins.length) {
         const dbValue = fftData.bins[binIndex];
         const colorIdx = dbToColorIndex(dbValue, minDb, maxDb);
@@ -169,7 +174,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.putImageData(waterfallDataRef.current, 0, 0);
+    // Clear canvas
+    ctx.fillStyle = "rgba(10, 10, 15, 0.95)";
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw waterfall data in plot area
+    ctx.putImageData(waterfallDataRef.current, margin.left, margin.top);
   };
 
   /**
@@ -209,7 +219,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const deltaX = e.clientX - dragStart.x;
     const { startFreq, endFreq } = frequencyRange;
     const span = endFreq - startFreq;
-    const freqShift = -(deltaX / width) * span;
+    const freqShift = -(deltaX / plotWidth) * span;
 
     onFrequencyRangeChange({
       startFreq: startFreq + freqShift,
@@ -250,8 +260,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         style={{
           position: "absolute",
           bottom: 0,
-          left: 0,
-          right: 0,
+          left: margin.left,
+          right: margin.right,
           height: 20,
           background: "rgba(0, 0, 0, 0.7)",
           color: "white",
