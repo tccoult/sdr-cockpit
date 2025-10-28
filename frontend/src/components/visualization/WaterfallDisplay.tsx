@@ -3,9 +3,9 @@
  * Optimized for 30+ FPS real-time rendering
  */
 
-import { useEffect, useRef, useState, memo } from 'react';
-import { FFTData, FrequencyRange } from '../../types/sdr';
-import { ColorMap, buildColorLUT, dbToColorIndex } from '../../utils/colorMaps';
+import { memo, useEffect, useRef, useState } from "react";
+import { FFTData, FrequencyRange } from "../../types/sdr";
+import { ColorMap, buildColorLUT, dbToColorIndex } from "../../utils/colorMaps";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -31,7 +31,9 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   const colorLUTRef = useRef<Uint8ClampedArray | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+    null
+  );
   const lastMouseYRef = useRef<number>(0);
 
   // Initialize waterfall image buffer
@@ -39,7 +41,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     // Create image buffer (width x height)
@@ -48,7 +50,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     // Initialize to black
     const data = waterfallDataRef.current.data;
     for (let i = 0; i < data.length; i += 4) {
-      data[i] = 0;     // R
+      data[i] = 0; // R
       data[i + 1] = 0; // G
       data[i + 2] = 0; // B
       data[i + 3] = 255; // A
@@ -69,9 +71,9 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       addFFTRow(customEvent.detail);
     };
 
-    window.addEventListener('fft-data', handleFFTData);
+    window.addEventListener("fft-data", handleFFTData);
     return () => {
-      window.removeEventListener('fft-data', handleFFTData);
+      window.removeEventListener("fft-data", handleFFTData);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minDb, maxDb, frequencyRange, width]);
@@ -93,8 +95,14 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const { startFreq, endFreq } = frequencyRange;
     const binWidth = fftData.sampleRate / fftData.bins.length;
     const centerFreq = fftData.centerFreq;
-    const startBin = Math.max(0, Math.floor((startFreq - centerFreq + fftData.sampleRate / 2) / binWidth));
-    const endBin = Math.min(fftData.bins.length, Math.ceil((endFreq - centerFreq + fftData.sampleRate / 2) / binWidth));
+    const startBin = Math.max(
+      0,
+      Math.floor((startFreq - centerFreq + fftData.sampleRate / 2) / binWidth)
+    );
+    const endBin = Math.min(
+      fftData.bins.length,
+      Math.ceil((endFreq - centerFreq + fftData.sampleRate / 2) / binWidth)
+    );
 
     // Map FFT bins to display pixels
     for (let x = 0; x < width; x++) {
@@ -124,7 +132,11 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   /**
    * Shift image data down by one row
    */
-  const shiftImageDown = (data: Uint8ClampedArray, width: number, height: number) => {
+  const shiftImageDown = (
+    data: Uint8ClampedArray,
+    width: number,
+    height: number
+  ) => {
     const rowBytes = width * 4;
 
     // Copy rows downward (last row discarded)
@@ -154,7 +166,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!canvasRef.current || !waterfallDataRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.putImageData(waterfallDataRef.current, 0, 0);
@@ -216,7 +228,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   };
 
   return (
-    <div style={{ position: 'relative', width, height, overflow: 'hidden' }}>
+    <div style={{ position: "relative", width, height, overflow: "hidden" }}>
       <canvas
         ref={canvasRef}
         width={width}
@@ -227,32 +239,36 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         style={{
-          display: 'block',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          imageRendering: 'pixelated',
+          display: "block",
+          cursor: isDragging ? "grabbing" : "grab",
+          imageRendering: "pixelated",
         }}
       />
 
       {/* Frequency scale overlay */}
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
           height: 20,
-          background: 'rgba(0, 0, 0, 0.7)',
-          color: 'white',
-          fontSize: 10,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '0 5px',
-          pointerEvents: 'none',
+          background: "rgba(0, 0, 0, 0.7)",
+          color: "white",
+          fontSize: 12,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 5px",
+          pointerEvents: "none",
         }}
       >
         <span>{formatFrequency(frequencyRange.startFreq)}</span>
-        <span>{formatFrequency((frequencyRange.startFreq + frequencyRange.endFreq) / 2)}</span>
+        <span>
+          {formatFrequency(
+            (frequencyRange.startFreq + frequencyRange.endFreq) / 2
+          )}
+        </span>
         <span>{formatFrequency(frequencyRange.endFreq)}</span>
       </div>
     </div>
