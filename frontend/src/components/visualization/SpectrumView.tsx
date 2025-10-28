@@ -3,8 +3,8 @@
  * Provides synchronized zoom, pan, and controls
  */
 
-import { memo, useCallback, useEffect, useState } from "react";
-import { FrequencyRange } from "../../types/sdr";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { FFTDisplay } from "./FFTDisplay";
 import { WaterfallDisplay } from "./WaterfallDisplay";
@@ -33,13 +33,57 @@ export const SpectrumView = memo(function SpectrumView({
     endFreq: centerFreq + sampleRate / 2,
   });
 
-  // Update frequency range when center freq or sample rate changes
+  // Store current FFT data for auto-ranging
+  const currentFFTRef = useRef<FFTData | null>(null);
+
+  // Listen to FFT data events to track current data
   useEffect(() => {
+    const handleFFTData = (event: Event) => {
+      const customEvent = event as CustomEvent<FFTData>;
+      currentFFTRef.current = customEvent.detail;
+    };
+
+    window.addEventListener("fft-data", handleFFTData);
+    return () => window.removeEventListener("fft-data", handleFFTData);
+  }, []);
+
+  // Auto range function
+  const autoRange = useCallback(() => {
+    // Reset frequency range to full spectrum
     setFrequencyRange({
       startFreq: centerFreq - sampleRate / 2,
       endFreq: centerFreq + sampleRate / 2,
     });
+
+    // Auto range Y-axis based on current FFT data
+    const fftData = currentFFTRef.current;
+    if (fftData && fftData.bins.length > 0) {
+      let min = Infinity;
+      let max = -Infinity;
+
+      // Find min/max power values in FFT data
+      for (let i = 0; i < fftData.bins.length; i++) {
+        const value = fftData.bins[i];
+        if (isFinite(value)) {
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+      }
+
+      // Add padding (10% on each side)
+      if (isFinite(min) && isFinite(max) && max > min) {
+        const range = max - min;
+        const padding = range * 0.1;
+        setMinDb(Math.floor(min - padding));
+        setMaxDb(Math.ceil(max + padding));
+      }
+    }
   }, [centerFreq, sampleRate]);
+
+  // Auto range when task switches (centerFreq or sampleRate changes)
+  useEffect(() => {
+    autoRange();
+  }, [centerFreq, sampleRate, autoRange]);
 
   // Handle frequency range changes (from zoom/pan)
   const handleFrequencyRangeChange = useCallback((newRange: FrequencyRange) => {
@@ -125,6 +169,29 @@ export const SpectrumView = memo(function SpectrumView({
               }}
             />
           </div>
+          <button
+            onClick={autoRange}
+            style={{
+              padding: "6px 12px",
+              background: "rgba(102, 208, 255, 0.1)",
+              border: "1px solid rgba(102, 208, 255, 0.5)",
+              borderRadius: 4,
+              color: "#66d0ff",
+              fontSize: 12,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(102, 208, 255, 0.2)";
+              e.currentTarget.style.borderColor = "#66d0ff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(102, 208, 255, 0.1)";
+              e.currentTarget.style.borderColor = "rgba(102, 208, 255, 0.5)";
+            }}
+          >
+            Auto Range
+          </button>
         </div>
       </div>
 
