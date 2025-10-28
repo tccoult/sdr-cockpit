@@ -22,6 +22,8 @@ export const SpectrumView = memo(function SpectrumView({
   colorMap,
 }: SpectrumViewProps) {
   // Display settings
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200); // Default width
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
   const [fftHeight] = useState(250);
@@ -91,18 +93,29 @@ export const SpectrumView = memo(function SpectrumView({
   }, []);
 
   // Get container dimensions (responsive)
-  const containerWidth =
-    typeof window !== "undefined"
-      ? Math.min(window.innerWidth - 40, 1400)
-      : 1200;
+
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setContainerWidth(entries[0].contentRect.width);
+      }
+    });
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  const plotWidth = Math.max(containerWidth - 32, 0); // 32 is your padding (16*2)
 
   return (
     <div
+      ref={containerRef}
       style={{
         display: "flex",
         flexDirection: "column",
         gap: 0,
-        width: containerWidth,
+        width: "100%",
         background: "rgba(10, 10, 15, 0.6)",
         borderRadius: 8,
         padding: 16,
@@ -197,7 +210,7 @@ export const SpectrumView = memo(function SpectrumView({
       {/* FFT Display */}
       <div style={{ marginBottom: 8 }}>
         <FFTDisplay
-          width={containerWidth - 32}
+          width={plotWidth}
           height={fftHeight}
           minDb={minDb}
           maxDb={maxDb}
@@ -209,7 +222,7 @@ export const SpectrumView = memo(function SpectrumView({
       {/* Waterfall Display */}
       <div>
         <WaterfallDisplay
-          width={containerWidth - 32}
+          width={plotWidth}
           height={waterfallHeight}
           colorMap={colorMap}
           minDb={minDb}
@@ -231,8 +244,8 @@ export const SpectrumView = memo(function SpectrumView({
           fontSize: 12,
         }}
       >
-        <strong>Controls:</strong> Mouse wheel to zoom | Click and drag to pan
-        frequency | Drag selection on FFT to zoom to range
+        <strong>Controls:</strong> Mouse wheel to zoom | Click and drag to pan |{" "}
+        <strong>Shift+Drag</strong> on FFT to zoom to range
       </div>
     </div>
   );
