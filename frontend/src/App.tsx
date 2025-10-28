@@ -25,6 +25,7 @@ function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(true);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // FPS tracking
   const [fps, setFps] = useState(0);
@@ -58,10 +59,12 @@ function App() {
     if (!selectedTask) return;
 
     if (!generatorsRef.current.has(selectedTask.id)) {
+      // Use frequency as seed to make each task's data visually distinct
       const generator = new MockFFTGenerator(
         selectedTask.frequency,
         selectedTask.sampleRate,
-        selectedTask.fftSize || 2048
+        selectedTask.fftSize || 2048,
+        selectedTask.frequency // Use frequency as seed for unique signals per task
       );
       generatorsRef.current.set(selectedTask.id, generator);
     }
@@ -183,20 +186,54 @@ function App() {
         color: 'white',
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        position: 'relative',
       }}
     >
+      {/* Mobile overlay */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            display: window.innerWidth < 1024 ? 'block' : 'none',
+          }}
+        />
+      )}
+
       {/* Task Sidebar */}
-      <TaskSidebar
-        tasks={tasks}
-        selectedTaskId={selectedTaskId}
-        isDiscovering={isDiscovering}
-        onSelectTask={handleSelectTask}
-        onCreateTask={() => setIsWizardOpen(true)}
-        onPauseTask={handlePauseTask}
-        onStopTask={handleStopTask}
-        onRecordTask={handleRecordTask}
-        onStopRecording={handleStopRecording}
-      />
+      <div
+        style={{
+          position: window.innerWidth < 1024 ? 'fixed' : 'relative',
+          left: window.innerWidth < 1024 ? (isSidebarOpen ? 0 : -280) : 0,
+          top: 0,
+          height: '100vh',
+          zIndex: 1000,
+          transition: 'left 0.3s ease',
+        }}
+      >
+        <TaskSidebar
+          tasks={tasks}
+          selectedTaskId={selectedTaskId}
+          isDiscovering={isDiscovering}
+          onSelectTask={(taskId) => {
+            handleSelectTask(taskId);
+            if (window.innerWidth < 1024) {
+              setIsSidebarOpen(false);
+            }
+          }}
+          onCreateTask={() => setIsWizardOpen(true)}
+          onPauseTask={handlePauseTask}
+          onStopTask={handleStopTask}
+          onRecordTask={handleRecordTask}
+          onStopRecording={handleStopRecording}
+        />
+      </div>
 
       {/* Main content area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -212,15 +249,36 @@ function App() {
             backdropFilter: 'blur(12px)',
           }}
         >
-          <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>
-              SDR Cockpit
-            </h1>
-            {selectedTask && (
-              <p style={{ margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: 13 }}>
-                {selectedTask.name} - {formatFrequency(selectedTask.frequency)}
-              </p>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* Hamburger menu for mobile */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              style={{
+                display: window.innerWidth < 1024 ? 'flex' : 'none',
+                flexDirection: 'column',
+                gap: 4,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 8,
+              }}
+              aria-label="Toggle sidebar"
+            >
+              <div style={{ width: 24, height: 2, background: 'white', borderRadius: 2 }} />
+              <div style={{ width: 24, height: 2, background: 'white', borderRadius: 2 }} />
+              <div style={{ width: 24, height: 2, background: 'white', borderRadius: 2 }} />
+            </button>
+
+            <div>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>
+                SDR Cockpit
+              </h1>
+              {selectedTask && (
+                <p style={{ margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: 13 }}>
+                  {selectedTask.name} - {formatFrequency(selectedTask.frequency)}
+                </p>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

@@ -92,11 +92,14 @@ export function TaskSidebar({
             border: '1px solid rgba(0, 229, 255, 0.4)',
             color: '#00e5ff',
             fontSize: 20,
+            fontWeight: 400,
+            lineHeight: 1,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.2s ease',
+            padding: 0,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
