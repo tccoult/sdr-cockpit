@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect, memo } from 'react';
-import { FFTDisplay } from './FFTDisplay';
+import { CanvasFFTDisplay } from './CanvasFFTDisplay';
 import { WaterfallDisplay } from './WaterfallDisplay';
 import { FrequencyRange } from '../../types/sdr';
 import { ColorMap } from '../../utils/colorMaps';
@@ -120,7 +120,7 @@ export const SpectrumView = memo(function SpectrumView({
 
       {/* FFT Display */}
       <div style={{ marginBottom: 8 }}>
-        <FFTDisplay
+        <CanvasFFTDisplay
           width={containerWidth - 32}
           height={fftHeight}
           minDb={minDb}
