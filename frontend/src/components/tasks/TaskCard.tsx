@@ -1,5 +1,5 @@
 /**
- * TaskCard component - displays a single SDR task with controls
+ * TaskCard component - displays a single SDR task with accordion expand/collapse
  */
 
 import { Task } from '../../types/sdr';
@@ -93,60 +93,77 @@ export function TaskCard({
       onClick={() => onSelect(task.id)}
       style={{
         background: isSelected
-          ? 'rgba(30, 30, 45, 0.9)'
-          : 'rgba(20, 20, 30, 0.6)',
-        border: `1px solid ${isSelected ? accentColor : 'rgba(255, 255, 255, 0.1)'}`,
-        borderLeft: `4px solid ${accentColor}`,
+          ? 'rgba(30, 30, 45, 0.95)'
+          : 'rgba(20, 20, 30, 0.4)',
+        borderLeft: `${isSelected ? 6 : 3}px solid ${accentColor}`,
+        borderTop: isSelected ? `1px solid ${accentColor}40` : '1px solid rgba(255, 255, 255, 0.05)',
+        borderRight: isSelected ? `1px solid ${accentColor}40` : '1px solid rgba(255, 255, 255, 0.05)',
+        borderBottom: isSelected ? `1px solid ${accentColor}40` : '1px solid rgba(255, 255, 255, 0.05)',
         borderRadius: 8,
-        padding: 12,
+        padding: isSelected ? 12 : 10,
         marginBottom: 8,
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+        transition: 'all 0.3s ease',
         boxShadow: isSelected
-          ? `0 4px 16px rgba(0, 0, 0, 0.4), 0 0 20px ${accentColor}20`
-          : '0 2px 8px rgba(0, 0, 0, 0.2)',
+          ? `0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px ${accentColor}40, inset 0 0 40px ${accentColor}08`
+          : '0 2px 4px rgba(0, 0, 0, 0.2)',
+        opacity: isSelected ? 1 : 0.7,
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = 'rgba(25, 25, 38, 0.8)';
+          e.currentTarget.style.background = 'rgba(25, 25, 38, 0.6)';
+          e.currentTarget.style.opacity = '0.85';
         }
       }}
       onMouseLeave={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = 'rgba(20, 20, 30, 0.6)';
+          e.currentTarget.style.background = 'rgba(20, 20, 30, 0.4)';
+          e.currentTarget.style.opacity = '0.7';
         }
       }}
     >
-      {/* Header row */}
+      {/* Collapsed View - Always visible */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 8,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>{getStatusIcon()}</span>
-          <span
-            style={{
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            {task.name}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>{getStatusIcon()}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                color: '#ffffff',
+                fontSize: 14,
+                fontWeight: isSelected ? 600 : 500,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {task.name}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: isSelected ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.5)',
+                marginTop: 2,
+              }}
+            >
+              {formatFrequency(task.frequency)}
+            </div>
+          </div>
         </div>
 
         {statusBadge && (
           <span
             style={{
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: 700,
-              padding: '4px 8px',
-              borderRadius: 4,
+              padding: '3px 6px',
+              borderRadius: 3,
               background: statusColor,
               color: 'white',
               letterSpacing: '0.5px',
@@ -154,6 +171,8 @@ export function TaskCard({
                 task.status === 'live' || task.recording?.isRecording
                   ? 'pulse 2s infinite'
                   : 'none',
+              flexShrink: 0,
+              marginLeft: 8,
             }}
           >
             {statusBadge}
@@ -161,196 +180,162 @@ export function TaskCard({
         )}
       </div>
 
-      {/* Frequency and sample rate */}
-      <div
-        style={{
-          fontSize: 13,
-          color: 'rgba(255, 255, 255, 0.8)',
-          marginBottom: 6,
-        }}
-      >
-        {formatFrequency(task.frequency)} • {formatSampleRate(task.sampleRate)}
-      </div>
-
-      {/* Owner and uptime */}
-      <div
-        style={{
-          fontSize: 12,
-          color: 'rgba(255, 255, 255, 0.6)',
-          marginBottom: isSelected ? 10 : 0,
-        }}
-      >
-        {task.ownerName} • {formatDuration(task.uptime)}
-        {task.fps && ` • ${task.fps} FPS`}
-      </div>
-
-      {/* TX Progress bar */}
-      {task.playback && (
-        <div style={{ marginTop: 8, marginBottom: 8 }}>
-          <div
-            style={{
-              width: '100%',
-              height: 4,
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: 2,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: `${task.playback.progress * 100}%`,
-                height: '100%',
-                background: accentColor,
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: 'rgba(255, 255, 255, 0.5)',
-              marginTop: 4,
-            }}
-          >
-            {task.playback.filename} • {Math.round(task.playback.progress * 100)}%
-          </div>
-        </div>
-      )}
-
-      {/* Recording info */}
-      {task.recording?.isRecording && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: 6,
-            background: 'rgba(244, 67, 54, 0.1)',
-            border: '1px solid rgba(244, 67, 54, 0.3)',
-            borderRadius: 4,
-            fontSize: 11,
-            color: 'rgba(255, 255, 255, 0.8)',
-          }}
-        >
-          Recording: {task.recording.filename} (
-          {formatFileSize(task.recording.fileSize)})
-        </div>
-      )}
-
-      {/* Controls (only show when selected) */}
+      {/* Expanded View - Only visible when selected */}
       {isSelected && (
         <div
           style={{
-            display: 'flex',
-            gap: 6,
-            marginTop: 10,
-            paddingTop: 10,
+            marginTop: 12,
+            paddingTop: 12,
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            animation: 'expandIn 0.3s ease',
           }}
-          onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
         >
-          {canControl && task.type === 'rx' && (
-            <>
-              <button
-                onClick={() => onPause?.(task.id)}
+          {/* Details */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '8px 12px',
+              marginBottom: 12,
+              fontSize: 12,
+            }}
+          >
+            <div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 2 }}>
+                Sample Rate
+              </div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                {formatSampleRate(task.sampleRate)}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 2 }}>
+                Owner
+              </div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                {task.ownerName}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 2 }}>
+                Uptime
+              </div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                {formatDuration(task.uptime)}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 2 }}>
+                FPS
+              </div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                {task.fps || 0}
+              </div>
+            </div>
+          </div>
+
+          {/* TX Progress bar */}
+          {task.playback && (
+            <div style={{ marginBottom: 12 }}>
+              <div
                 style={{
-                  flex: 1,
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  background: 'rgba(255, 193, 7, 0.2)',
-                  border: '1px solid rgba(255, 193, 7, 0.4)',
-                  borderRadius: 4,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 193, 7, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
+                  width: '100%',
+                  height: 4,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  marginBottom: 6,
                 }}
               >
-                {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-              </button>
-
-              <button
-                onClick={() => onStop?.(task.id)}
-                style={{
-                  flex: 1,
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  background: 'rgba(244, 67, 54, 0.2)',
-                  border: '1px solid rgba(244, 67, 54, 0.4)',
-                  borderRadius: 4,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
-                }}
-              >
-                ⏹ Stop
-              </button>
-
-              <button
-                onClick={() => onSettings?.(task.id)}
-                style={{
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  background: 'rgba(0, 229, 255, 0.2)',
-                  border: '1px solid rgba(0, 229, 255, 0.4)',
-                  borderRadius: 4,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
-                }}
-              >
-                ⚙
-              </button>
-
-              {task.recording?.isRecording ? (
-                <button
-                  onClick={() => onStopRecording?.(task.id)}
+                <div
                   style={{
-                    padding: '6px 10px',
+                    width: `${task.playback.progress * 100}%`,
+                    height: '100%',
+                    background: accentColor,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'rgba(255, 255, 255, 0.6)',
+                }}
+              >
+                {task.playback.filename} • {Math.round(task.playback.progress * 100)}%
+              </div>
+            </div>
+          )}
+
+          {/* Recording info */}
+          {task.recording?.isRecording && (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: 8,
+                background: 'rgba(244, 67, 54, 0.1)',
+                border: '1px solid rgba(244, 67, 54, 0.3)',
+                borderRadius: 4,
+                fontSize: 11,
+                color: 'rgba(255, 255, 255, 0.9)',
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                Recording: {task.recording.filename}
+              </div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                {formatFileSize(task.recording.fileSize)} • {formatDuration(task.recording.duration)}
+              </div>
+            </div>
+          )}
+
+          {/* Controls */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 6,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {canControl && task.type === 'rx' && (
+              <>
+                <button
+                  onClick={() => onPause?.(task.id)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
                     fontSize: 12,
-                    background: 'rgba(244, 67, 54, 0.3)',
-                    border: '1px solid rgba(244, 67, 54, 0.5)',
-                    borderRadius: 4,
+                    background: 'rgba(255, 193, 7, 0.2)',
+                    border: '1px solid rgba(255, 193, 7, 0.4)',
+                    borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.4)';
+                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.3)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
                   }}
                 >
-                  ⏹ Stop Rec
+                  {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
                 </button>
-              ) : (
+
                 <button
-                  onClick={() => onRecord?.(task.id)}
+                  onClick={() => onStop?.(task.id)}
                   style={{
-                    padding: '6px 10px',
+                    flex: 1,
+                    padding: '8px 10px',
                     fontSize: 12,
                     background: 'rgba(244, 67, 54, 0.2)',
                     border: '1px solid rgba(244, 67, 54, 0.4)',
-                    borderRadius: 4,
+                    borderRadius: 6,
                     color: 'white',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    fontWeight: 500,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
@@ -359,102 +344,190 @@ export function TaskCard({
                     e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
                   }}
                 >
-                  🎙️ Record
+                  ⏹ Stop
                 </button>
-              )}
-            </>
-          )}
 
-          {canControl && task.type === 'tx' && (
-            <>
-              <button
-                onClick={() => onPause?.(task.id)}
-                style={{
-                  flex: 1,
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  background: 'rgba(255, 193, 7, 0.2)',
-                  border: '1px solid rgba(255, 193, 7, 0.4)',
-                  borderRadius: 4,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 193, 7, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
-                }}
-              >
-                {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-              </button>
-
-              <button
-                onClick={() => onStop?.(task.id)}
-                style={{
-                  flex: 1,
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  background: 'rgba(244, 67, 54, 0.2)',
-                  border: '1px solid rgba(244, 67, 54, 0.4)',
-                  borderRadius: 4,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
-                }}
-              >
-                ⏹ Stop
-              </button>
-
-              {task.playback?.isLooping && (
-                <span
+                <button
+                  onClick={() => onSettings?.(task.id)}
                   style={{
-                    padding: '6px 10px',
+                    padding: '8px 12px',
                     fontSize: 12,
-                    background: 'rgba(124, 77, 255, 0.2)',
-                    border: '1px solid rgba(124, 77, 255, 0.4)',
-                    borderRadius: 4,
+                    background: 'rgba(0, 229, 255, 0.2)',
+                    border: '1px solid rgba(0, 229, 255, 0.4)',
+                    borderRadius: 6,
                     color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
                   }}
                 >
-                  🔁 Loop
-                </span>
-              )}
-            </>
-          )}
+                  ⚙
+                </button>
 
-          {!canControl && (
-            <div
-              style={{
-                flex: 1,
-                padding: '6px 10px',
-                fontSize: 12,
-                background: 'rgba(124, 77, 255, 0.2)',
-                border: '1px solid rgba(124, 77, 255, 0.4)',
-                borderRadius: 4,
-                color: 'white',
-                textAlign: 'center',
-              }}
-            >
-              👁️ View Only
-            </div>
-          )}
+                {task.recording?.isRecording ? (
+                  <button
+                    onClick={() => onStopRecording?.(task.id)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      background: 'rgba(244, 67, 54, 0.3)',
+                      border: '1px solid rgba(244, 67, 54, 0.5)',
+                      borderRadius: 6,
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                    }}
+                  >
+                    ⏹ Stop Rec
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onRecord?.(task.id)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      background: 'rgba(244, 67, 54, 0.2)',
+                      border: '1px solid rgba(244, 67, 54, 0.4)',
+                      borderRadius: 6,
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
+                    }}
+                  >
+                    🎙️ Record
+                  </button>
+                )}
+              </>
+            )}
+
+            {canControl && task.type === 'tx' && (
+              <>
+                <button
+                  onClick={() => onPause?.(task.id)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    fontSize: 12,
+                    background: 'rgba(255, 193, 7, 0.2)',
+                    border: '1px solid rgba(255, 193, 7, 0.4)',
+                    borderRadius: 6,
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
+                  }}
+                >
+                  {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
+                </button>
+
+                <button
+                  onClick={() => onStop?.(task.id)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    fontSize: 12,
+                    background: 'rgba(244, 67, 54, 0.2)',
+                    border: '1px solid rgba(244, 67, 54, 0.4)',
+                    borderRadius: 6,
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
+                  }}
+                >
+                  ⏹ Stop
+                </button>
+
+                {task.playback?.isLooping && (
+                  <span
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      background: 'rgba(124, 77, 255, 0.2)',
+                      border: '1px solid rgba(124, 77, 255, 0.4)',
+                      borderRadius: 6,
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontWeight: 500,
+                    }}
+                  >
+                    🔁 Loop
+                  </span>
+                )}
+              </>
+            )}
+
+            {!canControl && (
+              <div
+                style={{
+                  flex: 1,
+                  padding: '8px 10px',
+                  fontSize: 12,
+                  background: 'rgba(124, 77, 255, 0.2)',
+                  border: '1px solid rgba(124, 77, 255, 0.4)',
+                  borderRadius: 6,
+                  color: 'white',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                }}
+              >
+                👁️ View Only
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Pulse animation */}
+      {/* Animations */}
       <style>
         {`
           @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
+          }
+
+          @keyframes expandIn {
+            from {
+              opacity: 0;
+              max-height: 0;
+            }
+            to {
+              opacity: 1;
+              max-height: 500px;
+            }
           }
         `}
       </style>

@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { Task } from '../../types/sdr';
 import { TaskCard } from './TaskCard';
 
@@ -41,10 +42,8 @@ export function TaskSidebar({
     return task.type === filter;
   });
 
-  // Sort tasks: selected first, then by creation time
+  // Sort tasks by creation time (newest first) - NO auto-sort by selection
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    if (a.id === selectedTaskId) return -1;
-    if (b.id === selectedTaskId) return 1;
     return b.createdAt - a.createdAt;
   });
 
@@ -91,9 +90,6 @@ export function TaskSidebar({
             background: 'rgba(0, 229, 255, 0.2)',
             border: '1px solid rgba(0, 229, 255, 0.4)',
             color: '#00e5ff',
-            fontSize: 20,
-            fontWeight: 400,
-            lineHeight: 1,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -111,7 +107,7 @@ export function TaskSidebar({
           }}
           title="Create new task"
         >
-          +
+          <Plus size={18} />
         </button>
       </div>
 
