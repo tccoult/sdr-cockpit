@@ -167,6 +167,14 @@ interface PlotConfig {
   fontSize?: number;
   fontFamily?: string;
 
+  // Legend (optional)
+  legend?: {
+    show?: boolean;  // default: false
+    position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+    background?: string;
+    textColor?: string;
+  };
+
   // Performance options
   highDPI?: boolean;  // default: true
   maxRenderRate?: number;  // max FPS, default: 60
@@ -229,6 +237,9 @@ interface Trace1DConfig {
   fillOpacity?: number;
   baseline?: number;  // y-value for area baseline (default: 0)
 
+  // Legend
+  label?: string;  // label shown in legend (if legend is enabled)
+
   // Visibility & ordering
   visible?: boolean;
   zIndex?: number;  // render order (higher = on top)
@@ -248,6 +259,9 @@ interface Trace2DConfig {
   // Rendering
   interpolation?: 'nearest' | 'bilinear';  // default: 'nearest'
   opacity?: number;
+
+  // Legend
+  label?: string;  // label shown in legend (if legend is enabled)
 
   // Visibility & ordering
   visible?: boolean;
@@ -1143,13 +1157,71 @@ function SpectrumView() {
 
 ---
 
-## Open Questions
+## Additional Features
 
-1. **Color Maps**: Which color maps are essential beyond plasma/viridis/turbo?
-2. **Marker/Annotation Support**: Should we add text annotations, regions, or axis markers?
-3. **Log Scale**: Priority for logarithmic axis support?
-4. **Export**: Should plots support export to PNG/SVG?
-5. **Legends**: Need automatic legend generation for multi-trace plots?
+### Legends (Optional)
+
+Legends can be enabled for multi-trace plots:
+
+```typescript
+const plot = usePlot({
+  axes: { /* ... */ },
+  legend: {
+    show: false,  // default: false
+    position: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
+    background: 'rgba(0, 0, 0, 0.8)',
+    textColor: '#ffffff'
+  }
+});
+
+// Traces can have labels for legends
+plot.addTrace1D({
+  type: Trace1DType.Line,
+  color: '#00ff00',
+  lineWidth: 2,
+  label: 'Channel 1'  // shown in legend if enabled
+});
+
+plot.addTrace1D({
+  type: Trace1DType.Line,
+  color: '#0000ff',
+  lineWidth: 2,
+  label: 'Channel 2'
+});
+```
+
+### Color Maps
+
+Supported color maps for 2D traces:
+- `'plasma'` (default)
+- `'viridis'`
+- `'turbo'`
+- `'grayscale'`
+- `'jet'`
+- `'hot'`
+- `'cool'`
+
+Custom color maps can be created with gradient stops:
+```typescript
+plot.addTrace2D({
+  colorMap: {
+    stops: [
+      { position: 0.0, color: '#000000' },
+      { position: 0.5, color: '#ff0000' },
+      { position: 1.0, color: '#ffffff' }
+    ]
+  },
+  valueRange: { min: -100, max: 0 }
+});
+```
+
+### Future Considerations
+
+**Not planned for initial version:**
+- Markers/annotations (may add later if needed)
+- Log scale axes (not needed - users can provide log-scaled data like dB, and axes will display linearly)
+- Export to PNG/SVG (not a priority)
+- Advanced legend customization (basic version sufficient for now)
 
 ---
 
