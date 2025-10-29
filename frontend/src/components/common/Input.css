@@ -1,0 +1,21 @@
+/**
+ * Input styles and focus effects
+ */
+
+.input {
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}

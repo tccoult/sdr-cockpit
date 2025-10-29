@@ -6,6 +6,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
+import { formatFrequency } from "../../utils/formatters";
 
 interface FFTDisplayProps {
   width: number;
@@ -14,7 +15,6 @@ interface FFTDisplayProps {
   maxDb: number;
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
-  accentColor?: string;
 }
 
 interface CursorInfo {
@@ -38,7 +38,6 @@ export const FFTDisplay = memo(function FFTDisplay({
   maxDb,
   frequencyRange,
   onFrequencyRangeChange,
-  accentColor = "#66d0ff",
 }: FFTDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -144,34 +143,6 @@ export const FFTDisplay = memo(function FFTDisplay({
       return margin.top + plotHeight - normalized * plotHeight;
     },
     [minDb, maxDb, plotHeight, margin.top]
-  );
-
-  // const yToDb = useCallback(
-  //   (y: number): number => {
-  //     const normalized = (plotHeight - (y - margin.top)) / plotHeight;
-  //     return minDb + normalized * (maxDb - minDb);
-  //   },
-  //   [minDb, maxDb, plotHeight, margin.top]
-  // );
-
-  // Format frequency for display
-  const formatFrequency = useCallback(
-    (freq: number, short: boolean = false): string => {
-      if (Math.abs(freq) >= 1e9)
-        return short
-          ? `${(freq / 1e9).toFixed(2)}G`
-          : `${(freq / 1e9).toFixed(6)} GHz`;
-      if (Math.abs(freq) >= 1e6)
-        return short
-          ? `${(freq / 1e6).toFixed(1)}M`
-          : `${(freq / 1e6).toFixed(3)} MHz`;
-      if (Math.abs(freq) >= 1e3)
-        return short
-          ? `${(freq / 1e3).toFixed(1)}k`
-          : `${(freq / 1e3).toFixed(3)} kHz`;
-      return short ? `${freq.toFixed(0)}` : `${freq.toFixed(0)} Hz`;
-    },
-    []
   );
 
   // Calculate intelligent tick spacing
@@ -333,7 +304,6 @@ export const FFTDisplay = memo(function FFTDisplay({
     chartData,
     freqTicks,
     dbTicks,
-    accentColor,
     cursorInfo,
     zoomSelection,
     isSelecting,

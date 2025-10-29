@@ -3,6 +3,8 @@
  */
 
 import { useState } from 'react';
+import { Button } from '../common/Button';
+import { Input } from '../common/Input';
 import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr';
 
 type TaskMode = 'select' | 'rx' | 'tx';
@@ -184,21 +186,14 @@ export function TaskWizard({
               </button>
             </div>
 
-            <button
+            <Button
               onClick={handleClose}
-              style={{
-                marginTop: 20,
-                width: '100%',
-                padding: 12,
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 6,
-                color: 'rgba(255, 255, 255, 0.7)',
-                cursor: 'pointer',
-              }}
+              variant="subtle"
+              fullWidth
+              style={{ marginTop: 20 }}
             >
               Cancel
-            </button>
+            </Button>
           </>
         )}
 
@@ -213,20 +208,12 @@ export function TaskWizard({
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                   Task Name
                 </label>
-                <input
+                <Input
                   type="text"
                   value={rxName}
                   onChange={(e) => setRxName(e.target.value)}
                   placeholder="ISM Band Monitor"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'rgba(30, 30, 40, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'white',
-                    fontSize: 14,
-                  }}
+                  fullWidth
                 />
               </div>
 
@@ -235,20 +222,12 @@ export function TaskWizard({
                   Frequency
                 </label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input
+                  <Input
                     type="number"
                     value={rxFrequency}
                     onChange={(e) => setRxFrequency(e.target.value)}
                     step="0.001"
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    style={{ flex: 1 }}
                   />
                   <select
                     value={rxFreqUnit}
@@ -275,20 +254,12 @@ export function TaskWizard({
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                     Sample Rate (MSPS)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={rxSampleRate}
                     onChange={(e) => setRxSampleRate(e.target.value)}
                     step="0.1"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    fullWidth
                   />
                 </div>
 
@@ -296,20 +267,12 @@ export function TaskWizard({
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                     Bandwidth (MHz)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={rxBandwidth}
                     onChange={(e) => setRxBandwidth(e.target.value)}
                     step="0.1"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    fullWidth
                   />
                 </div>
               </div>
@@ -386,20 +349,12 @@ export function TaskWizard({
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                   Task Name
                 </label>
-                <input
+                <Input
                   type="text"
                   value={txName}
                   onChange={(e) => setTxName(e.target.value)}
                   placeholder="TX Playback"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'rgba(30, 30, 40, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'white',
-                    fontSize: 14,
-                  }}
+                  fullWidth
                 />
               </div>
 
@@ -461,21 +416,13 @@ export function TaskWizard({
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                       Override Frequency (MHz)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       value={txFrequency}
                       onChange={(e) => setTxFrequency(e.target.value)}
                       step="0.001"
                       placeholder="433.920"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: 'rgba(30, 30, 40, 0.8)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: 6,
-                        color: 'white',
-                        fontSize: 14,
-                      }}
+                      fullWidth
                     />
                   </div>
                 )}
@@ -533,26 +480,6 @@ export function TaskWizard({
           </>
         )}
       </div>
-
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-
-          @keyframes slideUp {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}
-      </style>
     </div>
   );
 }

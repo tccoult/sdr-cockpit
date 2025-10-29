@@ -2,7 +2,14 @@
  * TaskCard component - displays a single SDR task with accordion expand/collapse
  */
 
+import { Button } from '../common/Button';
 import { Task } from '../../types/sdr';
+import {
+  formatDuration,
+  formatFileSize,
+  formatFrequency,
+  formatSampleRate,
+} from '../../utils/formatters';
 
 interface TaskCardProps {
   task: Task;
@@ -49,33 +56,6 @@ export function TaskCard({
     if (task.status === 'transmitting') return 'TX';
     if (task.status === 'paused') return 'PAUSED';
     return null;
-  };
-
-  const formatDuration = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatFrequency = (freq: number): string => {
-    if (freq >= 1e9) return `${(freq / 1e9).toFixed(3)} GHz`;
-    if (freq >= 1e6) return `${(freq / 1e6).toFixed(3)} MHz`;
-    if (freq >= 1e3) return `${(freq / 1e3).toFixed(3)} kHz`;
-    return `${freq.toFixed(0)} Hz`;
-  };
-
-  const formatSampleRate = (rate: number): string => {
-    if (rate >= 1e6) return `${(rate / 1e6).toFixed(1)} MSPS`;
-    if (rate >= 1e3) return `${(rate / 1e3).toFixed(1)} kSPS`;
-    return `${rate.toFixed(0)} SPS`;
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
-    if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(2)} MB`;
-    if (bytes >= 1e3) return `${(bytes / 1e3).toFixed(2)} KB`;
-    return `${bytes} B`;
   };
 
   const statusColor = getStatusColor();
@@ -292,176 +272,71 @@ export function TaskCard({
           >
             {canControl && task.type === 'rx' && (
               <>
-                <button
+                <Button
                   onClick={() => onPause?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => onStop?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   ⏹ Stop
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => onSettings?.(task.id)}
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
                 >
                   ⚙
-                </button>
+                </Button>
 
                 {task.recording?.isRecording ? (
-                  <button
+                  <Button
                     onClick={() => onStopRecording?.(task.id)}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: 12,
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: 6,
-                      color: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }}
+                    variant="secondary"
+                    size="sm"
                   >
                     ⏹ Stop Rec
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     onClick={() => onRecord?.(task.id)}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: 12,
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: 6,
-                      color: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }}
+                    variant="secondary"
+                    size="sm"
                   >
                     🎙️ Record
-                  </button>
+                  </Button>
                 )}
               </>
             )}
 
             {canControl && task.type === 'tx' && (
               <>
-                <button
+                <Button
                   onClick={() => onPause?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => onStop?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   ⏹ Stop
-                </button>
+                </Button>
 
                 {task.playback?.isLooping && (
                   <span
@@ -503,27 +378,6 @@ export function TaskCard({
           </div>
         </div>
       )}
-
-      {/* Animations */}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-          }
-
-          @keyframes expandIn {
-            from {
-              opacity: 0;
-              max-height: 0;
-            }
-            to {
-              opacity: 1;
-              max-height: 500px;
-            }
-          }
-        `}
-      </style>
     </div>
   );
 }
