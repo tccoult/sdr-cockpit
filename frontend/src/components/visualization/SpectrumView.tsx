@@ -6,6 +6,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
+import { formatFrequency } from "../../utils/formatters";
 import { FFTDisplay } from "./FFTDisplay";
 import { WaterfallDisplay } from "./WaterfallDisplay";
 
@@ -13,7 +14,6 @@ interface SpectrumViewProps {
   centerFreq: number; // Center frequency in Hz
   sampleRate: number; // Sample rate in Hz
   colorMap: ColorMap; // Selected color map
-  onColorMapChange?: (colorMap: ColorMap) => void;
 }
 
 export const SpectrumView = memo(function SpectrumView({
@@ -250,10 +250,3 @@ export const SpectrumView = memo(function SpectrumView({
     </div>
   );
 });
-
-function formatFrequency(freq: number): string {
-  if (freq >= 1e9) return `${(freq / 1e9).toFixed(3)} GHz`;
-  if (freq >= 1e6) return `${(freq / 1e6).toFixed(3)} MHz`;
-  if (freq >= 1e3) return `${(freq / 1e3).toFixed(3)} kHz`;
-  return `${freq.toFixed(0)} Hz`;
-}

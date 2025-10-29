@@ -5,6 +5,7 @@ import { SpectrumView } from "./components/visualization/SpectrumView";
 import { useWindowSize } from "./hooks/useWindowSize";
 import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
+import { formatFrequency } from "./utils/formatters";
 import { MockFFTGenerator, dispatchFFTData } from "./utils/mockDataGenerator";
 
 import {
@@ -447,63 +448,8 @@ function App() {
         onCreateRxTask={handleCreateRxTask}
         onCreateTxTask={handleCreateTxTask}
       />
-
-      {/* Global styles */}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-          }
-
-          @keyframes slideDown {
-            from {
-              opacity: 0;
-              transform: translateY(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          body {
-            margin: 0;
-            overflow: hidden;
-          }
-
-          ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-          }
-
-          ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-          }
-
-          ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-          }
-
-          ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
-          }
-        `}
-      </style>
     </div>
   );
-}
-
-function formatFrequency(freq: number): string {
-  if (freq >= 1e9) return `${(freq / 1e9).toFixed(3)} GHz`;
-  if (freq >= 1e6) return `${(freq / 1e6).toFixed(3)} MHz`;
-  if (freq >= 1e3) return `${(freq / 1e3).toFixed(3)} kHz`;
-  return `${freq.toFixed(0)} Hz`;
 }
 
 export default App;

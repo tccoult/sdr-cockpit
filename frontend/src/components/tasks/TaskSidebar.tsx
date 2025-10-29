@@ -190,15 +190,6 @@ export function TaskSidebar({
             <div style={{ fontSize: 12, marginTop: 8, opacity: 0.7 }}>
               Scanning SDR system
             </div>
-
-            <style>
-              {`
-                @keyframes spin {
-                  from { transform: rotate(0deg); }
-                  to { transform: rotate(360deg); }
-                }
-              `}
-            </style>
           </div>
         ) : sortedTasks.length === 0 ? (
           // Empty state

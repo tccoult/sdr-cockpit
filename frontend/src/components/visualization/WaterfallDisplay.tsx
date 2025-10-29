@@ -7,6 +7,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap, buildColorLUT, dbToColorIndex } from "../../utils/colorMaps";
+import { formatFrequency } from "../../utils/formatters";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -311,13 +312,3 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     </div>
   );
 });
-
-/**
- * Format frequency for display
- */
-function formatFrequency(freq: number): string {
-  if (freq >= 1e9) return `${(freq / 1e9).toFixed(3)} GHz`;
-  if (freq >= 1e6) return `${(freq / 1e6).toFixed(3)} MHz`;
-  if (freq >= 1e3) return `${(freq / 1e3).toFixed(3)} kHz`;
-  return `${freq.toFixed(0)} Hz`;
-}
