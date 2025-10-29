@@ -57,8 +57,7 @@ function MySpectrumPlot() {
     spectrumTrace.current = plot.addTrace({
       type: 'line',
       color: '#00ff00',
-      lineWidth: 2,
-      smoothing: 0.9
+      lineWidth: 2
     });
   }, []);
 
@@ -172,7 +171,6 @@ interface AxisConfig {
   label?: string;
   formatter?: (value: number) => string;
   range?: { min: number; max: number };
-  autoRange?: boolean;  // auto-calculate from data
   scale?: 'linear' | 'log';  // future: support log scale
 
   // Tick configuration
@@ -183,54 +181,70 @@ interface AxisConfig {
     length?: number;
   };
 }
+
+// Auto-ranging behavior:
+// - If range is not specified, auto-range is calculated from first data update
+// - After initial auto-range, axes remain fixed (points can fall off screen)
+// - Call plot.autoRange('x' | 'y' | 'both') to explicitly re-calculate
 ```
 
 ### `TraceConfig`
 
 ```typescript
 interface TraceConfig {
-  type: 'line' | 'stem' | 'scatter' | 'area';
+  // Trace type (1D or 2D)
+  type: 'line' | 'stem' | 'scatter' | 'area' | 'image';
 
   // Styling
   color: string;
   lineWidth?: number;
   opacity?: number;
 
-  // Line-specific
+  // Line-specific options
   dashPattern?: number[];  // e.g., [5, 5] for dashed
 
-  // Scatter-specific
+  // Scatter-specific options
   pointSize?: number;
   pointShape?: 'circle' | 'square' | 'triangle';
 
-  // Area-specific
+  // Area-specific options
   fillColor?: string;
   fillOpacity?: number;
   baseline?: number;  // y-value for area baseline
 
-  // Data processing
-  smoothing?: number;  // exponential moving average factor (0-1)
-  decimation?: 'max-points' | 'lttb' | 'none';  // downsampling strategy
-  maxPoints?: number;  // max points to display (for performance)
+  // Image-specific options (for 2D data)
+  colorMap?: ColorMapName | CustomColorMap;
+  valueRange?: { min: number; max: number };  // maps Z values to colors
+  interpolation?: 'nearest' | 'bilinear';
 
-  // Visibility
+  // Visibility & ordering
   visible?: boolean;
   zIndex?: number;  // render order
 }
+
+// Note: Smoothing is handled by users maintaining their own state.
+// The library focuses on rendering, not data processing.
 ```
 
 ### `TraceData`
 
 ```typescript
-interface TraceData {
+// 1D trace data (line, stem, scatter, area)
+interface TraceData1D {
   x: number[] | Float32Array;
   y: number[] | Float32Array;
 }
 
-// Or for convenience, array of points
-interface TraceDataPoints {
-  points: Array<{ x: number; y: number }>;
+// 2D trace data (image, heatmap, spectrogram)
+interface TraceData2D {
+  x: number[] | Float32Array;      // 1D: x-axis values
+  y: number[] | Float32Array;      // 1D: y-axis values
+  z: number[][] | Float32Array;    // 2D: intensity values
+  width?: number;                  // required if z is flat Float32Array
+  height?: number;                 // required if z is flat Float32Array
 }
+
+type TraceData = TraceData1D | TraceData2D;
 ```
 
 ---
@@ -266,8 +280,7 @@ function FFTDisplay({ fftData, threshold }) {
     spectrumTrace.current = plot.addTrace({
       type: 'line',
       color: '#00ff00',
-      lineWidth: 2,
-      smoothing: 0.9
+      lineWidth: 2
     });
 
     thresholdTrace.current = plot.addTrace({
@@ -649,8 +662,7 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
     spectrumTrace.current = plot.addTrace({
       type: 'line',
       color: '#00ff00',
-      lineWidth: 2,
-      smoothing: 0.9
+      lineWidth: 2
     });
   }, []);
 
@@ -682,13 +694,18 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
 
 ## Design Decisions Made
 
-Based on feedback:
+Based on feedback and iteration:
 
 1. **✅ Hook-based API**: Modern React style with `usePlot` hook
 2. **✅ Trace handles instead of string IDs**: `addTrace()` returns a `TraceHandle` for type-safe updates
-3. **✅ Configurable line thickness**: `lineWidth` property in `TraceConfig` (default: 2)
+3. **✅ Configurable line thickness**: `lineWidth` property in `TraceConfig`
 4. **✅ Clear pan direction**: `pan: 'x'` means horizontal only, `pan: 'y'` means vertical only
 5. **✅ Imperative updates**: Trace updates don't trigger React re-renders for performance
+6. **✅ No smoothing in library**: Users handle their own data processing/state
+7. **✅ Smart auto-ranging**: Only auto-range on first data or explicit request
+8. **✅ Unified 1D/2D API**: Same `usePlot` hook handles both 1D and 2D traces
+9. **✅ Separate waterfall hook**: `useWaterfall` for optimized streaming use case
+10. **✅ Optional plot container**: Convenience wrapper, but manual layout works fine
 
 ## Performance & Rendering Optimizations
 
@@ -833,31 +850,32 @@ function FFTWithDetections({ fftData, detections }) {
 
 ---
 
-## 2D/Image Plotting API
+## Unified 1D/2D Plotting
 
-For spectrograms, waterfalls, and heatmaps, we need a 2D plotting API.
+**The same `usePlot` hook handles both 1D and 2D traces!**
 
-### Option 1: `usePlot2D` Hook
+### 2D Image Traces (Heatmaps, Spectrograms)
 
-For general 2D intensity plots (heatmaps, spectrograms):
+Use `type: 'image'` to add 2D data:
 
 ```typescript
 function Spectrogram({ data }) {
-  const plot = usePlot2D({
+  const plot = usePlot({
     axes: {
       x: { label: 'Frequency', formatter: formatFrequency },
       y: { label: 'Time', formatter: (t) => `${t.toFixed(1)}s` }
     },
-    colorMap: 'plasma',  // or 'viridis', 'turbo', 'grayscale'
-    valueRange: { min: -100, max: 0 },  // dB range for color mapping
     interactions: { zoom: 'both', pan: 'both' }
   });
 
-  const imageTrace = useRef<ImageTraceHandle>();
+  const imageTrace = useRef<TraceHandle>();
 
   useEffect(() => {
-    imageTrace.current = plot.addImageTrace({
-      interpolation: 'nearest'  // or 'bilinear'
+    imageTrace.current = plot.addTrace({
+      type: 'image',
+      colorMap: 'plasma',
+      valueRange: { min: -100, max: 0 },  // dB range for color mapping
+      interpolation: 'nearest'
     });
   }, []);
 
@@ -867,7 +885,6 @@ function Spectrogram({ data }) {
         x: frequencyArray,      // 1D: [f0, f1, f2, ...]
         y: timeArray,           // 1D: [t0, t1, t2, ...]
         z: intensityMatrix      // 2D: [[z00, z01, ...], [z10, z11, ...], ...]
-                                // or flat Float32Array with width/height
       });
     }
   }, [data]);
@@ -876,9 +893,9 @@ function Spectrogram({ data }) {
 }
 ```
 
-### Option 2: `useWaterfall` Hook
+### Streaming Waterfall Hook
 
-Specialized for streaming waterfall displays (like your current waterfall):
+For streaming waterfall displays, use the specialized `useWaterfall` hook:
 
 ```typescript
 function WaterfallDisplay({ frequencyRange }) {
@@ -886,14 +903,14 @@ function WaterfallDisplay({ frequencyRange }) {
     frequencyRange,
     colorMap: 'plasma',
     valueRange: { min: -100, max: 0 },
-    height: 400,  // number of rows to keep
-    scrollDirection: 'down',  // or 'up', 'left', 'right'
+    height: 400,  // number of rows to keep in buffer
+    scrollDirection: 'down',  // or 'up'
     interactions: { zoom: 'x', pan: 'x' }
   });
 
   useEffect(() => {
     const handleFFT = (e: CustomEvent<FFTData>) => {
-      // Just push new row - waterfall handles scrolling
+      // Just push new row - waterfall handles scrolling/buffering
       waterfall.addRow(e.detail.bins);
     };
 
@@ -905,29 +922,11 @@ function WaterfallDisplay({ frequencyRange }) {
 }
 ```
 
-**Key difference:**
-- `usePlot2D`: General 2D plotting, full control over X/Y/Z
-- `useWaterfall`: Optimized for streaming time-series spectrograms
-
-### ImageTraceHandle API
-
-```typescript
-interface ImageTraceHandle {
-  update: (data: ImageData2D) => void;
-  setColorMap: (colorMap: ColorMapName) => void;
-  setValueRange: (min: number, max: number) => void;
-  setInterpolation: (mode: 'nearest' | 'bilinear') => void;
-  setVisible: (visible: boolean) => void;
-}
-
-interface ImageData2D {
-  x: number[] | Float32Array;      // 1D frequency/x axis
-  y: number[] | Float32Array;      // 1D time/y axis
-  z: number[][] | Float32Array;    // 2D intensity values
-  width?: number;                  // if z is flat array
-  height?: number;                 // if z is flat array
-}
-```
+**Why separate `useWaterfall`?**
+- Highly optimized for streaming (efficient row shifting, ImageData reuse)
+- Different API pattern (`addRow()` vs full `update()`)
+- Maintains a rolling buffer of fixed height
+- Special implementation details for performance
 
 ### Color Map Support
 
@@ -960,33 +959,58 @@ imageTrace.setColorMap({
 
 ### Mixing 1D and 2D Traces
 
-You can overlay 1D traces on top of 2D plots:
+You can overlay 1D traces on top of 2D image traces:
 
 ```typescript
 function SpectrogramWithCursor({ data, cursorFreq }) {
-  const plot = usePlot2D({ /* ... */ });
+  const plot = usePlot({
+    axes: {
+      x: { label: 'Frequency', formatter: formatFrequency },
+      y: { label: 'Time' }
+    },
+    interactions: { zoom: 'both', pan: 'both' }
+  });
 
-  const imageTrace = useRef<ImageTraceHandle>();
-  const cursorTrace = useRef<TraceHandle>();  // regular 1D trace!
+  const imageTrace = useRef<TraceHandle>();
+  const cursorTrace = useRef<TraceHandle>();
 
   useEffect(() => {
-    imageTrace.current = plot.addImageTrace();
+    // Add 2D image trace
+    imageTrace.current = plot.addTrace({
+      type: 'image',
+      colorMap: 'plasma',
+      valueRange: { min: -100, max: 0 },
+      zIndex: 0  // render first (background)
+    });
 
     // Add 1D vertical line on top of 2D image
     cursorTrace.current = plot.addTrace({
       type: 'line',
       color: '#ffffff',
       lineWidth: 2,
-      dashPattern: [5, 5]
+      dashPattern: [5, 5],
+      zIndex: 1  // render on top
     });
   }, []);
 
   useEffect(() => {
-    // Update cursor line
+    // Update 2D spectrogram
+    if (data && imageTrace.current) {
+      imageTrace.current.update({
+        x: data.frequencies,
+        y: data.times,
+        z: data.intensities
+      });
+    }
+  }, [data]);
+
+  useEffect(() => {
+    // Update 1D cursor line
     if (cursorTrace.current) {
+      const yRange = plot.getAxisRange('y');
       cursorTrace.current.update({
         x: [cursorFreq, cursorFreq],
-        y: [plot.getAxisRange('y').min, plot.getAxisRange('y').max]
+        y: [yRange.min, yRange.max]
       });
     }
   }, [cursorFreq]);
@@ -995,15 +1019,104 @@ function SpectrogramWithCursor({ data, cursorFreq }) {
 }
 ```
 
+**This works because `usePlot` accepts any trace type - 1D or 2D!**
+
 ---
 
-## Questions for Further Refinement
+## Plot Container API (Optional)
 
-1. **Event Handling**: Are the event callbacks (`onZoom`, `onPan`, `onCursor`) sufficient?
-2. **Performance**: Should we expose controls for layer management or keep it internal?
-3. **2D API**: Prefer separate `useWaterfall` hook or just `usePlot2D` with scrolling mode?
-4. **Color Maps**: Which color maps are essential? Need custom color map support?
-5. **Marker/Annotation Support**: Should we add support for markers, text annotations, or regions?
+For multi-plot layouts (e.g., stacked FFT + Waterfall), a container component can simplify arrangement:
+
+```typescript
+import { PlotContainer } from '@/utils/plotting';
+
+function SpectrumView() {
+  return (
+    <PlotContainer
+      layout="vertical"  // or 'horizontal', 'grid'
+      sizes={[250, 400]}  // heights for each plot
+      gap={10}           // spacing between plots
+      syncZoom="x"       // sync x-axis zoom/pan across plots
+    >
+      <FFTDisplay />
+      <WaterfallDisplay />
+    </PlotContainer>
+  );
+}
+```
+
+### PlotContainer Props
+
+```typescript
+interface PlotContainerProps {
+  layout: 'vertical' | 'horizontal' | 'grid';
+  sizes?: number[];           // explicit sizes (px or flex ratios)
+  gap?: number;              // spacing between plots in pixels
+  syncZoom?: 'x' | 'y' | 'both' | false;  // sync zoom/pan
+  syncCursor?: boolean;      // sync cursor position
+  children: ReactNode;
+}
+```
+
+### Example: FFT + Waterfall Stack
+
+```typescript
+function SpectrumView() {
+  const [frequencyRange, setFrequencyRange] = useState({
+    startFreq: 2.4e9,
+    endFreq: 2.5e9
+  });
+
+  return (
+    <PlotContainer
+      layout="vertical"
+      sizes={[250, 400]}
+      gap={10}
+      syncZoom="x"
+    >
+      <FFTDisplay
+        frequencyRange={frequencyRange}
+        onFrequencyRangeChange={setFrequencyRange}
+      />
+      <WaterfallDisplay
+        frequencyRange={frequencyRange}
+        onFrequencyRangeChange={setFrequencyRange}
+      />
+    </PlotContainer>
+  );
+}
+```
+
+**Alternative: Manual Layout**
+
+If you prefer more control, just use regular CSS/flexbox:
+
+```typescript
+function SpectrumView() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ height: 250 }}>
+        <FFTDisplay />
+      </div>
+      <div style={{ height: 400 }}>
+        <WaterfallDisplay />
+      </div>
+    </div>
+  );
+}
+```
+
+**Note:** PlotContainer is a convenience wrapper. Manual layouts work just fine!
+
+---
+
+## Open Questions
+
+1. **Color Maps**: Which color maps are essential beyond plasma/viridis/turbo?
+2. **Marker/Annotation Support**: Should we add text annotations, regions, or axis markers?
+3. **Log Scale**: Priority for logarithmic axis support?
+4. **Export**: Should plots support export to PNG/SVG?
+5. **Legends**: Need automatic legend generation for multi-trace plots?
 
 ---
 
