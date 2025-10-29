@@ -690,12 +690,319 @@ Based on feedback:
 4. **✅ Clear pan direction**: `pan: 'x'` means horizontal only, `pan: 'y'` means vertical only
 5. **✅ Imperative updates**: Trace updates don't trigger React re-renders for performance
 
+## Performance & Rendering Optimizations
+
+### Dirty Region Tracking
+
+The library should internally optimize rendering by only redrawing what changed:
+
+```typescript
+// Internal optimization (transparent to user)
+class PlotRenderer {
+  private dirtyRegions: Set<'axes' | 'grid' | 'traces' | 'cursor'>;
+
+  // Only re-render what's dirty
+  render() {
+    if (this.dirtyRegions.has('axes')) this.renderAxes();
+    if (this.dirtyRegions.has('grid')) this.renderGrid();
+    if (this.dirtyRegions.has('traces')) this.renderTraces();
+    if (this.dirtyRegions.has('cursor')) this.renderCursor();
+  }
+}
+```
+
+### Multi-Layer Canvas Strategy
+
+Use multiple canvas layers for different update frequencies:
+
+```typescript
+// Implementation detail (internal)
+- Static layer: axes, grid, labels (rarely changes)
+- Data layer: traces (updates frequently)
+- Interaction layer: cursor, selection box (updates on mouse move)
+```
+
+**Benefits:**
+- Cursor movement doesn't re-render traces
+- Zoom/pan only updates affected layers
+- Significant performance improvement for real-time data
+
+### Buffer Management
+
+The library handles buffer reuse internally:
+
+```typescript
+// User just updates data
+trace.update({ x: newX, y: newY });
+
+// Library internally:
+// - Detects if array size changed
+// - Reuses Float32Array buffers when possible
+// - Only processes changed data
+// - Batches updates in RAF
+```
+
+**User doesn't need to worry about:**
+- Canvas context management
+- Buffer pooling
+- Render batching
+- Dirty tracking
+
+---
+
+## Multi-Trace X Coordinates
+
+### Each Trace Has Independent X,Y Data
+
+Different traces can have completely different X coordinates and sampling:
+
+```typescript
+// FFT: continuous, many points
+fftTrace.update({
+  x: [2.4e9, 2.400001e9, 2.400002e9, ...],  // 512 points
+  y: [-80, -79, -75, ...]
+});
+
+// Detection markers: discrete, few points
+markerTrace.update({
+  x: [2.45e9, 2.48e9],  // only 2 points
+  y: [-50, -45]
+});
+```
+
+The coordinate system handles this naturally - each trace's X values are independently mapped to canvas coordinates.
+
+### Use Cases
+
+**Example: FFT with Detection Markers**
+
+```typescript
+function FFTWithDetections({ fftData, detections }) {
+  const plot = usePlot({
+    axes: {
+      x: { label: 'Frequency', formatter: formatFrequency },
+      y: { label: 'Power (dBm)', range: { min: -100, max: 0 } }
+    }
+  });
+
+  const fftTrace = useRef<TraceHandle>();
+  const markerTrace = useRef<TraceHandle>();
+
+  useEffect(() => {
+    // Continuous FFT line
+    fftTrace.current = plot.addTrace({
+      type: 'line',
+      color: '#00ff00',
+      lineWidth: 2
+    });
+
+    // Discrete detection markers
+    markerTrace.current = plot.addTrace({
+      type: 'stem',  // or 'scatter' for dots
+      color: '#ff0000',
+      lineWidth: 3,
+      pointSize: 6
+    });
+  }, []);
+
+  useEffect(() => {
+    // Update FFT (512 points)
+    if (fftData && fftTrace.current) {
+      fftTrace.current.update({
+        x: generateFrequencyArray(fftData),
+        y: fftData.bins
+      });
+    }
+  }, [fftData]);
+
+  useEffect(() => {
+    // Update markers (variable number of points)
+    if (detections && markerTrace.current) {
+      markerTrace.current.update({
+        x: detections.map(d => d.frequency),
+        y: detections.map(d => d.power)
+      });
+    }
+  }, [detections]);
+
+  return <canvas ref={plot.canvasRef} width={800} height={400} />;
+}
+```
+
+**Key Point:** The library doesn't require traces to share X coordinates. Each trace is independent.
+
+---
+
+## 2D/Image Plotting API
+
+For spectrograms, waterfalls, and heatmaps, we need a 2D plotting API.
+
+### Option 1: `usePlot2D` Hook
+
+For general 2D intensity plots (heatmaps, spectrograms):
+
+```typescript
+function Spectrogram({ data }) {
+  const plot = usePlot2D({
+    axes: {
+      x: { label: 'Frequency', formatter: formatFrequency },
+      y: { label: 'Time', formatter: (t) => `${t.toFixed(1)}s` }
+    },
+    colorMap: 'plasma',  // or 'viridis', 'turbo', 'grayscale'
+    valueRange: { min: -100, max: 0 },  // dB range for color mapping
+    interactions: { zoom: 'both', pan: 'both' }
+  });
+
+  const imageTrace = useRef<ImageTraceHandle>();
+
+  useEffect(() => {
+    imageTrace.current = plot.addImageTrace({
+      interpolation: 'nearest'  // or 'bilinear'
+    });
+  }, []);
+
+  useEffect(() => {
+    if (data && imageTrace.current) {
+      imageTrace.current.update({
+        x: frequencyArray,      // 1D: [f0, f1, f2, ...]
+        y: timeArray,           // 1D: [t0, t1, t2, ...]
+        z: intensityMatrix      // 2D: [[z00, z01, ...], [z10, z11, ...], ...]
+                                // or flat Float32Array with width/height
+      });
+    }
+  }, [data]);
+
+  return <canvas ref={plot.canvasRef} width={800} height={600} />;
+}
+```
+
+### Option 2: `useWaterfall` Hook
+
+Specialized for streaming waterfall displays (like your current waterfall):
+
+```typescript
+function WaterfallDisplay({ frequencyRange }) {
+  const waterfall = useWaterfall({
+    frequencyRange,
+    colorMap: 'plasma',
+    valueRange: { min: -100, max: 0 },
+    height: 400,  // number of rows to keep
+    scrollDirection: 'down',  // or 'up', 'left', 'right'
+    interactions: { zoom: 'x', pan: 'x' }
+  });
+
+  useEffect(() => {
+    const handleFFT = (e: CustomEvent<FFTData>) => {
+      // Just push new row - waterfall handles scrolling
+      waterfall.addRow(e.detail.bins);
+    };
+
+    window.addEventListener('fft-data', handleFFT);
+    return () => window.removeEventListener('fft-data', handleFFT);
+  }, []);
+
+  return <canvas ref={waterfall.canvasRef} width={800} height={400} />;
+}
+```
+
+**Key difference:**
+- `usePlot2D`: General 2D plotting, full control over X/Y/Z
+- `useWaterfall`: Optimized for streaming time-series spectrograms
+
+### ImageTraceHandle API
+
+```typescript
+interface ImageTraceHandle {
+  update: (data: ImageData2D) => void;
+  setColorMap: (colorMap: ColorMapName) => void;
+  setValueRange: (min: number, max: number) => void;
+  setInterpolation: (mode: 'nearest' | 'bilinear') => void;
+  setVisible: (visible: boolean) => void;
+}
+
+interface ImageData2D {
+  x: number[] | Float32Array;      // 1D frequency/x axis
+  y: number[] | Float32Array;      // 1D time/y axis
+  z: number[][] | Float32Array;    // 2D intensity values
+  width?: number;                  // if z is flat array
+  height?: number;                 // if z is flat array
+}
+```
+
+### Color Map Support
+
+```typescript
+type ColorMapName =
+  | 'plasma'      // current default
+  | 'viridis'
+  | 'turbo'
+  | 'grayscale'
+  | 'jet'
+  | 'hot'
+  | 'cool';
+
+// Custom color maps
+interface CustomColorMap {
+  stops: Array<{ position: number; color: string }>;
+}
+
+// Usage
+imageTrace.setColorMap('viridis');
+// or
+imageTrace.setColorMap({
+  stops: [
+    { position: 0.0, color: '#000000' },
+    { position: 0.5, color: '#ff0000' },
+    { position: 1.0, color: '#ffffff' }
+  ]
+});
+```
+
+### Mixing 1D and 2D Traces
+
+You can overlay 1D traces on top of 2D plots:
+
+```typescript
+function SpectrogramWithCursor({ data, cursorFreq }) {
+  const plot = usePlot2D({ /* ... */ });
+
+  const imageTrace = useRef<ImageTraceHandle>();
+  const cursorTrace = useRef<TraceHandle>();  // regular 1D trace!
+
+  useEffect(() => {
+    imageTrace.current = plot.addImageTrace();
+
+    // Add 1D vertical line on top of 2D image
+    cursorTrace.current = plot.addTrace({
+      type: 'line',
+      color: '#ffffff',
+      lineWidth: 2,
+      dashPattern: [5, 5]
+    });
+  }, []);
+
+  useEffect(() => {
+    // Update cursor line
+    if (cursorTrace.current) {
+      cursorTrace.current.update({
+        x: [cursorFreq, cursorFreq],
+        y: [plot.getAxisRange('y').min, plot.getAxisRange('y').max]
+      });
+    }
+  }, [cursorFreq]);
+
+  return <canvas ref={plot.canvasRef} width={800} height={600} />;
+}
+```
+
+---
+
 ## Questions for Further Refinement
 
 1. **Event Handling**: Are the event callbacks (`onZoom`, `onPan`, `onCursor`) sufficient?
-2. **Performance**: Any specific performance requirements beyond 60 FPS?
-3. **Trace Configuration**: Should we support updating trace config after creation (color, lineWidth, etc.)?
-4. **Features**: Any missing features from your pyqtgraph experience?
+2. **Performance**: Should we expose controls for layer management or keep it internal?
+3. **2D API**: Prefer separate `useWaterfall` hook or just `usePlot2D` with scrolling mode?
+4. **Color Maps**: Which color maps are essential? Need custom color map support?
 5. **Marker/Annotation Support**: Should we add support for markers, text annotations, or regions?
 
 ---
