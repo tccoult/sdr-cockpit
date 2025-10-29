@@ -50,10 +50,22 @@ function MySpectrumPlot() {
     margins: { top: 20, right: 30, bottom: 40, left: 60 }
   });
 
+  // Create trace and get handle
+  const spectrumTrace = useRef<TraceHandle>();
+
+  useEffect(() => {
+    spectrumTrace.current = plot.addTrace({
+      type: 'line',
+      color: '#00ff00',
+      lineWidth: 2,
+      smoothing: 0.9
+    });
+  }, []);
+
   // Update data when FFT arrives
   useEffect(() => {
-    if (fftData) {
-      plot.updateTrace('spectrum', {
+    if (fftData && spectrumTrace.current) {
+      spectrumTrace.current.update({
         x: frequencyArray,
         y: fftData.bins
       });
@@ -71,10 +83,8 @@ interface PlotInstance {
   // Canvas ref to attach to <canvas> element
   canvasRef: RefObject<HTMLCanvasElement>;
 
-  // Trace management
-  addTrace: (id: string, config: TraceConfig) => void;
-  updateTrace: (id: string, data: TraceData) => void;
-  removeTrace: (id: string) => void;
+  // Trace management - returns a trace handle for updates
+  addTrace: (config: TraceConfig) => TraceHandle;
   clearTraces: () => void;
 
   // Axis control
@@ -92,6 +102,14 @@ interface PlotInstance {
 
   // Cleanup (usually automatic)
   destroy: () => void;
+}
+
+// Handle returned by addTrace for updating/removing individual traces
+interface TraceHandle {
+  update: (data: TraceData) => void;
+  setVisible: (visible: boolean) => void;
+  setConfig: (config: Partial<TraceConfig>) => void;  // update styling/options
+  remove: () => void;
 }
 ```
 
@@ -121,7 +139,7 @@ interface PlotConfig {
   // Interaction configuration
   interactions?: {
     zoom?: boolean | 'x' | 'y' | 'both';
-    pan?: boolean | 'x' | 'y' | 'both';
+    pan?: boolean | 'x' | 'y' | 'both';  // 'x' = horizontal only, 'y' = vertical only
     crosshair?: boolean;
     boxSelect?: boolean;  // shift+drag to zoom to box
     tooltip?: boolean;
@@ -236,19 +254,23 @@ function FFTDisplay({ fftData, threshold }) {
         range: { min: -100, max: 0 }
       }
     },
-    interactions: { zoom: true, pan: 'x', crosshair: true }
+    interactions: { zoom: true, pan: 'x', crosshair: true }  // pan horizontally only
   });
+
+  // Create trace handles
+  const spectrumTrace = useRef<TraceHandle>();
+  const thresholdTrace = useRef<TraceHandle>();
 
   // Add traces on mount
   useEffect(() => {
-    plot.addTrace('spectrum', {
+    spectrumTrace.current = plot.addTrace({
       type: 'line',
       color: '#00ff00',
       lineWidth: 2,
       smoothing: 0.9
     });
 
-    plot.addTrace('threshold', {
+    thresholdTrace.current = plot.addTrace({
       type: 'line',
       color: '#ff0000',
       lineWidth: 1,
@@ -258,17 +280,19 @@ function FFTDisplay({ fftData, threshold }) {
 
   // Update spectrum data
   useEffect(() => {
-    if (fftData) {
+    if (fftData && spectrumTrace.current) {
       const freqs = generateFrequencyArray(fftData);
-      plot.updateTrace('spectrum', { x: freqs, y: fftData.bins });
+      spectrumTrace.current.update({ x: freqs, y: fftData.bins });
     }
   }, [fftData]);
 
   // Update threshold line
   useEffect(() => {
-    const freqs = [fftData.centerFreq - fftData.sampleRate/2,
-                   fftData.centerFreq + fftData.sampleRate/2];
-    plot.updateTrace('threshold', { x: freqs, y: [threshold, threshold] });
+    if (fftData && thresholdTrace.current) {
+      const freqs = [fftData.centerFreq - fftData.sampleRate/2,
+                     fftData.centerFreq + fftData.sampleRate/2];
+      thresholdTrace.current.update({ x: freqs, y: [threshold, threshold] });
+    }
   }, [threshold, fftData]);
 
   return <canvas ref={plot.canvasRef} width={800} height={400} />;
@@ -288,8 +312,10 @@ function ConstellationPlot({ iqData }) {
     interactions: { zoom: 'both', pan: false }
   });
 
+  const symbolsTrace = useRef<TraceHandle>();
+
   useEffect(() => {
-    plot.addTrace('symbols', {
+    symbolsTrace.current = plot.addTrace({
       type: 'scatter',
       color: '#00ffff',
       pointSize: 3,
@@ -299,8 +325,8 @@ function ConstellationPlot({ iqData }) {
   }, []);
 
   useEffect(() => {
-    if (iqData) {
-      plot.updateTrace('symbols', { x: iqData.i, y: iqData.q });
+    if (iqData && symbolsTrace.current) {
+      symbolsTrace.current.update({ x: iqData.i, y: iqData.q });
     }
   }, [iqData]);
 
@@ -317,11 +343,13 @@ function ImpulseResponsePlot({ taps }) {
       x: { label: 'Tap Index', range: { min: 0, max: taps.length } },
       y: { label: 'Coefficient', autoRange: true }
     },
-    interactions: { zoom: 'both', pan: 'x' }
+    interactions: { zoom: 'both', pan: 'x' }  // pan horizontally only
   });
 
+  const tapsTrace = useRef<TraceHandle>();
+
   useEffect(() => {
-    plot.addTrace('taps', {
+    tapsTrace.current = plot.addTrace({
       type: 'stem',
       color: '#ffaa00',
       lineWidth: 2
@@ -329,8 +357,10 @@ function ImpulseResponsePlot({ taps }) {
   }, []);
 
   useEffect(() => {
-    const indices = Array.from({ length: taps.length }, (_, i) => i);
-    plot.updateTrace('taps', { x: indices, y: taps });
+    if (tapsTrace.current) {
+      const indices = Array.from({ length: taps.length }, (_, i) => i);
+      tapsTrace.current.update({ x: indices, y: taps });
+    }
   }, [taps]);
 
   return <canvas ref={plot.canvasRef} width={600} height={300} />;
@@ -346,28 +376,36 @@ function MultiChannelFFT({ channels }) {
       x: { label: 'Frequency', formatter: formatFrequency },
       y: { label: 'Power (dBm)', range: { min: -100, max: 0 } }
     },
-    interactions: { zoom: true, pan: 'x', crosshair: true }
+    interactions: { zoom: true, pan: 'x', crosshair: true }  // pan horizontally only
   });
 
   const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'];
+  const channelTraces = useRef<TraceHandle[]>([]);
 
   useEffect(() => {
-    channels.forEach((channel, idx) => {
-      plot.addTrace(`channel-${idx}`, {
+    // Clear old traces
+    channelTraces.current = [];
+
+    // Add trace for each channel
+    channels.forEach((_, idx) => {
+      const trace = plot.addTrace({
         type: 'line',
         color: colors[idx],
         lineWidth: 2,
         opacity: 0.8
       });
+      channelTraces.current.push(trace);
     });
   }, [channels.length]);
 
   useEffect(() => {
     channels.forEach((channel, idx) => {
-      plot.updateTrace(`channel-${idx}`, {
-        x: channel.frequencies,
-        y: channel.powers
-      });
+      if (channelTraces.current[idx]) {
+        channelTraces.current[idx].update({
+          x: channel.frequencies,
+          y: channel.powers
+        });
+      }
     });
   }, [channels]);
 
@@ -386,14 +424,17 @@ function SignalEnvelope({ timeData, envelope }) {
     }
   });
 
+  const signalTrace = useRef<TraceHandle>();
+  const envelopeTrace = useRef<TraceHandle>();
+
   useEffect(() => {
-    plot.addTrace('signal', {
+    signalTrace.current = plot.addTrace({
       type: 'line',
       color: '#00aaff',
       lineWidth: 1
     });
 
-    plot.addTrace('envelope', {
+    envelopeTrace.current = plot.addTrace({
       type: 'area',
       color: '#ff6600',
       fillColor: '#ff6600',
@@ -403,8 +444,10 @@ function SignalEnvelope({ timeData, envelope }) {
   }, []);
 
   useEffect(() => {
-    plot.updateTrace('signal', { x: timeData.t, y: timeData.signal });
-    plot.updateTrace('envelope', { x: timeData.t, y: envelope });
+    if (signalTrace.current && envelopeTrace.current) {
+      signalTrace.current.update({ x: timeData.t, y: timeData.signal });
+      envelopeTrace.current.update({ x: timeData.t, y: envelope });
+    }
   }, [timeData, envelope]);
 
   return <canvas ref={plot.canvasRef} width={800} height={300} />;
@@ -597,18 +640,27 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
            range: { min: frequencyRange.startFreq, max: frequencyRange.endFreq } },
       y: { label: 'Power (dBm)', range: { min: minDb, max: maxDb } }
     },
-    interactions: { zoom: true, pan: 'x', crosshair: true }
+    interactions: { zoom: true, pan: 'x', crosshair: true }  // pan horizontally only
   });
 
+  const spectrumTrace = useRef<TraceHandle>();
+
   useEffect(() => {
-    plot.addTrace('spectrum', { type: 'line', color: '#00ff00', smoothing: 0.9 });
+    spectrumTrace.current = plot.addTrace({
+      type: 'line',
+      color: '#00ff00',
+      lineWidth: 2,
+      smoothing: 0.9
+    });
   }, []);
 
   useEffect(() => {
     window.addEventListener('fft-data', (e) => {
       const fftData = e.detail;
       const freqs = generateFrequencyArray(fftData);
-      plot.updateTrace('spectrum', { x: freqs, y: fftData.bins });
+      if (spectrumTrace.current) {
+        spectrumTrace.current.update({ x: freqs, y: fftData.bins });
+      }
     });
   }, []);
 
@@ -628,13 +680,23 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
 
 ---
 
-## Questions for Refinement
+## Design Decisions Made
 
-1. **API Style**: Does this hook-based approach feel natural? Any preferences?
-2. **Trace Management**: Should traces be declarative (JSX) or imperative (addTrace)?
-3. **Event Handling**: Are the event callbacks sufficient, or need more granular control?
-4. **Performance**: Any specific performance requirements beyond 60 FPS?
-5. **Features**: Any missing features from your pyqtgraph experience?
+Based on feedback:
+
+1. **✅ Hook-based API**: Modern React style with `usePlot` hook
+2. **✅ Trace handles instead of string IDs**: `addTrace()` returns a `TraceHandle` for type-safe updates
+3. **✅ Configurable line thickness**: `lineWidth` property in `TraceConfig` (default: 2)
+4. **✅ Clear pan direction**: `pan: 'x'` means horizontal only, `pan: 'y'` means vertical only
+5. **✅ Imperative updates**: Trace updates don't trigger React re-renders for performance
+
+## Questions for Further Refinement
+
+1. **Event Handling**: Are the event callbacks (`onZoom`, `onPan`, `onCursor`) sufficient?
+2. **Performance**: Any specific performance requirements beyond 60 FPS?
+3. **Trace Configuration**: Should we support updating trace config after creation (color, lineWidth, etc.)?
+4. **Features**: Any missing features from your pyqtgraph experience?
+5. **Marker/Annotation Support**: Should we add support for markers, text annotations, or regions?
 
 ---
 
