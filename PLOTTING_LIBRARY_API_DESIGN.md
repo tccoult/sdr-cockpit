@@ -148,9 +148,32 @@ interface PlotConfig {
   interactions?: {
     zoom?: boolean | 'x' | 'y' | 'both';
     pan?: boolean | 'x' | 'y' | 'both';  // 'x' = horizontal only, 'y' = vertical only
-    crosshair?: boolean;
+
+    // Cursor/crosshair configuration
+    cursor?: {
+      style?: 'crosshair' | 'vertical' | 'horizontal' | 'none';  // default: 'crosshair'
+      snap?: boolean;  // snap to nearest data point for 1D traces (default: true for 1D, false for 2D)
+      color?: string;  // default: '#ffffff'
+      lineWidth?: number;  // default: 1
+      dashPattern?: number[];  // e.g., [5, 5] for dashed
+    } | boolean;  // true = default crosshair, false = none
+
+    // Tooltip configuration
+    tooltip?: {
+      show?: boolean;  // default: true if cursor enabled
+      mode?: 'nearest' | 'all-traces';  // default: 'nearest'
+      // Formatters (defaults to axis formatters)
+      formatX?: (value: number) => string;
+      formatY?: (value: number) => string;
+      formatZ?: (value: number) => string;  // for 2D traces
+      // Styling
+      background?: string;  // default: 'rgba(0, 0, 0, 0.8)'
+      textColor?: string;  // default: '#ffffff'
+      borderRadius?: number;
+      padding?: number;
+    } | boolean;  // true = default tooltip, false = none
+
     boxSelect?: boolean;  // shift+drag to zoom to box
-    tooltip?: boolean;
   };
 
   // Plot area margins
@@ -295,6 +318,189 @@ type TraceData = TraceData1D | TraceData2D;
 
 ---
 
+## Cursor & Tooltip Behavior
+
+### Crosshair Styles
+
+**Full Crosshair (default, recommended for technical plots):**
+```typescript
+interactions: {
+  cursor: { style: 'crosshair' }  // or cursor: true for defaults
+}
+```
+- Vertical + horizontal lines intersecting at cursor
+- Best for precise measurements
+- Can read exact X and Y from axes
+- Standard in scientific/financial applications
+
+**Vertical Line Only:**
+```typescript
+interactions: {
+  cursor: { style: 'vertical' }
+}
+```
+- Single vertical line at cursor X position
+- Cleaner, less visual clutter
+- Good for time-series and spectrograms
+
+**Horizontal Line Only:**
+```typescript
+interactions: {
+  cursor: { style: 'horizontal' }
+}
+```
+- Single horizontal line at cursor Y position
+- Less common but available
+
+**None:**
+```typescript
+interactions: {
+  cursor: false  // or { style: 'none' }
+}
+```
+- No cursor visualization
+- Can still have tooltip without crosshair
+
+### Snap Behavior
+
+**For 1D traces (default: snap enabled):**
+- Cursor snaps to nearest data point on nearest trace
+- Crosshair positioned at the snapped point
+- Tooltip shows exact data values
+```typescript
+interactions: {
+  cursor: { snap: true }  // default for 1D traces
+}
+```
+
+**For 2D traces (default: snap disabled):**
+- Cursor free-floating at exact mouse position
+- Samples Z value at that X/Y location
+- Tooltip shows interpolated/sampled intensity
+```typescript
+interactions: {
+  cursor: { snap: false }  // default for 2D traces
+}
+```
+
+**Mixed 1D + 2D traces:**
+- If 2D trace present: snap is disabled (free-floating)
+- Tooltip shows both 2D sampling and nearby 1D traces
+
+### Tooltip Content
+
+**For 1D traces:**
+```
+Frequency: 2.45 GHz
+Power: -75 dBm
+```
+Uses axis formatters by default, or custom formatters:
+```typescript
+tooltip: {
+  formatX: (f) => `${(f/1e9).toFixed(3)} GHz`,
+  formatY: (p) => `${p.toFixed(1)} dBm`
+}
+```
+
+**For 2D traces:**
+```
+Frequency: 2.45 GHz
+Time: 1.2s
+Intensity: -75 dBm
+```
+Shows X, Y, and Z value using formatX, formatY, formatZ.
+
+**For multiple 1D traces (mode: 'all-traces'):**
+```
+Frequency: 2.45 GHz
+
+Channel 1: -75 dBm
+Channel 2: -82 dBm
+Channel 3: -68 dBm
+```
+Shows all trace values at that X position (or nearest points).
+
+**For mixed 1D + 2D traces:**
+```
+Frequency: 2.45 GHz
+Time: 1.2s
+Intensity: -75 dBm
+
+Cursor Line: -65 dBm
+Threshold: -80 dBm
+```
+Shows 2D image data, then 1D trace data separately.
+
+### Example Configurations
+
+**Minimal (just show values, no visual crosshair):**
+```typescript
+interactions: {
+  cursor: false,
+  tooltip: true
+}
+```
+
+**FFT-style (snap to data, show single trace):**
+```typescript
+interactions: {
+  cursor: {
+    style: 'vertical',
+    snap: true,
+    color: '#00ff00'
+  },
+  tooltip: {
+    mode: 'nearest'
+  }
+}
+```
+
+**Multi-channel comparison (show all traces):**
+```typescript
+interactions: {
+  cursor: {
+    style: 'crosshair',
+    snap: true
+  },
+  tooltip: {
+    mode: 'all-traces'
+  }
+}
+```
+
+**Spectrogram (free-floating, sample image):**
+```typescript
+interactions: {
+  cursor: {
+    style: 'crosshair',
+    snap: false
+  },
+  tooltip: {
+    formatZ: (intensity) => `${intensity.toFixed(1)} dBm`
+  }
+}
+```
+
+**Custom styled crosshair:**
+```typescript
+interactions: {
+  cursor: {
+    style: 'crosshair',
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineWidth: 1,
+    dashPattern: [5, 5]
+  },
+  tooltip: {
+    background: 'rgba(0, 0, 0, 0.9)',
+    textColor: '#00ff00',
+    borderRadius: 4,
+    padding: 8
+  }
+}
+```
+
+---
+
 ## Advanced Usage Examples
 
 ### Example 1: FFT Display with Threshold Line
@@ -314,7 +520,17 @@ function FFTDisplay({ fftData, threshold }) {
         range: { min: -100, max: 0 }
       }
     },
-    interactions: { zoom: true, pan: 'x', crosshair: true }  // pan horizontally only
+    interactions: {
+      zoom: true,
+      pan: 'x',  // pan horizontally only
+      cursor: {
+        style: 'crosshair',
+        snap: true  // snap to nearest data point
+      },
+      tooltip: {
+        mode: 'nearest'
+      }
+    }
   });
 
   // Create trace handles
@@ -755,6 +971,11 @@ Based on feedback and iteration:
 9. **✅ Unified 1D/2D plotting**: Same `usePlot` hook handles both 1D and 2D traces
 10. **✅ Separate waterfall hook**: `useWaterfall` for optimized streaming use case
 11. **✅ Optional plot container**: Convenience wrapper, but manual layout works fine
+12. **✅ Comprehensive cursor/tooltip API**:
+   - Multiple crosshair styles (crosshair, vertical, horizontal, none)
+   - Smart snap behavior (auto for 1D, free for 2D)
+   - Flexible tooltip content (nearest, all-traces, custom formatters)
+   - Handles mixed 1D + 2D traces elegantly
 
 ## Performance & Rendering Optimizations
 
