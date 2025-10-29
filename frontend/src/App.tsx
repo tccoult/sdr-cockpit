@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { TaskSidebar } from "./components/tasks/TaskSidebar";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { SpectrumView } from "./components/visualization/SpectrumView";
+import { useWindowSize } from "./hooks/useWindowSize";
 import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
 import { MockFFTGenerator, dispatchFFTData } from "./utils/mockDataGenerator";
+
 import {
   createMockRxTask,
   createMockTxTask,
@@ -18,6 +20,9 @@ import {
 } from "./utils/mockTaskGenerator";
 
 function App() {
+  const { width } = useWindowSize(); // Get dynamic width
+  const isMobile = width < 1024;
+
   const colorMap = PLASMA;
 
   // Task state
@@ -194,7 +199,7 @@ function App() {
       }}
     >
       {/* Mobile overlay */}
-      {isSidebarOpen && (
+      {isSidebarOpen && isMobile && (
         <div
           onClick={() => setIsSidebarOpen(false)}
           style={{
@@ -205,7 +210,7 @@ function App() {
             bottom: 0,
             background: "rgba(0, 0, 0, 0.5)",
             zIndex: 999,
-            display: window.innerWidth < 1024 ? "block" : "none",
+            display: "block",
           }}
         />
       )}
@@ -213,8 +218,8 @@ function App() {
       {/* Task Sidebar */}
       <div
         style={{
-          position: window.innerWidth < 1024 ? "fixed" : "relative",
-          left: window.innerWidth < 1024 ? (isSidebarOpen ? 0 : -280) : 0,
+          position: isMobile ? "fixed" : "relative",
+          left: isMobile ? (isSidebarOpen ? 0 : -280) : 0,
           top: 0,
           height: "100vh",
           zIndex: 1000,
@@ -253,7 +258,7 @@ function App() {
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               style={{
-                display: window.innerWidth < 1024 ? "flex" : "none",
+                display: isMobile ? "flex" : "none",
                 flexDirection: "column",
                 gap: 4,
                 background: "transparent",

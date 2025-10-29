@@ -54,8 +54,9 @@ export const FFTDisplay = memo(function FFTDisplay({
     () => ({ top: 20, right: 30, bottom: 40, left: 60 }),
     []
   );
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
+
+  const plotWidth = Math.max(0, width - margin.left - margin.right);
+  const plotHeight = Math.max(0, height - margin.top - margin.bottom);
 
   const [smoothedFFT, setSmoothedFFT] = useState<Float32Array | null>(null);
   const smoothingFactor = 0.9; // 0-1, higher = more smoothing (try 0.5-0.8)
@@ -249,6 +250,24 @@ export const FFTDisplay = memo(function FFTDisplay({
 
     ctx.restore();
 
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.lineWidth = 1;
+
+    // Y-Axis (left)
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, height - margin.bottom);
+    ctx.stroke();
+
+    // X-Axis (bottom)
+    ctx.beginPath();
+    ctx.moveTo(margin.left, height - margin.bottom);
+    ctx.lineTo(width - margin.right, height - margin.bottom);
+    ctx.stroke();
+
+    ctx.restore();
+
     // ===== FFT TRACE =====
     if (chartData.length > 0) {
       ctx.lineWidth = 1.5;
@@ -336,7 +355,6 @@ export const FFTDisplay = memo(function FFTDisplay({
     requestRender();
   }, [requestRender]);
 
-  // One-time DPI setup when dimensions change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -350,13 +368,15 @@ export const FFTDisplay = memo(function FFTDisplay({
     canvas.width = width * dpr;
     canvas.height = height * dpr;
 
-    // Scale back down via CSS
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
     // Scale all drawing operations
     ctx.scale(dpr, dpr);
   }, [width, height]);
+
+  const [isPanning, setIsPanning] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number } | null>(null);
 
   // Mouse move handler - update cursor info
   const handleMouseMove = useCallback(
@@ -403,6 +423,23 @@ export const FFTDisplay = memo(function FFTDisplay({
         power: closestPoint.power,
       });
 
+      if (isPanning && dragStart) {
+        if (!onFrequencyRangeChange) return;
+
+        const deltaX = e.clientX - dragStart.x;
+        const { startFreq, endFreq } = frequencyRange;
+        const span = endFreq - startFreq;
+        const freqShift = -(deltaX / plotWidth) * span; // Use plotWidth
+
+        onFrequencyRangeChange({
+          startFreq: startFreq + freqShift,
+          endFreq: endFreq + freqShift,
+        });
+
+        setDragStart({ x: e.clientX });
+        return; // Don't show cursor info while panning
+      }
+
       // Update zoom selection end
       if (isSelecting && zoomSelection) {
         setZoomSelection({
@@ -412,57 +449,75 @@ export const FFTDisplay = memo(function FFTDisplay({
         });
       }
     },
-    [chartData, margin, width, height, xToFreq, isSelecting, zoomSelection]
+    [
+      chartData,
+      margin,
+      width,
+      height,
+      isPanning,
+      dragStart,
+      isSelecting,
+      zoomSelection,
+      onFrequencyRangeChange,
+      frequencyRange,
+      plotWidth,
+      xToFreq,
+    ]
   );
 
-  // Mouse down - start zoom selection
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
 
-      // Only start selection if in plot area
       if (x < margin.left || x > width - margin.right) return;
 
-      const freq = xToFreq(x);
-      setIsSelecting(true);
-      setZoomSelection({
-        startX: x,
-        endX: x,
-        startFreq: freq,
-        endFreq: freq,
-      });
+      if (e.shiftKey) {
+        // SHIFT key is pressed
+        const freq = xToFreq(x);
+        setIsSelecting(true); // Start region zoom
+        setZoomSelection({
+          startX: x,
+          endX: x,
+          startFreq: freq,
+          endFreq: freq,
+        });
+      } else {
+        // No shift key
+        setIsPanning(true); // Start panning
+        setDragStart({ x: e.clientX });
+      }
     },
     [margin, width, xToFreq]
   );
 
   // Mouse up - complete zoom
   const handleMouseUp = useCallback(() => {
-    if (!isSelecting || !zoomSelection || !onFrequencyRangeChange) {
-      setIsSelecting(false);
-      setZoomSelection(null);
-      return;
+    if (isSelecting && zoomSelection && onFrequencyRangeChange) {
+      const newStartFreq = Math.min(
+        zoomSelection.startFreq,
+        zoomSelection.endFreq
+      );
+      const newEndFreq = Math.max(
+        zoomSelection.startFreq,
+        zoomSelection.endFreq
+      );
+
+      // Only zoom if selection is significant (> 1kHz)
+      if (newEndFreq - newStartFreq > 1000) {
+        onFrequencyRangeChange({
+          startFreq: newStartFreq,
+          endFreq: newEndFreq,
+        });
+      }
     }
 
-    const newStartFreq = Math.min(
-      zoomSelection.startFreq,
-      zoomSelection.endFreq
-    );
-    const newEndFreq = Math.max(zoomSelection.startFreq, zoomSelection.endFreq);
-
-    // Only zoom if selection is significant (> 1kHz)
-    if (newEndFreq - newStartFreq > 1000) {
-      onFrequencyRangeChange({
-        startFreq: newStartFreq,
-        endFreq: newEndFreq,
-      });
-    }
-
+    setIsPanning(false);
     setIsSelecting(false);
     setZoomSelection(null);
+    setDragStart(null);
   }, [isSelecting, zoomSelection, onFrequencyRangeChange]);
 
   // Mouse leave - cancel cursor and selection
@@ -516,7 +571,11 @@ export const FFTDisplay = memo(function FFTDisplay({
         onWheel={handleWheel}
         style={{
           display: "block",
-          cursor: isSelecting ? "crosshair" : "default",
+          cursor: isPanning
+            ? "grabbing"
+            : isSelecting
+            ? "crosshair"
+            : "default",
         }}
       />
 
