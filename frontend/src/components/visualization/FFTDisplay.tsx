@@ -355,7 +355,6 @@ export const FFTDisplay = memo(function FFTDisplay({
     requestRender();
   }, [requestRender]);
 
-  // One-time DPI setup when dimensions change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -369,7 +368,6 @@ export const FFTDisplay = memo(function FFTDisplay({
     canvas.width = width * dpr;
     canvas.height = height * dpr;
 
-    // Scale back down via CSS
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
