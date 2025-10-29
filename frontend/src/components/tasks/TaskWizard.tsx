@@ -222,20 +222,12 @@ export function TaskWizard({
                   Frequency
                 </label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input
+                  <Input
                     type="number"
                     value={rxFrequency}
                     onChange={(e) => setRxFrequency(e.target.value)}
                     step="0.001"
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    style={{ flex: 1 }}
                   />
                   <select
                     value={rxFreqUnit}
@@ -262,20 +254,12 @@ export function TaskWizard({
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                     Sample Rate (MSPS)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={rxSampleRate}
                     onChange={(e) => setRxSampleRate(e.target.value)}
                     step="0.1"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    fullWidth
                   />
                 </div>
 
@@ -283,20 +267,12 @@ export function TaskWizard({
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                     Bandwidth (MHz)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={rxBandwidth}
                     onChange={(e) => setRxBandwidth(e.target.value)}
                     step="0.1"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    fullWidth
                   />
                 </div>
               </div>
@@ -373,20 +349,12 @@ export function TaskWizard({
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                   Task Name
                 </label>
-                <input
+                <Input
                   type="text"
                   value={txName}
                   onChange={(e) => setTxName(e.target.value)}
                   placeholder="TX Playback"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'rgba(30, 30, 40, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'white',
-                    fontSize: 14,
-                  }}
+                  fullWidth
                 />
               </div>
 
@@ -448,21 +416,13 @@ export function TaskWizard({
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                       Override Frequency (MHz)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       value={txFrequency}
                       onChange={(e) => setTxFrequency(e.target.value)}
                       step="0.001"
                       placeholder="433.920"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: 'rgba(30, 30, 40, 0.8)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: 6,
-                        color: 'white',
-                        fontSize: 14,
-                      }}
+                      fullWidth
                     />
                   </div>
                 )}
