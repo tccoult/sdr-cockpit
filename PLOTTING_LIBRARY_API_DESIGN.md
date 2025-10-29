@@ -51,11 +51,11 @@ function MySpectrumPlot() {
   });
 
   // Create trace and get handle
-  const spectrumTrace = useRef<TraceHandle>();
+  const spectrumTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
-    spectrumTrace.current = plot.addTrace({
-      type: 'line',
+    spectrumTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#00ff00',
       lineWidth: 2
     });
@@ -82,8 +82,9 @@ interface PlotInstance {
   // Canvas ref to attach to <canvas> element
   canvasRef: RefObject<HTMLCanvasElement>;
 
-  // Trace management - returns a trace handle for updates
-  addTrace: (config: TraceConfig) => TraceHandle;
+  // Trace management - type-safe 1D and 2D trace addition
+  addTrace1D: (config: Trace1DConfig) => TraceHandle1D;
+  addTrace2D: (config: Trace2DConfig) => TraceHandle2D;
   clearTraces: () => void;
 
   // Axis control
@@ -103,11 +104,19 @@ interface PlotInstance {
   destroy: () => void;
 }
 
-// Handle returned by addTrace for updating/removing individual traces
-interface TraceHandle {
-  update: (data: TraceData) => void;
+// Handle returned by addTrace1D for updating/removing 1D traces
+interface TraceHandle1D {
+  update: (data: TraceData1D) => void;
   setVisible: (visible: boolean) => void;
-  setConfig: (config: Partial<TraceConfig>) => void;  // update styling/options
+  setConfig: (config: Partial<Trace1DConfig>) => void;
+  remove: () => void;
+}
+
+// Handle returned by addTrace2D for updating/removing 2D traces
+interface TraceHandle2D {
+  update: (data: TraceData2D) => void;
+  setVisible: (visible: boolean) => void;
+  setConfig: (config: Partial<Trace2DConfig>) => void;
   remove: () => void;
 }
 ```
@@ -188,20 +197,28 @@ interface AxisConfig {
 // - Call plot.autoRange('x' | 'y' | 'both') to explicitly re-calculate
 ```
 
-### `TraceConfig`
+### `Trace1DConfig` and `Trace2DConfig`
+
+**1D Traces** (line, stem, scatter, area):
 
 ```typescript
-interface TraceConfig {
-  // Trace type (1D or 2D)
-  type: 'line' | 'stem' | 'scatter' | 'area' | 'image';
+enum Trace1DType {
+  Line = 'line',
+  Stem = 'stem',
+  Scatter = 'scatter',
+  Area = 'area'
+}
 
-  // Styling
+interface Trace1DConfig {
+  type: Trace1DType;
+
+  // Common styling
   color: string;
   lineWidth?: number;
   opacity?: number;
 
   // Line-specific options
-  dashPattern?: number[];  // e.g., [5, 5] for dashed
+  dashPattern?: number[];  // e.g., [5, 5] for dashed line
 
   // Scatter-specific options
   pointSize?: number;
@@ -210,21 +227,36 @@ interface TraceConfig {
   // Area-specific options
   fillColor?: string;
   fillOpacity?: number;
-  baseline?: number;  // y-value for area baseline
-
-  // Image-specific options (for 2D data)
-  colorMap?: ColorMapName | CustomColorMap;
-  valueRange?: { min: number; max: number };  // maps Z values to colors
-  interpolation?: 'nearest' | 'bilinear';
+  baseline?: number;  // y-value for area baseline (default: 0)
 
   // Visibility & ordering
   visible?: boolean;
-  zIndex?: number;  // render order
+  zIndex?: number;  // render order (higher = on top)
 }
-
-// Note: Smoothing is handled by users maintaining their own state.
-// The library focuses on rendering, not data processing.
 ```
+
+**2D Traces** (heatmaps, spectrograms):
+
+```typescript
+interface Trace2DConfig {
+  // No type enum - only one 2D trace type
+
+  // Color mapping
+  colorMap: ColorMapName | CustomColorMap;  // required
+  valueRange: { min: number; max: number };  // maps Z values to colors
+
+  // Rendering
+  interpolation?: 'nearest' | 'bilinear';  // default: 'nearest'
+  opacity?: number;
+
+  // Visibility & ordering
+  visible?: boolean;
+  zIndex?: number;  // render order (typically 0 for background)
+}
+```
+
+**Note:** Smoothing/filtering is handled by users maintaining their own state.
+The library focuses on rendering, not data processing.
 
 ### `TraceData`
 
@@ -272,19 +304,19 @@ function FFTDisplay({ fftData, threshold }) {
   });
 
   // Create trace handles
-  const spectrumTrace = useRef<TraceHandle>();
-  const thresholdTrace = useRef<TraceHandle>();
+  const spectrumTrace = useRef<TraceHandle1D>();
+  const thresholdTrace = useRef<TraceHandle1D>();
 
   // Add traces on mount
   useEffect(() => {
-    spectrumTrace.current = plot.addTrace({
-      type: 'line',
+    spectrumTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#00ff00',
       lineWidth: 2
     });
 
-    thresholdTrace.current = plot.addTrace({
-      type: 'line',
+    thresholdTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#ff0000',
       lineWidth: 1,
       dashPattern: [5, 5]
@@ -325,15 +357,14 @@ function ConstellationPlot({ iqData }) {
     interactions: { zoom: 'both', pan: false }
   });
 
-  const symbolsTrace = useRef<TraceHandle>();
+  const symbolsTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
-    symbolsTrace.current = plot.addTrace({
-      type: 'scatter',
+    symbolsTrace.current = plot.addTrace1D({
+      type: Trace1DType.Scatter,
       color: '#00ffff',
       pointSize: 3,
-      opacity: 0.6,
-      maxPoints: 1000  // limit for performance
+      opacity: 0.6
     });
   }, []);
 
@@ -359,11 +390,11 @@ function ImpulseResponsePlot({ taps }) {
     interactions: { zoom: 'both', pan: 'x' }  // pan horizontally only
   });
 
-  const tapsTrace = useRef<TraceHandle>();
+  const tapsTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
-    tapsTrace.current = plot.addTrace({
-      type: 'stem',
+    tapsTrace.current = plot.addTrace1D({
+      type: Trace1DType.Stem,
       color: '#ffaa00',
       lineWidth: 2
     });
@@ -393,7 +424,7 @@ function MultiChannelFFT({ channels }) {
   });
 
   const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'];
-  const channelTraces = useRef<TraceHandle[]>([]);
+  const channelTraces = useRef<TraceHandle1D[]>([]);
 
   useEffect(() => {
     // Clear old traces
@@ -401,8 +432,8 @@ function MultiChannelFFT({ channels }) {
 
     // Add trace for each channel
     channels.forEach((_, idx) => {
-      const trace = plot.addTrace({
-        type: 'line',
+      const trace = plot.addTrace1D({
+        type: Trace1DType.Line,
         color: colors[idx],
         lineWidth: 2,
         opacity: 0.8
@@ -437,18 +468,18 @@ function SignalEnvelope({ timeData, envelope }) {
     }
   });
 
-  const signalTrace = useRef<TraceHandle>();
-  const envelopeTrace = useRef<TraceHandle>();
+  const signalTrace = useRef<TraceHandle1D>();
+  const envelopeTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
-    signalTrace.current = plot.addTrace({
-      type: 'line',
+    signalTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#00aaff',
       lineWidth: 1
     });
 
-    envelopeTrace.current = plot.addTrace({
-      type: 'area',
+    envelopeTrace.current = plot.addTrace1D({
+      type: Trace1DType.Area,
       color: '#ff6600',
       fillColor: '#ff6600',
       fillOpacity: 0.2,
@@ -656,11 +687,11 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
     interactions: { zoom: true, pan: 'x', crosshair: true }  // pan horizontally only
   });
 
-  const spectrumTrace = useRef<TraceHandle>();
+  const spectrumTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
-    spectrumTrace.current = plot.addTrace({
-      type: 'line',
+    spectrumTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#00ff00',
       lineWidth: 2
     });
@@ -697,15 +728,19 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
 Based on feedback and iteration:
 
 1. **✅ Hook-based API**: Modern React style with `usePlot` hook
-2. **✅ Trace handles instead of string IDs**: `addTrace()` returns a `TraceHandle` for type-safe updates
-3. **✅ Configurable line thickness**: `lineWidth` property in `TraceConfig`
-4. **✅ Clear pan direction**: `pan: 'x'` means horizontal only, `pan: 'y'` means vertical only
-5. **✅ Imperative updates**: Trace updates don't trigger React re-renders for performance
-6. **✅ No smoothing in library**: Users handle their own data processing/state
-7. **✅ Smart auto-ranging**: Only auto-range on first data or explicit request
-8. **✅ Unified 1D/2D API**: Same `usePlot` hook handles both 1D and 2D traces
-9. **✅ Separate waterfall hook**: `useWaterfall` for optimized streaming use case
-10. **✅ Optional plot container**: Convenience wrapper, but manual layout works fine
+2. **✅ Trace handles instead of string IDs**: `addTrace1D/2D()` returns handles for type-safe updates
+3. **✅ Type-safe trace addition**: Separate `addTrace1D()` and `addTrace2D()` methods
+   - `addTrace1D()` accepts `Trace1DConfig` with `Trace1DType` enum
+   - `addTrace2D()` accepts `Trace2DConfig` (no type enum needed)
+   - TypeScript enforces correct options for each trace type
+4. **✅ Configurable line thickness**: `lineWidth` property in trace configs
+5. **✅ Clear pan direction**: `pan: 'x'` means horizontal only, `pan: 'y'` means vertical only
+6. **✅ Imperative updates**: Trace updates don't trigger React re-renders for performance
+7. **✅ No smoothing in library**: Users handle their own data processing/state
+8. **✅ Smart auto-ranging**: Only auto-range on first data or explicit request
+9. **✅ Unified 1D/2D plotting**: Same `usePlot` hook handles both 1D and 2D traces
+10. **✅ Separate waterfall hook**: `useWaterfall` for optimized streaming use case
+11. **✅ Optional plot container**: Convenience wrapper, but manual layout works fine
 
 ## Performance & Rendering Optimizations
 
@@ -802,20 +837,20 @@ function FFTWithDetections({ fftData, detections }) {
     }
   });
 
-  const fftTrace = useRef<TraceHandle>();
-  const markerTrace = useRef<TraceHandle>();
+  const fftTrace = useRef<TraceHandle1D>();
+  const markerTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
     // Continuous FFT line
-    fftTrace.current = plot.addTrace({
-      type: 'line',
+    fftTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#00ff00',
       lineWidth: 2
     });
 
     // Discrete detection markers
-    markerTrace.current = plot.addTrace({
-      type: 'stem',  // or 'scatter' for dots
+    markerTrace.current = plot.addTrace1D({
+      type: Trace1DType.Stem,  // or Scatter for dots
       color: '#ff0000',
       lineWidth: 3,
       pointSize: 6
@@ -868,11 +903,10 @@ function Spectrogram({ data }) {
     interactions: { zoom: 'both', pan: 'both' }
   });
 
-  const imageTrace = useRef<TraceHandle>();
+  const imageTrace = useRef<TraceHandle2D>();
 
   useEffect(() => {
-    imageTrace.current = plot.addTrace({
-      type: 'image',
+    imageTrace.current = plot.addTrace2D({
       colorMap: 'plasma',
       valueRange: { min: -100, max: 0 },  // dB range for color mapping
       interpolation: 'nearest'
@@ -971,21 +1005,20 @@ function SpectrogramWithCursor({ data, cursorFreq }) {
     interactions: { zoom: 'both', pan: 'both' }
   });
 
-  const imageTrace = useRef<TraceHandle>();
-  const cursorTrace = useRef<TraceHandle>();
+  const imageTrace = useRef<TraceHandle2D>();
+  const cursorTrace = useRef<TraceHandle1D>();
 
   useEffect(() => {
     // Add 2D image trace
-    imageTrace.current = plot.addTrace({
-      type: 'image',
+    imageTrace.current = plot.addTrace2D({
       colorMap: 'plasma',
       valueRange: { min: -100, max: 0 },
       zIndex: 0  // render first (background)
     });
 
     // Add 1D vertical line on top of 2D image
-    cursorTrace.current = plot.addTrace({
-      type: 'line',
+    cursorTrace.current = plot.addTrace1D({
+      type: Trace1DType.Line,
       color: '#ffffff',
       lineWidth: 2,
       dashPattern: [5, 5],
