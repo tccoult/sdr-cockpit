@@ -151,7 +151,7 @@ interface PlotConfig {
 
     // Cursor/crosshair configuration
     cursor?: {
-      style?: 'crosshair' | 'vertical' | 'horizontal' | 'none';  // default: 'crosshair'
+      style?: CursorStyle;  // default: CursorStyle.Crosshair
       snap?: boolean;  // snap to nearest data point for 1D traces (default: true for 1D, false for 2D)
       color?: string;  // default: '#ffffff'
       lineWidth?: number;  // default: 1
@@ -161,7 +161,7 @@ interface PlotConfig {
     // Tooltip configuration
     tooltip?: {
       show?: boolean;  // default: true if cursor enabled
-      mode?: 'nearest' | 'all-traces';  // default: 'nearest'
+      mode?: TooltipMode;  // default: TooltipMode.Nearest
       // Formatters (defaults to axis formatters)
       formatX?: (value: number) => string;
       formatY?: (value: number) => string;
@@ -193,7 +193,7 @@ interface PlotConfig {
   // Legend (optional)
   legend?: {
     show?: boolean;  // default: false
-    position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+    position?: LegendPosition;  // default: LegendPosition.TopRight
     background?: string;
     textColor?: string;
   };
@@ -228,9 +228,9 @@ interface AxisConfig {
 // - Call plot.autoRange('x' | 'y' | 'both') to explicitly re-calculate
 ```
 
-### `Trace1DConfig` and `Trace2DConfig`
+### Enums
 
-**1D Traces** (line, stem, scatter, area):
+**Core enums used throughout the API:**
 
 ```typescript
 enum Trace1DType {
@@ -239,6 +239,64 @@ enum Trace1DType {
   Scatter = 'scatter',
   Area = 'area'
 }
+
+enum CursorStyle {
+  Crosshair = 'crosshair',
+  Vertical = 'vertical',
+  Horizontal = 'horizontal',
+  None = 'none'
+}
+
+enum TooltipMode {
+  Nearest = 'nearest',
+  AllTraces = 'all-traces'
+}
+
+enum LegendPosition {
+  TopRight = 'top-right',
+  TopLeft = 'top-left',
+  BottomRight = 'bottom-right',
+  BottomLeft = 'bottom-left'
+}
+
+enum InterpolationMode {
+  Nearest = 'nearest',
+  Bilinear = 'bilinear'
+}
+
+enum PointShape {
+  Circle = 'circle',
+  Square = 'square',
+  Triangle = 'triangle'
+}
+
+enum ColorMapName {
+  Plasma = 'plasma',
+  Viridis = 'viridis',
+  Turbo = 'turbo',
+  Grayscale = 'grayscale',
+  Jet = 'jet',
+  Hot = 'hot',
+  Cool = 'cool'
+}
+
+enum LayoutDirection {
+  Vertical = 'vertical',
+  Horizontal = 'horizontal',
+  Grid = 'grid'
+}
+
+enum ScrollDirection {
+  Down = 'down',
+  Up = 'up'
+}
+```
+
+### `Trace1DConfig` and `Trace2DConfig`
+
+**1D Traces** (line, stem, scatter, area):
+
+```typescript
 
 interface Trace1DConfig {
   type: Trace1DType;
@@ -253,7 +311,7 @@ interface Trace1DConfig {
 
   // Scatter-specific options
   pointSize?: number;
-  pointShape?: 'circle' | 'square' | 'triangle';
+  pointShape?: PointShape;
 
   // Area-specific options
   fillColor?: string;
@@ -280,7 +338,7 @@ interface Trace2DConfig {
   valueRange: { min: number; max: number };  // maps Z values to colors
 
   // Rendering
-  interpolation?: 'nearest' | 'bilinear';  // default: 'nearest'
+  interpolation?: InterpolationMode;  // default: InterpolationMode.Nearest
   opacity?: number;
 
   // Legend
@@ -325,7 +383,7 @@ type TraceData = TraceData1D | TraceData2D;
 **Full Crosshair (default, recommended for technical plots):**
 ```typescript
 interactions: {
-  cursor: { style: 'crosshair' }  // or cursor: true for defaults
+  cursor: { style: CursorStyle.Crosshair }  // or cursor: true for defaults
 }
 ```
 - Vertical + horizontal lines intersecting at cursor
@@ -336,7 +394,7 @@ interactions: {
 **Vertical Line Only:**
 ```typescript
 interactions: {
-  cursor: { style: 'vertical' }
+  cursor: { style: CursorStyle.Vertical }
 }
 ```
 - Single vertical line at cursor X position
@@ -346,7 +404,7 @@ interactions: {
 **Horizontal Line Only:**
 ```typescript
 interactions: {
-  cursor: { style: 'horizontal' }
+  cursor: { style: CursorStyle.Horizontal }
 }
 ```
 - Single horizontal line at cursor Y position
@@ -355,7 +413,7 @@ interactions: {
 **None:**
 ```typescript
 interactions: {
-  cursor: false  // or { style: 'none' }
+  cursor: false  // or { style: CursorStyle.None }
 }
 ```
 - No cursor visualization
@@ -410,7 +468,7 @@ Intensity: -75 dBm
 ```
 Shows X, Y, and Z value using formatX, formatY, formatZ.
 
-**For multiple 1D traces (mode: 'all-traces'):**
+**For multiple 1D traces (mode: TooltipMode.AllTraces):**
 ```
 Frequency: 2.45 GHz
 
@@ -445,12 +503,12 @@ interactions: {
 ```typescript
 interactions: {
   cursor: {
-    style: 'vertical',
+    style: CursorStyle.Vertical,
     snap: true,
     color: '#00ff00'
   },
   tooltip: {
-    mode: 'nearest'
+    mode: TooltipMode.Nearest
   }
 }
 ```
@@ -459,11 +517,11 @@ interactions: {
 ```typescript
 interactions: {
   cursor: {
-    style: 'crosshair',
+    style: CursorStyle.Crosshair,
     snap: true
   },
   tooltip: {
-    mode: 'all-traces'
+    mode: TooltipMode.AllTraces
   }
 }
 ```
@@ -472,7 +530,7 @@ interactions: {
 ```typescript
 interactions: {
   cursor: {
-    style: 'crosshair',
+    style: CursorStyle.Crosshair,
     snap: false
   },
   tooltip: {
@@ -485,7 +543,7 @@ interactions: {
 ```typescript
 interactions: {
   cursor: {
-    style: 'crosshair',
+    style: CursorStyle.Crosshair,
     color: 'rgba(255, 255, 255, 0.8)',
     lineWidth: 1,
     dashPattern: [5, 5]
@@ -524,11 +582,11 @@ function FFTDisplay({ fftData, threshold }) {
       zoom: true,
       pan: 'x',  // pan horizontally only
       cursor: {
-        style: 'crosshair',
+        style: CursorStyle.Crosshair,
         snap: true  // snap to nearest data point
       },
       tooltip: {
-        mode: 'nearest'
+        mode: TooltipMode.Nearest
       }
     }
   });
@@ -1142,9 +1200,9 @@ function Spectrogram({ data }) {
 
   useEffect(() => {
     imageTrace.current = plot.addTrace2D({
-      colorMap: 'plasma',
+      colorMap: ColorMapName.Plasma,
       valueRange: { min: -100, max: 0 },  // dB range for color mapping
-      interpolation: 'nearest'
+      interpolation: InterpolationMode.Nearest
     });
   }, []);
 
@@ -1170,10 +1228,10 @@ For streaming waterfall displays, use the specialized `useWaterfall` hook:
 function WaterfallDisplay({ frequencyRange }) {
   const waterfall = useWaterfall({
     frequencyRange,
-    colorMap: 'plasma',
+    colorMap: ColorMapName.Plasma,
     valueRange: { min: -100, max: 0 },
     height: 400,  // number of rows to keep in buffer
-    scrollDirection: 'down',  // or 'up'
+    scrollDirection: ScrollDirection.Down,
     interactions: { zoom: 'x', pan: 'x' }
   });
 
@@ -1246,7 +1304,7 @@ function SpectrogramWithCursor({ data, cursorFreq }) {
   useEffect(() => {
     // Add 2D image trace
     imageTrace.current = plot.addTrace2D({
-      colorMap: 'plasma',
+      colorMap: ColorMapName.Plasma,
       valueRange: { min: -100, max: 0 },
       zIndex: 0  // render first (background)
     });
@@ -1301,7 +1359,7 @@ import { PlotContainer } from '@/utils/plotting';
 function SpectrumView() {
   return (
     <PlotContainer
-      layout="vertical"  // or 'horizontal', 'grid'
+      layout={LayoutDirection.Vertical}  // or Horizontal, Grid
       sizes={[250, 400]}  // heights for each plot
       gap={10}           // spacing between plots
       syncZoom="x"       // sync x-axis zoom/pan across plots
@@ -1317,7 +1375,7 @@ function SpectrumView() {
 
 ```typescript
 interface PlotContainerProps {
-  layout: 'vertical' | 'horizontal' | 'grid';
+  layout: LayoutDirection;
   sizes?: number[];           // explicit sizes (px or flex ratios)
   gap?: number;              // spacing between plots in pixels
   syncZoom?: 'x' | 'y' | 'both' | false;  // sync zoom/pan
@@ -1337,7 +1395,7 @@ function SpectrumView() {
 
   return (
     <PlotContainer
-      layout="vertical"
+      layout={LayoutDirection.Vertical}
       sizes={[250, 400]}
       gap={10}
       syncZoom="x"
@@ -1389,7 +1447,7 @@ const plot = usePlot({
   axes: { /* ... */ },
   legend: {
     show: false,  // default: false
-    position: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
+    position: LegendPosition.TopRight,
     background: 'rgba(0, 0, 0, 0.8)',
     textColor: '#ffffff'
   }
@@ -1413,17 +1471,31 @@ plot.addTrace1D({
 
 ### Color Maps
 
-Supported color maps for 2D traces:
-- `'plasma'` (default)
-- `'viridis'`
-- `'turbo'`
-- `'grayscale'`
-- `'jet'`
-- `'hot'`
-- `'cool'`
-
-Custom color maps can be created with gradient stops:
+Supported color maps for 2D traces (use `ColorMapName` enum):
 ```typescript
+ColorMapName.Plasma      // default
+ColorMapName.Viridis
+ColorMapName.Turbo
+ColorMapName.Grayscale
+ColorMapName.Jet
+ColorMapName.Hot
+ColorMapName.Cool
+```
+
+**Using a built-in color map:**
+```typescript
+plot.addTrace2D({
+  colorMap: ColorMapName.Viridis,
+  valueRange: { min: -100, max: 0 }
+});
+```
+
+**Custom color maps with gradient stops:**
+```typescript
+interface CustomColorMap {
+  stops: Array<{ position: number; color: string }>;
+}
+
 plot.addTrace2D({
   colorMap: {
     stops: [
