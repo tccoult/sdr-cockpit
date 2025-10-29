@@ -2,6 +2,7 @@
  * TaskCard component - displays a single SDR task with accordion expand/collapse
  */
 
+import { Button } from '../common/Button';
 import { Task } from '../../types/sdr';
 import {
   formatDuration,
@@ -271,176 +272,71 @@ export function TaskCard({
           >
             {canControl && task.type === 'rx' && (
               <>
-                <button
+                <Button
                   onClick={() => onPause?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => onStop?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   ⏹ Stop
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => onSettings?.(task.id)}
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
                 >
                   ⚙
-                </button>
+                </Button>
 
                 {task.recording?.isRecording ? (
-                  <button
+                  <Button
                     onClick={() => onStopRecording?.(task.id)}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: 12,
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: 6,
-                      color: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }}
+                    variant="secondary"
+                    size="sm"
                   >
                     ⏹ Stop Rec
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     onClick={() => onRecord?.(task.id)}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: 12,
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: 6,
-                      color: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }}
+                    variant="secondary"
+                    size="sm"
                   >
                     🎙️ Record
-                  </button>
+                  </Button>
                 )}
               </>
             )}
 
             {canControl && task.type === 'tx' && (
               <>
-                <button
+                <Button
                   onClick={() => onPause?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   {task.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => onStop?.(task.id)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    fontSize: 12,
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  }}
+                  variant="secondary"
+                  size="sm"
+                  style={{ flex: 1 }}
                 >
                   ⏹ Stop
-                </button>
+                </Button>
 
                 {task.playback?.isLooping && (
                   <span

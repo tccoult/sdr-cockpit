@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "./components/common/Button";
 import { TaskSidebar } from "./components/tasks/TaskSidebar";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { SpectrumView } from "./components/visualization/SpectrumView";
@@ -413,29 +414,13 @@ function App() {
               <div style={{ fontSize: 14, marginBottom: 30, opacity: 0.8 }}>
                 Select a task from the sidebar to view spectrum
               </div>
-              <button
+              <Button
                 onClick={() => setIsWizardOpen(true)}
-                style={{
-                  padding: "12px 24px",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  background: "rgba(255, 255, 255, 0.1)",
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                  borderRadius: 8,
-                  color: "white",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.15)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-                }}
+                variant="secondary"
+                size="lg"
               >
                 + Create New Task
-              </button>
+              </Button>
             </div>
           )}
         </div>

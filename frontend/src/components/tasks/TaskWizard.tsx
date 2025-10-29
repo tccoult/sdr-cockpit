@@ -3,6 +3,8 @@
  */
 
 import { useState } from 'react';
+import { Button } from '../common/Button';
+import { Input } from '../common/Input';
 import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr';
 
 type TaskMode = 'select' | 'rx' | 'tx';
@@ -184,21 +186,14 @@ export function TaskWizard({
               </button>
             </div>
 
-            <button
+            <Button
               onClick={handleClose}
-              style={{
-                marginTop: 20,
-                width: '100%',
-                padding: 12,
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 6,
-                color: 'rgba(255, 255, 255, 0.7)',
-                cursor: 'pointer',
-              }}
+              variant="subtle"
+              fullWidth
+              style={{ marginTop: 20 }}
             >
               Cancel
-            </button>
+            </Button>
           </>
         )}
 
@@ -213,20 +208,12 @@ export function TaskWizard({
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
                   Task Name
                 </label>
-                <input
+                <Input
                   type="text"
                   value={rxName}
                   onChange={(e) => setRxName(e.target.value)}
                   placeholder="ISM Band Monitor"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'rgba(30, 30, 40, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'white',
-                    fontSize: 14,
-                  }}
+                  fullWidth
                 />
               </div>
 

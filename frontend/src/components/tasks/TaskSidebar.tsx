@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { Button } from '../common/Button';
 import { Task } from '../../types/sdr';
 import { TaskCard } from './TaskCard';
 
@@ -81,34 +82,13 @@ export function TaskSidebar({
           Tasks
         </h2>
 
-        <button
+        <Button
           onClick={onCreateTask}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            color: 'white',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            padding: 0,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+          variant="icon"
           title="Create new task"
         >
           <Plus size={18} />
-        </button>
+        </Button>
       </div>
 
       {/* Filter tabs */}
@@ -210,28 +190,13 @@ export function TaskSidebar({
                 : `No ${filter.toUpperCase()} tasks available`}
             </div>
             {filter === 'all' && (
-              <button
+              <Button
                 onClick={onCreateTask}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: 6,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
+                variant="secondary"
+                size="md"
               >
                 + Create Task
-              </button>
+              </Button>
             )}
           </div>
         ) : (
