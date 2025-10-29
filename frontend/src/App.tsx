@@ -388,7 +388,6 @@ function App() {
             <div
               style={{
                 width: "100%",
-                maxWidth: 1400,
                 animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
