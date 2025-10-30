@@ -772,53 +772,103 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
       const { x: xs, y: ys } = data;
       const length = Math.min(xs.length, ys.length);
       if (length === 0) return;
+
+      const segments: Array<Array<{ x: number; y: number }>> = [];
+      let current: Array<{ x: number; y: number }> | null = null;
+
+      for (let i = 0; i < length; i += 1) {
+        const rawX = xs[i];
+        const rawY = ys[i];
+        if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) {
+          if (current && current.length > 0) {
+            segments.push(current);
+            current = null;
+          }
+          continue;
+        }
+        const x = dataToX(rawX);
+        const y = dataToY(rawY);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          if (current && current.length > 0) {
+            segments.push(current);
+            current = null;
+          }
+          continue;
+        }
+        if (!current) {
+          current = [];
+        }
+        current.push({ x, y });
+      }
+
+      if (current && current.length > 0) {
+        segments.push(current);
+      }
+
+      if (segments.length === 0) {
+        return;
+      }
+
       ctx.save();
       ctx.beginPath();
       ctx.rect(rect.x, rect.y, rect.width, rect.height);
       ctx.clip();
       ctx.strokeStyle = config.color;
       ctx.lineWidth = config.lineWidth ?? 1.5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.globalAlpha = config.opacity ?? 1;
       if (config.dashPattern) {
         ctx.setLineDash(config.dashPattern);
       }
+
       if (config.type === Trace1DType.Area) {
-        ctx.beginPath();
-        const baseline = config.baseline ?? 0;
-        ctx.moveTo(dataToX(xs[0]), dataToY(baseline));
-        for (let i = 0; i < length; i += 1) {
-          ctx.lineTo(dataToX(xs[i]), dataToY(ys[i]));
-        }
-        ctx.lineTo(dataToX(xs[length - 1]), dataToY(baseline));
-        ctx.closePath();
-        ctx.fillStyle = config.fillColor ?? config.color;
+        const baselineValue = Number.isFinite(config.baseline)
+          ? (config.baseline as number)
+          : axes.y.range.min;
+        const baselineY = dataToY(baselineValue);
+        const fillStyle = config.fillColor ?? config.color;
         const fillOpacity = config.fillOpacity ?? 0.2;
-        ctx.globalAlpha = fillOpacity;
-        ctx.fill();
+        ctx.fillStyle = fillStyle;
+
+        segments.forEach((segment) => {
+          if (segment.length === 0) return;
+          ctx.beginPath();
+          ctx.moveTo(segment[0].x, baselineY);
+          segment.forEach((point) => {
+            ctx.lineTo(point.x, point.y);
+          });
+          ctx.lineTo(segment[segment.length - 1].x, baselineY);
+          ctx.closePath();
+          ctx.globalAlpha = fillOpacity;
+          ctx.fill();
+        });
         ctx.globalAlpha = config.opacity ?? 1;
       }
 
       if (config.type === Trace1DType.Stem) {
-        const baseline = config.baseline ?? 0;
+        const baselineValue = Number.isFinite(config.baseline)
+          ? (config.baseline as number)
+          : axes.y.range.min;
+        const baselineY = dataToY(baselineValue);
         ctx.beginPath();
-        for (let i = 0; i < length; i += 1) {
-          const x = dataToX(xs[i]);
-          ctx.moveTo(x, dataToY(baseline));
-          ctx.lineTo(x, dataToY(ys[i]));
-        }
+        segments.forEach((segment) => {
+          segment.forEach((point) => {
+            ctx.moveTo(point.x, baselineY);
+            ctx.lineTo(point.x, point.y);
+          });
+        });
         ctx.stroke();
       } else if (config.type !== Trace1DType.Scatter) {
-        ctx.beginPath();
-        for (let i = 0; i < length; i += 1) {
-          const x = dataToX(xs[i]);
-          const y = dataToY(ys[i]);
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
+        segments.forEach((segment) => {
+          if (segment.length === 0) return;
+          ctx.beginPath();
+          ctx.moveTo(segment[0].x, segment[0].y);
+          for (let i = 1; i < segment.length; i += 1) {
+            ctx.lineTo(segment[i].x, segment[i].y);
           }
-        }
-        ctx.stroke();
+          ctx.stroke();
+        });
       }
 
       if (config.type === Trace1DType.Scatter || config.pointSize) {
@@ -826,30 +876,31 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
         const half = pointSize / 2;
         ctx.fillStyle = config.color;
         const shape = config.pointShape ?? PointShape.Circle;
-        for (let i = 0; i < length; i += 1) {
-          const x = dataToX(xs[i]);
-          const y = dataToY(ys[i]);
-          switch (shape) {
-            case PointShape.Square: {
-              ctx.fillRect(x - half, y - half, pointSize, pointSize);
-              break;
+        segments.forEach((segment) => {
+          segment.forEach((point) => {
+            const { x, y } = point;
+            switch (shape) {
+              case PointShape.Square: {
+                ctx.fillRect(x - half, y - half, pointSize, pointSize);
+                break;
+              }
+              case PointShape.Triangle: {
+                ctx.beginPath();
+                ctx.moveTo(x, y - half);
+                ctx.lineTo(x + half, y + half);
+                ctx.lineTo(x - half, y + half);
+                ctx.closePath();
+                ctx.fill();
+                break;
+              }
+              default: {
+                ctx.beginPath();
+                ctx.arc(x, y, half, 0, Math.PI * 2);
+                ctx.fill();
+              }
             }
-            case PointShape.Triangle: {
-              ctx.beginPath();
-              ctx.moveTo(x, y - half);
-              ctx.lineTo(x + half, y + half);
-              ctx.lineTo(x - half, y + half);
-              ctx.closePath();
-              ctx.fill();
-              break;
-            }
-            default: {
-              ctx.beginPath();
-              ctx.arc(x, y, half, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-        }
+          });
+        });
       }
 
       ctx.setLineDash([]);

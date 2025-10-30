@@ -48,6 +48,7 @@ function createPlotConfig(
       color: "rgba(255, 255, 255, 0.1)",
     },
     background: "rgba(10, 10, 15, 0.85)",
+    margins: { top: 16, right: 16, bottom: 48, left: 72 },
     interactions: {
       pan: "x",
       zoom: "x",
@@ -210,8 +211,8 @@ export const FFTDisplay = memo(function FFTDisplay({
     <div
       style={{
         position: "relative",
-        width,
-        height,
+        width: `${width}px`,
+        height: `${height}px`,
         background: "rgba(10, 10, 15, 0.85)",
         borderRadius: 4,
         overflow: "hidden",
