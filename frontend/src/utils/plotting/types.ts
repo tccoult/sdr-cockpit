@@ -227,6 +227,11 @@ export interface TraceHandle2D {
   remove: () => void;
 }
 
+export interface CursorPosition {
+  x?: number | null;
+  y?: number | null;
+}
+
 export interface PlotInstance {
   canvasRef: MutableRefObject<HTMLCanvasElement | null>;
   addTrace1D: (config: Trace1DConfig) => TraceHandle1D;
@@ -235,9 +240,10 @@ export interface PlotInstance {
   setAxisRange: (axis: "x" | "y", min: number, max: number) => void;
   getAxisRange: (axis: "x" | "y") => AxisRange;
   autoRange: (axis: "x" | "y" | "both", padding?: number) => void;
-  onZoom: (callback: (range: AxisRange) => void) => () => void;
-  onPan: (callback: (range: AxisRange) => void) => () => void;
+  onZoom: (callback: (axis: "x" | "y", range: AxisRange) => void) => () => void;
+  onPan: (callback: (axis: "x" | "y", range: AxisRange) => void) => () => void;
   onCursor: (callback: (info: CursorInfo | null) => void) => () => void;
+  setCursorPosition: (position: CursorPosition | null) => void;
   requestRender: () => void;
   destroy: () => void;
 }

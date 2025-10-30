@@ -1,17 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 
 import { createPlotRuntime, type PlotRuntime } from "./core";
 import type {
+  CursorPosition,
   PlotConfig,
   PlotInstance,
   Trace1DConfig,
   Trace2DConfig,
 } from "./types";
+import { PlotSyncContext } from "./PlotSyncContext";
 
 export function usePlot(config: PlotConfig): PlotInstance {
   const runtimeRef = useRef<PlotRuntime>();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const instanceRef = useRef<PlotInstance | null>(null);
+  const syncContext = useContext(PlotSyncContext);
 
   if (!runtimeRef.current) {
     runtimeRef.current = createPlotRuntime(config);
@@ -20,6 +23,14 @@ export function usePlot(config: PlotConfig): PlotInstance {
   useEffect(() => {
     runtimeRef.current?.updateConfig(config);
   }, [config]);
+
+  useEffect(() => {
+    if (!syncContext || !runtimeRef.current) {
+      return;
+    }
+    const unregister = syncContext.registerPlot(runtimeRef.current);
+    return unregister;
+  }, [syncContext]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,6 +68,8 @@ export function usePlot(config: PlotConfig): PlotInstance {
       onZoom: (callback) => runtimeRef.current!.onZoom(callback),
       onPan: (callback) => runtimeRef.current!.onPan(callback),
       onCursor: (callback) => runtimeRef.current!.onCursor(callback),
+      setCursorPosition: (position: CursorPosition | null) =>
+        runtimeRef.current!.setCursorPosition(position),
       requestRender: () => runtimeRef.current!.requestRender(),
       destroy: () => runtimeRef.current!.destroy(),
     };

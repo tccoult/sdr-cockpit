@@ -110,13 +110,19 @@ export const FFTDisplay = memo(function FFTDisplay({
     if (!onFrequencyRangeChange) {
       return;
     }
-    const unsubscribeZoom = plot.onZoom((range) => {
+    const unsubscribeZoom = plot.onZoom((axis, range) => {
+      if (axis !== "x") {
+        return;
+      }
       onFrequencyRangeChange({
         startFreq: range.min,
         endFreq: range.max,
       });
     });
-    const unsubscribePan = plot.onPan((range) => {
+    const unsubscribePan = plot.onPan((axis, range) => {
+      if (axis !== "x") {
+        return;
+      }
       onFrequencyRangeChange({
         startFreq: range.min,
         endFreq: range.max,
@@ -264,6 +270,8 @@ export const FFTDisplay = memo(function FFTDisplay({
     >
       <canvas
         ref={plot.canvasRef}
+        width={width}
+        height={height}
         style={{
           width: "100%",
           height: "100%",

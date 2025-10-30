@@ -3,11 +3,13 @@ import { colorForValue, resolveColorMap } from "./colorMaps";
 import {
   CursorStyle,
   InterpolationMode,
+  LegendPosition,
   PointShape,
   Trace1DType,
   type AxisConfig,
   type AxisRange,
   type CursorInfo,
+  type CursorPosition,
   type GridConfig,
   type PlotConfig,
   type Trace1DConfig,
@@ -25,7 +27,7 @@ import {
   withPadding,
 } from "./math";
 
-type ZoomPanCallback = (range: AxisRange) => void;
+type ZoomPanCallback = (axis: "x" | "y", range: AxisRange) => void;
 type CursorCallback = (info: CursorInfo | null) => void;
 
 interface AxisState {
@@ -86,6 +88,7 @@ export interface PlotRuntime {
   onZoom: (callback: ZoomPanCallback) => () => void;
   onPan: (callback: ZoomPanCallback) => () => void;
   onCursor: (callback: CursorCallback) => () => void;
+  setCursorPosition: (position: CursorPosition | null) => void;
   requestRender: () => void;
   destroy: () => void;
 }
@@ -167,6 +170,7 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
     isBoxSelecting: false,
   };
   const cursorState: CursorState = { info: null };
+  const syncedCursor = { hasX: false, hasY: false, x: 0, y: 0 };
   const boxSelectRect = { x: 0, y: 0, width: 0, height: 0 };
   let frameHandle: number | null = null;
   let lastRender = 0;
@@ -244,12 +248,54 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
 
   function fireZoom(axis: "x" | "y") {
     const range = axes[axis].range;
-    zoomCallbacks.forEach((cb) => cb(range));
+    zoomCallbacks.forEach((cb) => cb(axis, range));
   }
 
   function firePan(axis: "x" | "y") {
     const range = axes[axis].range;
-    panCallbacks.forEach((cb) => cb(range));
+    panCallbacks.forEach((cb) => cb(axis, range));
+  }
+
+  function setSyncedCursor(position: CursorPosition | null) {
+    const hasX =
+      position !== null && position.x !== undefined && position.x !== null && Number.isFinite(position.x);
+    const hasY =
+      position !== null && position.y !== undefined && position.y !== null && Number.isFinite(position.y);
+
+    if (!hasX && !hasY) {
+      if (syncedCursor.hasX || syncedCursor.hasY) {
+        syncedCursor.hasX = false;
+        syncedCursor.hasY = false;
+        scheduleRender();
+      }
+      return;
+    }
+
+    const clampedX = hasX
+      ? clamp(position!.x as number, axes.x.range.min, axes.x.range.max)
+      : syncedCursor.x;
+    const clampedY = hasY
+      ? clamp(position!.y as number, axes.y.range.min, axes.y.range.max)
+      : syncedCursor.y;
+
+    const changed =
+      syncedCursor.hasX !== hasX ||
+      syncedCursor.hasY !== hasY ||
+      (hasX && syncedCursor.x !== clampedX) ||
+      (hasY && syncedCursor.y !== clampedY);
+
+    syncedCursor.hasX = hasX;
+    syncedCursor.hasY = hasY;
+    if (hasX) {
+      syncedCursor.x = clampedX;
+    }
+    if (hasY) {
+      syncedCursor.y = clampedY;
+    }
+
+    if (changed) {
+      scheduleRender();
+    }
   }
 
   function updateCursorFromPointer(x: number, y: number) {
@@ -762,6 +808,107 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
     });
   }
 
+  function drawLegend(ctx: CanvasRenderingContext2D) {
+    const legend = configRef.current.legend;
+    if (!legend.show) {
+      return;
+    }
+
+    const entries: Array<{
+      type: "1d" | "2d";
+      label: string;
+      color?: string;
+      stops?: ReturnType<typeof resolveColorMap>;
+    }> = [];
+
+    traces1D.forEach((trace) => {
+      if (!trace.visible || !trace.config.label) {
+        return;
+      }
+      entries.push({ type: "1d", label: trace.config.label, color: trace.config.color });
+    });
+
+    traces2D.forEach((trace) => {
+      if (!trace.visible || !trace.config.label) {
+        return;
+      }
+      entries.push({
+        type: "2d",
+        label: trace.config.label,
+        stops: resolveColorMap(trace.config.colorMap),
+      });
+    });
+
+    if (entries.length === 0) {
+      return;
+    }
+
+    const { fontSize, fontFamily } = configRef.current;
+    const padding = 8;
+    const swatchSize = fontSize;
+    const lineHeight = fontSize + 6;
+
+    ctx.save();
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    let maxTextWidth = 0;
+    entries.forEach((entry) => {
+      maxTextWidth = Math.max(maxTextWidth, ctx.measureText(entry.label).width);
+    });
+
+    const width = padding * 2 + swatchSize + 8 + maxTextWidth;
+    const height = padding * 2 + entries.length * lineHeight;
+
+    let x = 12;
+    let y = 12;
+    switch (legend.position) {
+      case LegendPosition.TopLeft:
+        x = 12;
+        y = 12;
+        break;
+      case LegendPosition.BottomLeft:
+        x = 12;
+        y = size.height - height - 12;
+        break;
+      case LegendPosition.BottomRight:
+        x = size.width - width - 12;
+        y = size.height - height - 12;
+        break;
+      case LegendPosition.TopRight:
+      default:
+        x = size.width - width - 12;
+        y = 12;
+        break;
+    }
+
+    x = clamp(x, 0, Math.max(0, size.width - width));
+    y = clamp(y, 0, Math.max(0, size.height - height));
+
+    ctx.fillStyle = legend.background;
+    ctx.fillRect(x, y, width, height);
+
+    entries.forEach((entry, index) => {
+      const lineY = y + padding + index * lineHeight;
+      if (entry.type === "1d" && entry.color) {
+        ctx.fillStyle = entry.color;
+        ctx.fillRect(x + padding, lineY, swatchSize, swatchSize);
+      } else if (entry.type === "2d" && entry.stops) {
+        const gradient = ctx.createLinearGradient(x + padding, 0, x + padding + swatchSize, 0);
+        entry.stops.forEach((stop) => {
+          gradient.addColorStop(stop.value, stop.color);
+        });
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x + padding, lineY, swatchSize, swatchSize);
+      }
+      ctx.fillStyle = legend.textColor;
+      ctx.fillText(entry.label, x + padding + swatchSize + 8, lineY);
+    });
+
+    ctx.restore();
+  }
+
   function draw1DTraces(ctx: CanvasRenderingContext2D) {
     const ordered = Array.from(traces1D.values()).filter((trace) => trace.visible && trace.data);
     ordered.sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
@@ -910,27 +1057,117 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
 
   function drawCursor(ctx: CanvasRenderingContext2D) {
     const cursorConfig = configRef.current.interactions.cursor;
-    const info = cursorState.info;
-    if (!cursorConfig || !info) return;
+    if (!cursorConfig) return;
     const rect = getPlotRect();
+    let info = cursorState.info;
+    let hasX = true;
+    let hasY = true;
+
+    if (!info && (syncedCursor.hasX || syncedCursor.hasY)) {
+      const xValue = syncedCursor.hasX ? clamp(syncedCursor.x, axes.x.range.min, axes.x.range.max) : null;
+      const yValue = syncedCursor.hasY ? clamp(syncedCursor.y, axes.y.range.min, axes.y.range.max) : null;
+      if (xValue !== null || yValue !== null) {
+        info = {
+          canvasX: xValue !== null ? dataToX(xValue) : rect.x,
+          canvasY: yValue !== null ? dataToY(yValue) : rect.y,
+          x: xValue ?? axes.x.range.min,
+          y: yValue ?? axes.y.range.min,
+          snapped: null,
+          zValue: null,
+        };
+        hasX = xValue !== null;
+        hasY = yValue !== null;
+      }
+    }
+
+    if (!info) return;
+
     ctx.save();
     ctx.strokeStyle = cursorConfig.color;
     ctx.lineWidth = cursorConfig.lineWidth;
     if (cursorConfig.dashPattern) {
       ctx.setLineDash(cursorConfig.dashPattern);
     }
-    if (cursorConfig.style === CursorStyle.Crosshair || cursorConfig.style === CursorStyle.Vertical) {
+    if (
+      (cursorConfig.style === CursorStyle.Crosshair || cursorConfig.style === CursorStyle.Vertical) &&
+      hasX
+    ) {
       ctx.beginPath();
       ctx.moveTo(info.canvasX, rect.y);
       ctx.lineTo(info.canvasX, rect.y + rect.height);
       ctx.stroke();
     }
-    if (cursorConfig.style === CursorStyle.Crosshair || cursorConfig.style === CursorStyle.Horizontal) {
+    if (
+      (cursorConfig.style === CursorStyle.Crosshair || cursorConfig.style === CursorStyle.Horizontal) &&
+      hasY
+    ) {
       ctx.beginPath();
       ctx.moveTo(rect.x, info.canvasY);
       ctx.lineTo(rect.x + rect.width, info.canvasY);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawTooltip(ctx: CanvasRenderingContext2D) {
+    const tooltipConfig = configRef.current.interactions.tooltip;
+    const info = cursorState.info;
+    if (!tooltipConfig || !tooltipConfig.show || !info) {
+      return;
+    }
+
+    const { axes: axesConfig, fontSize, fontFamily } = configRef.current;
+    const formatX =
+      tooltipConfig.formatX ?? axesConfig.x.ticks?.formatter ?? axesConfig.x.formatter ?? defaultFormatter;
+    const formatY =
+      tooltipConfig.formatY ?? axesConfig.y.ticks?.formatter ?? axesConfig.y.formatter ?? defaultFormatter;
+    const formatZ = tooltipConfig.formatZ ?? defaultFormatter;
+
+    const lines: string[] = [];
+
+    if (info.snapped) {
+      const trace = traces1D.get(info.snapped.traceId);
+      const label = trace?.config.label ?? "Trace";
+      lines.push(`${label}: ${formatY(info.snapped.y)} @ ${formatX(info.snapped.x)}`);
+    } else {
+      lines.push(`X: ${formatX(info.x)}`);
+      lines.push(`Y: ${formatY(info.y)}`);
+    }
+
+    if (info.zValue !== null && info.zValue !== undefined && Number.isFinite(info.zValue)) {
+      lines.push(`Z: ${formatZ(info.zValue)}`);
+    }
+
+    if (lines.length === 0) {
+      return;
+    }
+
+    ctx.save();
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    const padding = tooltipConfig.padding ?? 8;
+    const lineHeight = fontSize + 4;
+    let width = 0;
+    lines.forEach((line) => {
+      width = Math.max(width, ctx.measureText(line).width);
+    });
+    width += padding * 2;
+    const height = padding * 2 + lines.length * lineHeight;
+
+    const preferredX = info.canvasX + 12;
+    const preferredY = info.canvasY - height - 12;
+    const x = clamp(preferredX, 0, Math.max(0, size.width - width));
+    const y = clamp(preferredY, 0, Math.max(0, size.height - height));
+
+    ctx.fillStyle = tooltipConfig.background;
+    ctx.fillRect(x, y, width, height);
+
+    ctx.fillStyle = tooltipConfig.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    lines.forEach((line, index) => {
+      ctx.fillText(line, x + padding, y + padding + index * lineHeight);
+    });
     ctx.restore();
   }
 
@@ -967,7 +1204,9 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
     draw2DTraces(ctx);
     draw1DTraces(ctx);
     drawAxes(ctx);
+    drawLegend(ctx);
     drawCursor(ctx);
+    drawTooltip(ctx);
     drawBoxSelect(ctx);
 
     ctx.restore();
@@ -1176,6 +1415,7 @@ export function createPlotRuntime(initialConfig: PlotConfig): PlotRuntime {
     onZoom,
     onPan,
     onCursor,
+    setCursorPosition: setSyncedCursor,
     requestRender: () => scheduleRender(true),
     destroy,
   };
