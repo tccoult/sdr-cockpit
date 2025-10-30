@@ -48,7 +48,7 @@ function createPlotConfig(
       color: "rgba(255, 255, 255, 0.1)",
     },
     background: "rgba(10, 10, 15, 0.85)",
-    margins: { top: 16, right: 16, bottom: 48, left: 72 },
+    margins: { top: 20, right: 30, bottom: 40, left: 60 },
     interactions: {
       pan: "x",
       zoom: "x",
@@ -81,6 +81,10 @@ export const FFTDisplay = memo(function FFTDisplay({
   const plot = usePlot(config);
   const traceRef = useRef<TraceHandle1D | null>(null);
   const smoothingRef = useRef<Float32Array | null>(null);
+  const lastFFTMetaRef = useRef<{
+    sampleRate: number;
+    centerFreq: number;
+  } | null>(null);
   const [cursorInfo, setCursorInfo] = useState<{
     canvasX: number;
     canvasY: number;
@@ -142,6 +146,61 @@ export const FFTDisplay = memo(function FFTDisplay({
     };
   }, [plot]);
 
+  const updateTraceFromSmoothed = useMemo(() => {
+    return () => {
+      const trace = traceRef.current;
+      const smoothed = smoothingRef.current;
+      const meta = lastFFTMetaRef.current;
+      if (!trace || !smoothed || !meta) {
+        return;
+      }
+
+      const { sampleRate, centerFreq } = meta;
+      const binCount = smoothed.length;
+      if (binCount === 0) {
+        return;
+      }
+
+      const binWidth = sampleRate / binCount;
+      const fftStartFreq = centerFreq - sampleRate / 2;
+
+      let startBin = Math.floor(
+        (frequencyRange.startFreq - fftStartFreq) / binWidth
+      );
+      let endBin = Math.ceil(
+        (frequencyRange.endFreq - fftStartFreq) / binWidth
+      );
+      startBin = Math.max(0, Math.min(binCount - 1, startBin));
+      endBin = Math.max(startBin + 1, Math.min(binCount, endBin));
+
+      const rangeBinCount = endBin - startBin;
+      const maxPoints = Math.min(MAX_POINTS, Math.max(1, rangeBinCount));
+      const freqs = new Float32Array(maxPoints);
+      const powers = new Float32Array(maxPoints);
+      const step =
+        maxPoints > 1 ? (rangeBinCount - 1) / (maxPoints - 1) : 0;
+
+      for (let i = 0; i < maxPoints; i += 1) {
+        const offset = maxPoints > 1 ? Math.round(i * step) : 0;
+        const binIndex = Math.min(rangeBinCount - 1, offset) + startBin;
+        const freq = fftStartFreq + binIndex * binWidth;
+        let power = smoothed[binIndex];
+        if (!Number.isFinite(power) || power < minDb) {
+          power = minDb;
+        } else if (power > maxDb) {
+          power = maxDb;
+        }
+        freqs[i] = freq;
+        powers[i] = power;
+      }
+
+      trace.update({
+        x: freqs,
+        y: powers,
+      });
+    };
+  }, [frequencyRange, maxDb, minDb]);
+
   useEffect(() => {
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
@@ -162,36 +221,21 @@ export const FFTDisplay = memo(function FFTDisplay({
         }
       }
       smoothingRef.current = smoothed;
+      lastFFTMetaRef.current = {
+        sampleRate: incomingFFT.sampleRate,
+        centerFreq: incomingFFT.centerFreq,
+      };
 
-      const trace = traceRef.current;
-      if (!trace) {
-        return;
-      }
-
-      const { sampleRate, centerFreq } = incomingFFT;
-      const binCount = smoothed.length;
-      const maxPoints = Math.min(MAX_POINTS, Math.max(1, binCount));
-      const freqs = new Float32Array(maxPoints);
-      const powers = new Float32Array(maxPoints);
-      const binWidth = sampleRate / binCount;
-      const startFreq = centerFreq - sampleRate / 2;
-      const step = maxPoints > 1 ? (binCount - 1) / (maxPoints - 1) : 0;
-
-      for (let i = 0; i < maxPoints; i += 1) {
-        const binIndex = Math.min(binCount - 1, Math.round(i * step));
-        freqs[i] = startFreq + binIndex * binWidth;
-        powers[i] = smoothed[binIndex];
-      }
-
-      trace.update({
-        x: freqs,
-        y: powers,
-      });
+      updateTraceFromSmoothed();
     };
 
     window.addEventListener("fft-data", handleFFTData);
     return () => window.removeEventListener("fft-data", handleFFTData);
-  }, []);
+  }, [updateTraceFromSmoothed]);
+
+  useEffect(() => {
+    updateTraceFromSmoothed();
+  }, [updateTraceFromSmoothed]);
 
   useEffect(() => {
     const plotRange = plot.getAxisRange("x");
