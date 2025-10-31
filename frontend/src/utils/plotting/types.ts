@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import type { ColorMapInput } from "../../utils/colorMaps";
 
 export enum Trace1DType {
   Line = "line",
@@ -117,9 +118,8 @@ export interface TraceHandle2D {
 }
 
 export interface Trace2DConfig {
-  colorMap: unknown;
+  colorMap: ColorMapInput;
   valueRange: AxisRange;
-  interpolation?: "nearest" | "bilinear";
   opacity?: number;
   label?: string;
   visible?: boolean;
@@ -155,6 +155,8 @@ export interface CursorInfo {
   canvasY: number;
   dataX: number;
   dataY: number;
+  dataZ: number | null;
+  sourceTraceId: string | null;
   snapped: null | {
     traceId: string;
     x: number;
@@ -178,6 +180,8 @@ export interface PlotInstance {
   ) => () => void;
   onCursor: (callback: (info: CursorInfo | null) => void) => () => void;
   requestRender: () => void;
+  setPrimaryTrace: (traceId: string | null) => void;
+  getPrimaryTrace: () => string | null;
   destroy: () => void;
 }
 

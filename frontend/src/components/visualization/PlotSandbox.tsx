@@ -1,11 +1,12 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Trace1DType,
   CursorStyle,
+  Trace1DType,
   usePlot,
+  type CursorInfo,
   type PlotConfig,
   type TraceHandle1D,
-  type CursorInfo,
+  type TraceHandle2D,
 } from "../../utils/plotting";
 
 interface PlotSandboxProps {
@@ -37,12 +38,12 @@ function buildConfig(): PlotConfig {
     },
     background: "rgba(10, 10, 15, 0.9)",
     interactions: {
-      zoom: "x",
-      pan: "x",
+      zoom: "both",
+      pan: "both",
       boxSelect: true,
       cursor: {
         style: CursorStyle.Crosshair,
-        snap: true,
+        snap: false,
       },
     },
   };
@@ -74,11 +75,66 @@ export const PlotSandbox = memo(function PlotSandbox({
     yValuesRef.current.fill(0);
   }, []);
 
+  const imageData = useMemo(() => {
+    const width = 256;
+    const height = 256;
+    const xAxis = new Float32Array(width);
+    const yAxis = new Float32Array(height);
+    const values = new Float32Array(width * height);
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let x = 0; x < width; x += 1) {
+      xAxis[x] = x / (width - 1);
+    }
+    for (let y = 0; y < height; y += 1) {
+      yAxis[y] = -1 + (2 * y) / (height - 1);
+      for (let x = 0; x < width; x += 1) {
+        const fx = xAxis[x];
+        const fy = yAxis[y];
+        const value = Math.sin(2 * Math.PI * fx * 3) * Math.cos(2 * Math.PI * fy * 2);
+        values[y * width + x] = value;
+        if (value < min) min = value;
+        if (value > max) max = value;
+      }
+    }
+    return { width, height, values, xAxis, yAxis, min, max };
+  }, []);
+  const dynamicImageValuesRef = useRef<Float32Array>(imageData.values.slice());
+  const imagePhaseRef = useRef(0);
+
+
+
+  const imageTraceRef = useRef<TraceHandle2D | null>(null);
+
+  useEffect(() => {
+    const trace = plot.addTrace2D({
+      colorMap: "plasma",
+      valueRange: { min: imageData.min, max: imageData.max },
+      opacity: 0.8,
+      zIndex: 0,
+    });
+    imageTraceRef.current = trace;
+    trace.update({
+      x: imageData.xAxis,
+      y: imageData.yAxis,
+      z: dynamicImageValuesRef.current,
+      width: imageData.width,
+      height: imageData.height,
+    });
+    plot.requestRender();
+    return () => {
+      trace.remove();
+      imageTraceRef.current = null;
+    };
+  }, [plot, imageData]);
+
+
   useEffect(() => {
     const trace = plot.addTrace1D({
       type: Trace1DType.Line,
       color: "#00ffd0",
       lineWidth: 2,
+      zIndex: 1,
     });
     traceRef.current = trace;
     return () => {
@@ -107,6 +163,29 @@ export const PlotSandbox = memo(function PlotSandbox({
         x: xValues,
         y: target,
       });
+      const imageTrace = imageTraceRef.current;
+      if (imageTrace) {
+        const values = dynamicImageValuesRef.current;
+        const { width: imgWidth, height: imgHeight } = imageData;
+        const phase = imagePhaseRef.current;
+        let idxVal = 0;
+        for (let y = 0; y < imgHeight; y += 1) {
+          const fy = imageData.yAxis[y];
+          for (let x = 0; x < imgWidth; x += 1) {
+            const fx = imageData.xAxis[x];
+            values[idxVal] = Math.sin(2 * Math.PI * (fx * 3 + phase * 0.3)) * Math.cos(2 * Math.PI * (fy * 2 - phase * 0.2));
+            idxVal += 1;
+          }
+        }
+        imageTrace.update({
+          x: imageData.xAxis,
+          y: imageData.yAxis,
+          z: values,
+          width: imageData.width,
+          height: imageData.height,
+        });
+      }
+      imagePhaseRef.current += 0.016;
       plot.requestRender();
       frameCounterRef.current += 1;
       const nowMs = performance.now();
@@ -142,12 +221,16 @@ export const PlotSandbox = memo(function PlotSandbox({
         return;
       }
       tooltip.style.opacity = "1";
-      tooltip.style.transform = `translate(${info.canvasX + 12}px, ${
-        info.canvasY - 36
-      }px)`;
-      tooltip.textContent = `f=${info.dataX.toFixed(
-        3
-      )}  amp=${info.dataY.toFixed(2)}`;
+      tooltip.style.transform = `translate(${info.canvasX + 12}px, ${info.canvasY - 36}px)`;
+      const freqText = `f=${info.dataX.toFixed(3)}`;
+      const ampText = info.snapped
+        ? `amp=${info.dataY.toFixed(2)}`
+        : `y=${info.dataY.toFixed(2)}`;
+      const intensityText =
+        info.dataZ !== null ? `int=${info.dataZ.toFixed(2)}` : "";
+      tooltip.textContent = [freqText, ampText, intensityText]
+        .filter(Boolean)
+        .join("  ");
     };
     const unsubscribe = plot.onCursor(handleCursor);
     return () => {
@@ -222,6 +305,8 @@ export const PlotSandbox = memo(function PlotSandbox({
       >
         <div>• Wheel to zoom horizontally</div>
         <div>• Drag to pan</div>
+        <div>• Hover to read amplitude (1D) and intensity (2D)</div>
+        <div>• Hover to read amplitude (line) and intensity (image)</div>
         <div>• Hold Shift + drag to box-zoom</div>
       </div>
     </div>

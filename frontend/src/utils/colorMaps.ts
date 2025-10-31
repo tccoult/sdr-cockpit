@@ -8,6 +8,8 @@ export interface ColorMap {
   colors: [number, number, number][]; // RGB tuples (0-255)
 }
 
+export type ColorMapInput = ColorMap | Uint8ClampedArray | string | undefined;
+
 /**
  * Interpolate between two RGB colors
  */
@@ -80,3 +82,55 @@ export const PLASMA: ColorMap = {
     [240, 249, 33],
   ],
 };
+
+export const VIRIDIS: ColorMap = {
+  name: "Viridis",
+  id: "viridis",
+  colors: [
+    [68, 1, 84],
+    [58, 82, 139],
+    [33, 145, 140],
+    [94, 201, 98],
+    [253, 231, 37],
+  ],
+};
+
+export const GRAYSCALE: ColorMap = {
+  name: "Grayscale",
+  id: "grayscale",
+  colors: [
+    [0, 0, 0],
+    [85, 85, 85],
+    [170, 170, 170],
+    [255, 255, 255],
+  ],
+};
+
+export const DEFAULT_COLOR_MAPS: Record<string, ColorMap> = {
+  [PLASMA.id]: PLASMA,
+  [VIRIDIS.id]: VIRIDIS,
+  [GRAYSCALE.id]: GRAYSCALE,
+};
+
+function isColorMap(value: unknown): value is ColorMap {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "colors" in (value as Record<string, unknown>)
+  );
+}
+
+export function resolveColorMap(input: ColorMapInput): Uint8ClampedArray {
+  if (input instanceof Uint8ClampedArray) {
+    return input;
+  }
+  if (typeof input === "string") {
+    const key = input.toLowerCase();
+    const map = DEFAULT_COLOR_MAPS[key] ?? PLASMA;
+    return buildColorLUT(map);
+  }
+  if (isColorMap(input)) {
+    return buildColorLUT(input);
+  }
+  return buildColorLUT(PLASMA);
+}

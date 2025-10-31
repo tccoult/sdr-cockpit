@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type {
   AxisRange,
   PlotConfig,
@@ -19,6 +14,7 @@ import type {
   CursorRenderArgs,
 } from "./types";
 import { Trace1DType, CursorStyle } from "./types";
+import { resolveColorMap } from "../colorMaps";
 
 type TraceRegistry = Map<string, TraceRecord>;
 
@@ -28,17 +24,35 @@ type TraceRecord1D = {
   data: TraceData1D | null;
   visible: boolean;
   removed: boolean;
+  xDomain: AxisRange | null;
+  yDomain: AxisRange | null;
 };
 
 type TraceRecord2D = {
   id: string;
   config: Trace2DConfig;
-  data: TraceData2D | null;
+  data: PreparedTraceData2D | null;
   visible: boolean;
   removed: boolean;
+  colorLUT: Uint8ClampedArray;
+  imageData: ImageData | null;
 };
 
 type TraceRecord = TraceRecord1D | TraceRecord2D;
+
+type PreparedTraceData2D = {
+  x: Float32Array;
+  y: Float32Array;
+  z: Float32Array;
+  width: number;
+  height: number;
+  xDomain: { min: number; max: number };
+  yDomain: { min: number; max: number };
+  zDomain: { min: number; max: number };
+};
+
+
+type SampledTrace2D = { traceId: string; value: number; zIndex: number };
 
 type Projection = {
   projectX: (value: number) => number;
@@ -120,7 +134,181 @@ function cursorEquals(a: CursorInfo | null, b: CursorInfo | null): boolean {
   );
 }
 
+
+const expandRange = (min: number, max: number, padding = 0.05): AxisRange | null => {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return null;
+  }
+  if (min === max) {
+    const delta = min === 0 ? 1 : Math.abs(min) * padding;
+    return { min: min - delta, max: max + delta };
+  }
+  const span = max - min;
+  const pad = span * padding;
+  return { min: min - pad, max: max + pad };
+};
+
+const computeDomain1D = (data: TraceData1D): {
+  x: AxisRange | null;
+  y: AxisRange | null;
+} => {
+  const { x, y } = data;
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  for (let i = 0; i < x.length; i += 1) {
+    const value = (x as ArrayLike<number>)[i];
+    if (!Number.isFinite(value)) continue;
+    if (value < minX) minX = value;
+    if (value > maxX) maxX = value;
+  }
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (let i = 0; i < y.length; i += 1) {
+    const value = (y as ArrayLike<number>)[i];
+    if (!Number.isFinite(value)) continue;
+    if (value < minY) minY = value;
+    if (value > maxY) maxY = value;
+  }
+  const xDomain =
+    minX < maxX
+      ? { min: minX, max: maxX }
+      : Number.isFinite(minX)
+      ? { min: minX - 1, max: minX + 1 }
+      : null;
+  const yDomain =
+    minY < maxY
+      ? { min: minY, max: maxY }
+      : Number.isFinite(minY)
+      ? { min: minY - 1, max: minY + 1 }
+      : null;
+  return { x: xDomain, y: yDomain };
+};
+
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+
+const toFloat32Array = (source: number[] | ArrayLike<number>): Float32Array =>
+  source instanceof Float32Array ? source : new Float32Array(source);
+
+function prepareTraceData2D(data: TraceData2D): PreparedTraceData2D {
+  const x = toFloat32Array(data.x as ArrayLike<number>);
+  const y = toFloat32Array(data.y as ArrayLike<number>);
+
+  let width = 0;
+  let height = 0;
+  let values: Float32Array;
+  let minZ = Number.POSITIVE_INFINITY;
+  let maxZ = Number.NEGATIVE_INFINITY;
+
+  if (Array.isArray(data.z)) {
+    height = data.z.length;
+    width = height > 0 ? data.z[0]?.length ?? 0 : 0;
+    if (height === 0 || width === 0) {
+      values = new Float32Array(0);
+    } else {
+      values = new Float32Array(width * height);
+      for (let row = 0; row < height; row += 1) {
+        const line = data.z[row];
+        if (!Array.isArray(line) || line.length !== width) {
+          throw new Error(
+            "[plotting] Trace2D data rows must all have the same length."
+          );
+        }
+        for (let col = 0; col < width; col += 1) {
+          const value = line[col];
+          values[row * width + col] = value;
+          if (Number.isFinite(value)) {
+            if (value < minZ) minZ = value;
+            if (value > maxZ) maxZ = value;
+          }
+        }
+      }
+    }
+  } else {
+    if (data.width == null || data.height == null) {
+      throw new Error(
+        "[plotting] Trace2D data requires width and height when providing a flat array."
+      );
+    }
+    width = data.width;
+    height = data.height;
+    if (width <= 0 || height <= 0) {
+      values = new Float32Array(0);
+    } else {
+      const expected = width * height;
+      if (data.z.length !== expected) {
+        throw new Error(
+          `[plotting] Trace2D data length (${data.z.length}) does not match width*height (${expected}).`
+        );
+      }
+      if (data.z instanceof Float32Array) {
+        values = data.z;
+      } else {
+        values = new Float32Array(data.z);
+      }
+      for (let i = 0; i < values.length; i += 1) {
+        const value = values[i];
+        if (Number.isFinite(value)) {
+          if (value < minZ) minZ = value;
+          if (value > maxZ) maxZ = value;
+        }
+      }
+    }
+  }
+
+  const computeDomain = (
+    arr: Float32Array,
+    fallbackMin: number,
+    fallbackMax: number
+  ) => {
+    if (arr.length === 0) {
+      return { min: fallbackMin, max: fallbackMax };
+    }
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < arr.length; i += 1) {
+      const value = arr[i];
+      if (!Number.isFinite(value)) continue;
+      if (value < min) min = value;
+      if (value > max) max = value;
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return { min: fallbackMin, max: fallbackMax };
+    }
+    if (min === max) {
+      const delta = min === 0 ? 1 : Math.abs(min) * 1e-3;
+      return { min: min - delta, max: max + delta };
+    }
+    return { min, max };
+  };
+
+  const xDomain = computeDomain(x, 0, width > 0 ? 1 : 0);
+  const yDomain = computeDomain(y, 0, height > 0 ? 1 : 0);
+  const zDomain = Number.isFinite(minZ) && Number.isFinite(maxZ) && minZ !== maxZ
+    ? { min: minZ, max: maxZ }
+    : { min: 0, max: 1 };
+
+  if (x.length > 0 && width > 0 && x.length !== width) {
+    throw new Error(
+      `[plotting] Trace2D x array length (${x.length}) must match width (${width}).`
+    );
+  }
+  if (y.length > 0 && height > 0 && y.length !== height) {
+    throw new Error(
+      `[plotting] Trace2D y array length (${y.length}) must match height (${height}).`
+    );
+  }
+
+  return {
+    x,
+    y,
+    z: values,
+    width,
+    height,
+    xDomain,
+    yDomain,
+    zDomain,
+  };
+}
 
 const defaultCursorRender: CursorRenderArgs["renderDefault"] = ({
   ctx,
@@ -307,12 +495,15 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     x: config.axes.x.range ?? { ...DEFAULT_AXIS_RANGE },
     y: config.axes.y.range ?? { ...DEFAULT_AXIS_RANGE },
   });
+  const autoAxisStateRef = useRef({
+    x: config.axes.x.range ? false : true,
+    y: config.axes.y.range ? false : true,
+  });
+  const primaryTraceIdRef = useRef<string | null>(null);
   const pointerStateRef = useRef<PointerState>(createPointerState());
   const selectionRef = useRef<{ active: boolean; start: number; current: number } | null>(null);
   const cursorStateRef = useRef<CursorInfo | null>(null);
-  const zoomListenersRef = useRef(
-    new Set<(axis: "x" | "y" | "both", range: AxisRange) => void>()
-  );
+  const zoomListenersRef = useRef(new Set<(axis: "x" | "y" | "both", range: AxisRange) => void>());
   const panListenersRef = useRef(
     new Set<(axis: "x" | "y" | "both", range: AxisRange) => void>()
   );
@@ -370,7 +561,7 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
   );
 
   const applyAxisRange = useCallback(
-    (axis: "x" | "y", min: number, max: number, source: "pan" | "zoom" | "manual") => {
+    (axis: "x" | "y", min: number, max: number, source: "pan" | "zoom" | "manual" | "auto" | "primary") => {
       if (!Number.isFinite(min) || !Number.isFinite(max)) {
         return;
       }
@@ -382,6 +573,11 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         return;
       }
       axisRangeRef.current[axis] = { min, max };
+      if (source === "pan" || source === "zoom" || source === "manual") {
+        autoAxisStateRef.current[axis] = false;
+      } else if (source === "auto") {
+        autoAxisStateRef.current[axis] = true;
+      }
       if (source === "pan") {
         emitPan(axis, axisRangeRef.current[axis]);
       } else if (source === "zoom") {
@@ -417,6 +613,105 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     },
     []
   );
+
+  const samplePoint2D = useCallback(
+    (xValue: number, yValue: number): { traceId: string; value: number } | null => {
+      let best: SampledTrace2D | null = null;
+      tracesRef.current.forEach((record) => {
+        if (record.removed || !record.visible) return;
+        if (isTrace1D(record) || !record.data) return;
+        const { data, config } = record;
+        const { width, height, xDomain, yDomain } = data;
+        if (width <= 0 || height <= 0) return;
+        const normalizedX = (xValue - xDomain.min) / (xDomain.max - xDomain.min || 1);
+        const normalizedY = (yValue - yDomain.min) / (yDomain.max - yDomain.min || 1);
+        if (!Number.isFinite(normalizedX) || !Number.isFinite(normalizedY)) return;
+        const clampedX = Math.max(0, Math.min(1, normalizedX));
+        const clampedY = Math.max(0, Math.min(1, normalizedY));
+        const col = Math.min(width - 1, Math.max(0, Math.round(clampedX * (width - 1))));
+        const row = Math.min(height - 1, Math.max(0, Math.round((1 - clampedY) * (height - 1))));
+        const value = data.z[row * width + col];
+        if (!Number.isFinite(value)) return;
+        const zIndex = config.zIndex ?? 0;
+        if (!best || zIndex >= best.zIndex) {
+          best = { traceId: record.id, value, zIndex };
+        }
+      });
+      if (!best) {
+        return null;
+      }
+      const { traceId, value } = best as SampledTrace2D;
+      return { traceId, value };
+    },
+    []
+  );
+
+
+  const ensurePrimaryRecord = (): TraceRecord | null => {
+    const currentId = primaryTraceIdRef.current;
+    if (currentId) {
+      const existing = tracesRef.current.get(currentId);
+      if (existing && !existing.removed && existing.visible) {
+        return existing;
+      }
+    }
+    for (const record of tracesRef.current.values()) {
+      if (record.removed || !record.visible) continue;
+      primaryTraceIdRef.current = record.id;
+      return record;
+    }
+    primaryTraceIdRef.current = null;
+    return null;
+  };
+
+  const updateAxesFromPrimary = useCallback(() => {
+    const primaryRecord = ensurePrimaryRecord();
+    if (!primaryRecord) {
+      return;
+    }
+
+    const applyDomain = (axis: "x" | "y", domain: AxisRange | null) => {
+      if (!domain || !autoAxisStateRef.current[axis]) {
+        return;
+      }
+      const expanded = expandRange(domain.min, domain.max);
+      if (expanded) {
+        applyAxisRange(axis, expanded.min, expanded.max, "primary");
+      }
+    };
+
+    if (isTrace1D(primaryRecord)) {
+      if (!primaryRecord.data) {
+        return;
+      }
+      applyDomain("x", primaryRecord.xDomain);
+      applyDomain("y", primaryRecord.yDomain);
+    } else {
+      if (!primaryRecord.data) {
+        return;
+      }
+      applyDomain("x", primaryRecord.data.xDomain);
+      applyDomain("y", primaryRecord.data.yDomain);
+    }
+  }, [applyAxisRange]);
+
+  const setPrimaryTrace = useCallback(
+    (traceId: string | null) => {
+      if (traceId) {
+        const record = tracesRef.current.get(traceId);
+        if (!record || record.removed || !record.visible) {
+          return;
+        }
+        primaryTraceIdRef.current = traceId;
+      } else {
+        primaryTraceIdRef.current = null;
+      }
+      updateAxesFromPrimary();
+    },
+    [updateAxesFromPrimary]
+  );
+
+  const getPrimaryTrace = useCallback(() => primaryTraceIdRef.current, []);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -495,8 +790,79 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         height: plotHeight,
       },
     };
+    
+    const sortedTraces2D = Array.from(tracesRef.current.values()).filter(
+      (record): record is TraceRecord2D => !record.removed && record.visible && !isTrace1D(record)
+    );
+    sortedTraces2D.sort((a, b) => {
+      const zA = a.config.zIndex ?? 0;
+      const zB = b.config.zIndex ?? 0;
+      return zA - zB;
+    });
 
-    const grid = cfg.grid ?? { show: true };
+    const deviceWidth = Math.max(1, Math.round(plotWidth * dpr));
+    const deviceHeight = Math.max(1, Math.round(plotHeight * dpr));
+
+    for (const record of sortedTraces2D) {
+      const { data, colorLUT, config } = record;
+      if (!data || data.width <= 0 || data.height <= 0) continue;
+      const domainX = data.xDomain;
+      const domainY = data.yDomain;
+      const domainZ = config.valueRange ?? data.zDomain;
+      if (domainZ.max === domainZ.min) {
+        continue;
+      }
+
+      let imageData = record.imageData;
+      if (!imageData || imageData.width !== deviceWidth || imageData.height !== deviceHeight) {
+        imageData = new ImageData(deviceWidth, deviceHeight);
+        record.imageData = imageData;
+      }
+      const pixels = imageData.data;
+      const zSpan = domainZ.max - domainZ.min || 1;
+      const opacity = Math.max(0, Math.min(1, config.opacity ?? 1));
+      const dataWidth = data.width;
+      const dataHeight = data.height;
+
+      for (let py = 0; py < deviceHeight; py += 1) {
+        const tY = deviceHeight > 1 ? py / (deviceHeight - 1) : 0;
+        const axisYValue = yRange.max - tY * ySpan;
+        const normalizedY = (axisYValue - domainY.min) / (domainY.max - domainY.min || 1);
+        const clampedY = Math.max(0, Math.min(1, normalizedY));
+        const row = Math.min(
+          dataHeight - 1,
+          Math.max(0, Math.round((1 - clampedY) * (dataHeight - 1)))
+        );
+        for (let px = 0; px < deviceWidth; px += 1) {
+          const tX = deviceWidth > 1 ? px / (deviceWidth - 1) : 0;
+          const axisXValue = xRange.min + tX * xSpan;
+          const normalizedX = (axisXValue - domainX.min) / (domainX.max - domainX.min || 1);
+          const clampedX = Math.max(0, Math.min(1, normalizedX));
+          const col = Math.min(
+            dataWidth - 1,
+            Math.max(0, Math.round(clampedX * (dataWidth - 1)))
+          );
+          const value = data.z[row * dataWidth + col];
+          const pixelOffset = (py * deviceWidth + px) * 4;
+          if (!Number.isFinite(value)) {
+            pixels[pixelOffset + 3] = 0;
+            continue;
+          }
+          const normalizedValue = Math.max(
+            0,
+            Math.min(1, (value - domainZ.min) / zSpan)
+          );
+          const colorIndex = Math.round(normalizedValue * 255);
+          pixels[pixelOffset + 0] = colorLUT[colorIndex * 4 + 0];
+          pixels[pixelOffset + 1] = colorLUT[colorIndex * 4 + 1];
+          pixels[pixelOffset + 2] = colorLUT[colorIndex * 4 + 2];
+          pixels[pixelOffset + 3] = Math.round(255 * opacity);
+        }
+      }
+      ctx.putImageData(imageData, margins.left * dpr, margins.top * dpr);
+    }
+
+const grid = cfg.grid ?? { show: true };
     if (grid.show !== false) {
       ctx.save();
       ctx.strokeStyle = grid.color ?? DEFAULT_GRID_COLOR;
@@ -584,11 +950,11 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     ctx.restore();
 
     const sortedTraces = Array.from(tracesRef.current.values()).filter(
-      (record) => !record.removed && record.visible
+      (record): record is TraceRecord1D => !record.removed && record.visible && isTrace1D(record)
     );
     sortedTraces.sort((a, b) => {
-      const zA = "config" in a && "zIndex" in a.config ? a.config.zIndex ?? 0 : 0;
-      const zB = "config" in b && "zIndex" in b.config ? b.config.zIndex ?? 0 : 0;
+      const zA = a.config.zIndex ?? 0;
+      const zB = b.config.zIndex ?? 0;
       return zA - zB;
     });
 
@@ -761,6 +1127,7 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       };
       const dataX = projection.invertX(pointerInfo.x);
       const dataY = projection.invertY(pointerInfo.y);
+      const sampled2D = samplePoint2D(dataX, dataY);
       let finalX = dataX;
       let finalY = dataY;
       let snappedInfo: { traceId: string; x: number; y: number } | null = null;
@@ -785,6 +1152,10 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         canvasY: pointerInfo.y,
         dataX: finalX,
         dataY: finalY,
+        dataZ: sampled2D ? sampled2D.value : null,
+        sourceTraceId: snappedInfo
+          ? snappedInfo.traceId
+          : sampled2D?.traceId ?? null,
         snapped: snappedInfo
           ? {
               traceId: snappedInfo.traceId,
@@ -1056,8 +1427,13 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         data: null,
         visible: traceConfig.visible ?? true,
         removed: false,
+        xDomain: null,
+        yDomain: null,
       };
       tracesRef.current.set(id, record);
+      if (primaryTraceIdRef.current === null) {
+        primaryTraceIdRef.current = id;
+      }
       scheduleRender();
       const handle: TraceHandle1D = {
         update: (data: TraceData1D) => {
@@ -1065,24 +1441,53 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
             throw new Error(`[plotting] Trace "${id}" has been removed.`);
           }
           record.data = data;
+          const domains = computeDomain1D(data);
+          record.xDomain = domains.x;
+          record.yDomain = domains.y;
+          if (primaryTraceIdRef.current === id) {
+            updateAxesFromPrimary();
+          }
           scheduleRender();
         },
+
         setVisible: (visible: boolean) => {
           if (record.removed) return;
           record.visible = visible;
+          if (!visible && primaryTraceIdRef.current === id) {
+            primaryTraceIdRef.current = null;
+            updateAxesFromPrimary();
+          } else if (visible) {
+            if (primaryTraceIdRef.current === null) {
+              primaryTraceIdRef.current = id;
+            }
+            if (primaryTraceIdRef.current === id) {
+              updateAxesFromPrimary();
+            }
+          }
           scheduleRender();
         },
+
         setConfig: (configUpdate: Partial<Trace1DConfig>) => {
           if (record.removed) return;
           record.config = { ...record.config, ...configUpdate };
           scheduleRender();
         },
+
+
+
         remove: () => {
           if (record.removed) return;
           record.removed = true;
           tracesRef.current.delete(id);
+          if (primaryTraceIdRef.current === id) {
+            primaryTraceIdRef.current = null;
+            updateAxesFromPrimary();
+          }
           scheduleRender();
         },
+
+
+
       };
       return handle;
     },
@@ -1098,31 +1503,61 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         data: null,
         visible: traceConfig.visible ?? true,
         removed: false,
+        colorLUT: resolveColorMap(traceConfig.colorMap),
+        imageData: null,
       };
       tracesRef.current.set(id, record);
+      if (primaryTraceIdRef.current === null) {
+        primaryTraceIdRef.current = id;
+      }
       scheduleRender();
       const handle: TraceHandle2D = {
         update: (data: TraceData2D) => {
           if (record.removed) {
             throw new Error(`[plotting] Trace "${id}" has been removed.`);
           }
-          record.data = data;
+          const prepared = prepareTraceData2D(data);
+          record.data = prepared;
+          if (primaryTraceIdRef.current === id) {
+            updateAxesFromPrimary();
+          }
           scheduleRender();
         },
+
         setVisible: (visible: boolean) => {
           if (record.removed) return;
           record.visible = visible;
+          if (!visible && primaryTraceIdRef.current === id) {
+            primaryTraceIdRef.current = null;
+            updateAxesFromPrimary();
+          } else if (visible) {
+            if (primaryTraceIdRef.current === null) {
+              primaryTraceIdRef.current = id;
+            }
+            if (primaryTraceIdRef.current === id) {
+              updateAxesFromPrimary();
+            }
+          }
           scheduleRender();
         },
+
         setConfig: (configUpdate: Partial<Trace2DConfig>) => {
           if (record.removed) return;
-          record.config = { ...record.config, ...configUpdate };
+          const nextConfig = { ...record.config, ...configUpdate };
+          record.config = nextConfig;
+          if (configUpdate.colorMap !== undefined) {
+            record.colorLUT = resolveColorMap(nextConfig.colorMap);
+          }
           scheduleRender();
         },
         remove: () => {
           if (record.removed) return;
           record.removed = true;
           tracesRef.current.delete(id);
+          if (primaryTraceIdRef.current === id) {
+            primaryTraceIdRef.current = null;
+            updateAxesFromPrimary();
+          }
           scheduleRender();
         },
       };
@@ -1131,11 +1566,14 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     [scheduleRender]
   );
 
+
   const clearTraces = useCallback(() => {
     tracesRef.current.forEach((record) => {
       record.removed = true;
     });
     tracesRef.current.clear();
+    primaryTraceIdRef.current = null;
+    autoAxisStateRef.current = { x: true, y: true };
     scheduleRender();
   }, [scheduleRender]);
 
@@ -1152,56 +1590,36 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
 
   const autoRange = useCallback(
     (axis: "x" | "y" | "both", padding = 0.05) => {
-      if (axis === "both" || axis === "x") {
+      const range1D = (axisKey: "x" | "y") => {
         let min = Number.POSITIVE_INFINITY;
         let max = Number.NEGATIVE_INFINITY;
         tracesRef.current.forEach((record) => {
           if (!isTrace1D(record) || !record.data) return;
-          const xs = record.data.x;
-          const length = xs.length;
+          const data = axisKey === "x" ? record.data.x : record.data.y;
+          const length = data.length;
           for (let i = 0; i < length; i += 1) {
-            const val = (xs as ArrayLike<number>)[i];
-            if (!Number.isFinite(val)) continue;
-            min = Math.min(min, val);
-            max = Math.max(max, val);
+            const value = (data as ArrayLike<number>)[i];
+            if (!Number.isFinite(value)) continue;
+            if (value < min) min = value;
+            if (value > max) max = value;
           }
         });
         if (min < max) {
           const span = max - min;
-          applyAxisRange(
-            "x",
-            min - span * padding,
-            max + span * padding,
-            "manual"
-          );
+          const pad = span * padding;
+          applyAxisRange(axisKey, min - pad, max + pad, "auto");
         }
+      };
+
+      if (axis === "both" || axis === "x") {
+        range1D("x");
       }
       if (axis === "both" || axis === "y") {
-        let min = Number.POSITIVE_INFINITY;
-        let max = Number.NEGATIVE_INFINITY;
-        tracesRef.current.forEach((record) => {
-          if (!isTrace1D(record) || !record.data) return;
-          const ys = record.data.y;
-          const length = ys.length;
-          for (let i = 0; i < length; i += 1) {
-            const val = (ys as ArrayLike<number>)[i];
-            if (!Number.isFinite(val)) continue;
-            min = Math.min(min, val);
-            max = Math.max(max, val);
-          }
-        });
-        if (min < max) {
-          const span = max - min;
-          applyAxisRange(
-            "y",
-            min - span * padding,
-            max + span * padding,
-            "manual"
-          );
-        }
+        range1D("y");
       }
+      updateAxesFromPrimary();
     },
-    [applyAxisRange]
+    [applyAxisRange, updateAxesFromPrimary]
   );
 
   const onZoom = useCallback(
@@ -1290,6 +1708,8 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       onPan,
       onCursor,
       requestRender: scheduleRender,
+      setPrimaryTrace,
+      getPrimaryTrace,
       destroy,
       __debug: debugApi,
     };
@@ -1306,5 +1726,7 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     onZoom,
     scheduleRender,
     setAxisRange,
+    setPrimaryTrace,
+    getPrimaryTrace,
   ]);
 }

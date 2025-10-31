@@ -19,7 +19,7 @@ The main entry point for creating a plot instance.
 ### Basic Usage
 
 ```typescript
-import { usePlot } from '@/utils/plotting';
+import { CursorStyle, usePlot } from '@/utils/plotting';
 
 function MySpectrumPlot() {
   const plot = usePlot({
@@ -38,14 +38,16 @@ function MySpectrumPlot() {
     grid: {
       show: true,
       color: 'rgba(255, 255, 255, 0.1)',
-      xLines: 10,
-      yLines: 8
+      lineWidth: 1
     },
     interactions: {
-      zoom: true,
-      pan: true,
-      crosshair: true,
-      boxSelect: true
+      zoom: 'x',
+      pan: 'x',
+      boxSelect: true,
+      cursor: {
+        style: CursorStyle.Vertical,
+        snap: true,
+      },
     },
     margins: { top: 20, right: 30, bottom: 40, left: 60 }
   });
@@ -167,8 +169,7 @@ interface PlotConfig {
     show?: boolean;
     color?: string;
     lineWidth?: number;
-    xLines?: number | 'auto';  // number of grid lines or auto-calculate
-    yLines?: number | 'auto';
+    dashPattern?: number[];
   };
 
   // Interaction configuration
@@ -177,28 +178,12 @@ interface PlotConfig {
     pan?: boolean | 'x' | 'y' | 'both';  // 'x' = horizontal only, 'y' = vertical only
 
     // Cursor/crosshair configuration
-    cursor?: {
-      style?: CursorStyle;  // default: CursorStyle.Crosshair
-      snap?: boolean;  // snap to nearest data point for 1D traces (default: true for 1D, false for 2D)
-      color?: string;  // default: '#ffffff'
-      lineWidth?: number;  // default: 1
-      dashPattern?: number[];  // e.g., [5, 5] for dashed
-    } | boolean;  // true = default crosshair, false = none
-
-    // Tooltip configuration
-    tooltip?: {
-      show?: boolean;  // default: true if cursor enabled
-      mode?: TooltipMode;  // default: TooltipMode.Nearest
-      // Formatters (defaults to axis formatters)
-      formatX?: (value: number) => string;
-      formatY?: (value: number) => string;
-      formatZ?: (value: number) => string;  // for 2D traces
-      // Styling
-      background?: string;  // default: 'rgba(0, 0, 0, 0.8)'
-      textColor?: string;  // default: '#ffffff'
-      borderRadius?: number;
-      padding?: number;
-    } | boolean;  // true = default tooltip, false = none
+    cursor?:
+      | boolean
+      | {
+          style?: CursorStyle;  // defaults to CursorStyle.Crosshair
+          snap?: boolean;       // defaults to true for 1D traces
+        };
 
     boxSelect?: boolean;  // shift+drag to zoom to box
   };
@@ -216,19 +201,16 @@ interface PlotConfig {
   textColor?: string;
   fontSize?: number;
   fontFamily?: string;
-
-  // Legend (optional)
-  legend?: {
-    show?: boolean;  // default: false
-    position?: LegendPosition;  // default: LegendPosition.TopRight
-    background?: string;
-    textColor?: string;
+  highDPI?: boolean;
+  cursor?: {
+    render?: (args: CursorRenderArgs) => void;
   };
-
-  // Performance options
-  highDPI?: boolean;  // default: true
-  maxRenderRate?: number;  // max FPS, default: 60
 }
+
+// Notes:
+// - `tooltip`, `legend`, and `maxRenderRate` exist in the TypeScript types but
+//   are currently ignored. We'll wire them up as part of the future enhancements
+//   listed near the end of this document.
 ```
 
 ### `AxisConfig`
@@ -238,84 +220,32 @@ interface AxisConfig {
   label?: string;
   formatter?: (value: number) => string;
   range?: { min: number; max: number };
-  scale?: 'linear' | 'log';  // future: support log scale
-
-  // Tick configuration
+  scale?: 'linear' | 'log';
   ticks?: {
-    count?: number | 'auto';
     formatter?: (value: number) => string;
-    color?: string;
-    length?: number;
   };
 }
 
-// Auto-ranging behavior:
-// - If range is not specified, auto-range is calculated from first data update
-// - After initial auto-range, axes remain fixed (points can fall off screen)
-// - Call plot.autoRange('x' | 'y' | 'both') to explicitly re-calculate
+// Notes:
+// - If you omit range, initialize the axis via data updates or call autoRange().
+// - `ticks.count` is currently ignored; tick density is chosen automatically.
 ```
 
 ### Enums
-
-**Core enums used throughout the API:**
 
 ```typescript
 enum Trace1DType {
   Line = 'line',
   Stem = 'stem',
   Scatter = 'scatter',
-  Area = 'area'
+  Area = 'area',
 }
 
 enum CursorStyle {
   Crosshair = 'crosshair',
   Vertical = 'vertical',
   Horizontal = 'horizontal',
-  None = 'none'
-}
-
-enum TooltipMode {
-  Nearest = 'nearest',
-  AllTraces = 'all-traces'
-}
-
-enum LegendPosition {
-  TopRight = 'top-right',
-  TopLeft = 'top-left',
-  BottomRight = 'bottom-right',
-  BottomLeft = 'bottom-left'
-}
-
-enum InterpolationMode {
-  Nearest = 'nearest',
-  Bilinear = 'bilinear'
-}
-
-enum PointShape {
-  Circle = 'circle',
-  Square = 'square',
-  Triangle = 'triangle'
-}
-
-enum ColorMapName {
-  Plasma = 'plasma',
-  Viridis = 'viridis',
-  Turbo = 'turbo',
-  Grayscale = 'grayscale',
-  Jet = 'jet',
-  Hot = 'hot',
-  Cool = 'cool'
-}
-
-enum LayoutDirection {
-  Vertical = 'vertical',
-  Horizontal = 'horizontal',
-  Grid = 'grid'
-}
-
-enum ScrollDirection {
-  Down = 'down',
-  Up = 'up'
+  None = 'none',
 }
 ```
 
@@ -338,15 +268,11 @@ interface Trace1DConfig {
 
   // Scatter-specific options
   pointSize?: number;
-  pointShape?: PointShape;
 
   // Area-specific options
   fillColor?: string;
   fillOpacity?: number;
   baseline?: number;  // y-value for area baseline (default: 0)
-
-  // Legend
-  label?: string;  // label shown in legend (if legend is enabled)
 
   // Visibility & ordering
   visible?: boolean;
@@ -358,27 +284,18 @@ interface Trace1DConfig {
 
 ```typescript
 interface Trace2DConfig {
-  // No type enum - only one 2D trace type
-
   // Color mapping
-  colorMap: ColorMapName | CustomColorMap;  // required
-  valueRange: { min: number; max: number };  // maps Z values to colors
-
-  // Rendering
-  interpolation?: InterpolationMode;  // default: InterpolationMode.Nearest
+  colorMap: unknown;
+  valueRange: { min: number; max: number };
   opacity?: number;
-
-  // Legend
-  label?: string;  // label shown in legend (if legend is enabled)
-
-  // Visibility & ordering
   visible?: boolean;
   zIndex?: number;  // render order (typically 0 for background)
 }
 ```
 
-**Note:** Smoothing/filtering is handled by users maintaining their own state.
-The library focuses on rendering, not data processing.
+**Note:** The 2D trace shape is in place to support upcoming image/spectrogram
+rendering. The current canvas renderer ignores 2D traces, so keep using
+`WaterfallDisplay` until we land the new image pipeline.
 
 ### `TraceData`
 
@@ -403,417 +320,12 @@ type TraceData = TraceData1D | TraceData2D;
 
 ---
 
-## Cursor & Tooltip Behavior
+## Cursor & Tooltip Behaviour
 
-### Crosshair Styles
-
-**Full Crosshair (default, recommended for technical plots):**
-```typescript
-interactions: {
-  cursor: { style: CursorStyle.Crosshair }  // or cursor: true for defaults
-}
-```
-- Vertical + horizontal lines intersecting at cursor
-- Best for precise measurements
-- Can read exact X and Y from axes
-- Standard in scientific/financial applications
-
-**Vertical Line Only:**
-```typescript
-interactions: {
-  cursor: { style: CursorStyle.Vertical }
-}
-```
-- Single vertical line at cursor X position
-- Cleaner, less visual clutter
-- Good for time-series and spectrograms
-
-**Horizontal Line Only:**
-```typescript
-interactions: {
-  cursor: { style: CursorStyle.Horizontal }
-}
-```
-- Single horizontal line at cursor Y position
-- Less common but available
-
-**None:**
-```typescript
-interactions: {
-  cursor: false  // or { style: CursorStyle.None }
-}
-```
-- No cursor visualization
-- Can still have tooltip without crosshair
-
-### Snap Behavior
-
-**For 1D traces (default: snap enabled):**
-- Cursor snaps to nearest data point on nearest trace
-- Crosshair positioned at the snapped point
-- Tooltip shows exact data values
-```typescript
-interactions: {
-  cursor: { snap: true }  // default for 1D traces
-}
-```
-
-**For 2D traces (default: snap disabled):**
-- Cursor free-floating at exact mouse position
-- Samples Z value at that X/Y location
-- Tooltip shows interpolated/sampled intensity
-```typescript
-interactions: {
-  cursor: { snap: false }  // default for 2D traces
-}
-```
-
-**Mixed 1D + 2D traces:**
-- If 2D trace present: snap is disabled (free-floating)
-- Tooltip shows both 2D sampling and nearby 1D traces
-
-### Tooltip Content
-
-**For 1D traces:**
-```
-Frequency: 2.45 GHz
-Power: -75 dBm
-```
-Uses axis formatters by default, or custom formatters:
-```typescript
-tooltip: {
-  formatX: (f) => `${(f/1e9).toFixed(3)} GHz`,
-  formatY: (p) => `${p.toFixed(1)} dBm`
-}
-```
-
-**For 2D traces:**
-```
-Frequency: 2.45 GHz
-Time: 1.2s
-Intensity: -75 dBm
-```
-Shows X, Y, and Z value using formatX, formatY, formatZ.
-
-**For multiple 1D traces (mode: TooltipMode.AllTraces):**
-```
-Frequency: 2.45 GHz
-
-Channel 1: -75 dBm
-Channel 2: -82 dBm
-Channel 3: -68 dBm
-```
-Shows all trace values at that X position (or nearest points).
-
-**For mixed 1D + 2D traces:**
-```
-Frequency: 2.45 GHz
-Time: 1.2s
-Intensity: -75 dBm
-
-Cursor Line: -65 dBm
-Threshold: -80 dBm
-```
-Shows 2D image data, then 1D trace data separately.
-
-### Example Configurations
-
-**Minimal (just show values, no visual crosshair):**
-```typescript
-interactions: {
-  cursor: false,
-  tooltip: true
-}
-```
-
-**FFT-style (snap to data, show single trace):**
-```typescript
-interactions: {
-  cursor: {
-    style: CursorStyle.Vertical,
-    snap: true,
-    color: '#00ff00'
-  },
-  tooltip: {
-    mode: TooltipMode.Nearest
-  }
-}
-```
-
-**Multi-channel comparison (show all traces):**
-```typescript
-interactions: {
-  cursor: {
-    style: CursorStyle.Crosshair,
-    snap: true
-  },
-  tooltip: {
-    mode: TooltipMode.AllTraces
-  }
-}
-```
-
-**Spectrogram (free-floating, sample image):**
-```typescript
-interactions: {
-  cursor: {
-    style: CursorStyle.Crosshair,
-    snap: false
-  },
-  tooltip: {
-    formatZ: (intensity) => `${intensity.toFixed(1)} dBm`
-  }
-}
-```
-
-**Custom styled crosshair:**
-```typescript
-interactions: {
-  cursor: {
-    style: CursorStyle.Crosshair,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineWidth: 1,
-    dashPattern: [5, 5]
-  },
-  tooltip: {
-    background: 'rgba(0, 0, 0, 0.9)',
-    textColor: '#00ff00',
-    borderRadius: 4,
-    padding: 8
-  }
-}
-```
-
----
-
-## Advanced Usage Examples
-
-### Example 1: FFT Display with Threshold Line
-
-```typescript
-function FFTDisplay({ fftData, threshold }) {
-  const plot = usePlot({
-    axes: {
-      x: {
-        label: 'Frequency',
-        formatter: formatFrequency,
-        range: { min: fftData.centerFreq - fftData.sampleRate/2,
-                 max: fftData.centerFreq + fftData.sampleRate/2 }
-      },
-      y: {
-        label: 'Power (dBm)',
-        range: { min: -100, max: 0 }
-      }
-    },
-    interactions: {
-      zoom: true,
-      pan: 'x',  // pan horizontally only
-      cursor: {
-        style: CursorStyle.Crosshair,
-        snap: true  // snap to nearest data point
-      },
-      tooltip: {
-        mode: TooltipMode.Nearest
-      }
-    }
-  });
-
-  // Create trace handles
-  const spectrumTrace = useRef<TraceHandle1D>();
-  const thresholdTrace = useRef<TraceHandle1D>();
-
-  // Add traces on mount
-  useEffect(() => {
-    spectrumTrace.current = plot.addTrace1D({
-      type: Trace1DType.Line,
-      color: '#00ff00',
-      lineWidth: 2
-    });
-
-    thresholdTrace.current = plot.addTrace1D({
-      type: Trace1DType.Line,
-      color: '#ff0000',
-      lineWidth: 1,
-      dashPattern: [5, 5]
-    });
-  }, []);
-
-  // Update spectrum data
-  useEffect(() => {
-    if (fftData && spectrumTrace.current) {
-      const freqs = generateFrequencyArray(fftData);
-      spectrumTrace.current.update({ x: freqs, y: fftData.bins });
-    }
-  }, [fftData]);
-
-  // Update threshold line
-  useEffect(() => {
-    if (fftData && thresholdTrace.current) {
-      const freqs = [fftData.centerFreq - fftData.sampleRate/2,
-                     fftData.centerFreq + fftData.sampleRate/2];
-      thresholdTrace.current.update({ x: freqs, y: [threshold, threshold] });
-    }
-  }, [threshold, fftData]);
-
-  return <canvas ref={plot.canvasRef} width={800} height={400} />;
-}
-```
-
-### Example 2: Constellation Diagram (I/Q Plot)
-
-```typescript
-function ConstellationPlot({ iqData }) {
-  const plot = usePlot({
-    axes: {
-      x: { label: 'In-Phase', range: { min: -1, max: 1 } },
-      y: { label: 'Quadrature', range: { min: -1, max: 1 } }
-    },
-    grid: { show: true },
-    interactions: { zoom: 'both', pan: false }
-  });
-
-  const symbolsTrace = useRef<TraceHandle1D>();
-
-  useEffect(() => {
-    symbolsTrace.current = plot.addTrace1D({
-      type: Trace1DType.Scatter,
-      color: '#00ffff',
-      pointSize: 3,
-      opacity: 0.6
-    });
-  }, []);
-
-  useEffect(() => {
-    if (iqData && symbolsTrace.current) {
-      symbolsTrace.current.update({ x: iqData.i, y: iqData.q });
-    }
-  }, [iqData]);
-
-  return <canvas ref={plot.canvasRef} width={400} height={400} />;
-}
-```
-
-### Example 3: Stem Plot (Impulse Response)
-
-```typescript
-function ImpulseResponsePlot({ taps }) {
-  const plot = usePlot({
-    axes: {
-      x: { label: 'Tap Index', range: { min: 0, max: taps.length } },
-      y: { label: 'Coefficient', autoRange: true }
-    },
-    interactions: { zoom: 'both', pan: 'x' }  // pan horizontally only
-  });
-
-  const tapsTrace = useRef<TraceHandle1D>();
-
-  useEffect(() => {
-    tapsTrace.current = plot.addTrace1D({
-      type: Trace1DType.Stem,
-      color: '#ffaa00',
-      lineWidth: 2
-    });
-  }, []);
-
-  useEffect(() => {
-    if (tapsTrace.current) {
-      const indices = Array.from({ length: taps.length }, (_, i) => i);
-      tapsTrace.current.update({ x: indices, y: taps });
-    }
-  }, [taps]);
-
-  return <canvas ref={plot.canvasRef} width={600} height={300} />;
-}
-```
-
-### Example 4: Multi-Trace Comparison
-
-```typescript
-function MultiChannelFFT({ channels }) {
-  const plot = usePlot({
-    axes: {
-      x: { label: 'Frequency', formatter: formatFrequency },
-      y: { label: 'Power (dBm)', range: { min: -100, max: 0 } }
-    },
-    interactions: { zoom: true, pan: 'x', crosshair: true }  // pan horizontally only
-  });
-
-  const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'];
-  const channelTraces = useRef<TraceHandle1D[]>([]);
-
-  useEffect(() => {
-    // Clear old traces
-    channelTraces.current = [];
-
-    // Add trace for each channel
-    channels.forEach((_, idx) => {
-      const trace = plot.addTrace1D({
-        type: Trace1DType.Line,
-        color: colors[idx],
-        lineWidth: 2,
-        opacity: 0.8
-      });
-      channelTraces.current.push(trace);
-    });
-  }, [channels.length]);
-
-  useEffect(() => {
-    channels.forEach((channel, idx) => {
-      if (channelTraces.current[idx]) {
-        channelTraces.current[idx].update({
-          x: channel.frequencies,
-          y: channel.powers
-        });
-      }
-    });
-  }, [channels]);
-
-  return <canvas ref={plot.canvasRef} width={1000} height={500} />;
-}
-```
-
-### Example 5: Area Plot (Signal Envelope)
-
-```typescript
-function SignalEnvelope({ timeData, envelope }) {
-  const plot = usePlot({
-    axes: {
-      x: { label: 'Time (ms)', formatter: (t) => `${(t*1000).toFixed(1)} ms` },
-      y: { label: 'Amplitude', range: { min: -1, max: 1 } }
-    }
-  });
-
-  const signalTrace = useRef<TraceHandle1D>();
-  const envelopeTrace = useRef<TraceHandle1D>();
-
-  useEffect(() => {
-    signalTrace.current = plot.addTrace1D({
-      type: Trace1DType.Line,
-      color: '#00aaff',
-      lineWidth: 1
-    });
-
-    envelopeTrace.current = plot.addTrace1D({
-      type: Trace1DType.Area,
-      color: '#ff6600',
-      fillColor: '#ff6600',
-      fillOpacity: 0.2,
-      lineWidth: 2
-    });
-  }, []);
-
-  useEffect(() => {
-    if (signalTrace.current && envelopeTrace.current) {
-      signalTrace.current.update({ x: timeData.t, y: timeData.signal });
-      envelopeTrace.current.update({ x: timeData.t, y: envelope });
-    }
-  }, [timeData, envelope]);
-
-  return <canvas ref={plot.canvasRef} width={800} height={300} />;
-}
-```
-
----
+- Configure the visual crosshair via `interactions.cursor`. Supported styles are `Crosshair`, `Vertical`, `Horizontal`, and `None`. Passing `true` uses the default crosshair; passing `false` disables the cursor entirely.
+- Snapping is enabled by default so the cursor locks onto the nearest finite X value across all visible 1D traces. Set `snap: false` to let the cursor follow the pointer exactly.
+- Use `plot.onCursor` to subscribe to cursor updates. The hook emits `CursorInfo` with canvas coordinates, data values, and optional snap metadata. Host components are responsible for rendering tooltips or overlays (see `FFTDisplay` for an example DOM tooltip).
+- 2D traces currently do not participate in cursor snapping. Once the image/spectrogram renderer lands we will revisit cursor semantics for 2D data.
 
 ## Event Handling
 
@@ -868,58 +380,6 @@ useEffect(() => {
 ---
 
 ## Helper Hooks
-
-### `useAxisRange` - Sync with External State
-
-For cases where you want axis ranges controlled by parent components (like SpectrumView coordinating FFT and Waterfall):
-
-```typescript
-function FFTDisplay({ frequencyRange, onFrequencyRangeChange }) {
-  const plot = usePlot({
-    axes: {
-      x: { range: { min: frequencyRange.startFreq, max: frequencyRange.endFreq } },
-      y: { /* ... */ }
-    }
-  });
-
-  // Sync external range changes to plot
-  useEffect(() => {
-    plot.setAxisRange('x', frequencyRange.startFreq, frequencyRange.endFreq);
-  }, [plot, frequencyRange]);
-
-  // Sync plot range changes to external state
-  useEffect(() => {
-    if (!onFrequencyRangeChange) return;
-    const unsubscribe = plot.onZoom((axis, range) => {
-      if (axis !== 'x') return;
-      onFrequencyRangeChange({
-        startFreq: range.min,
-        endFreq: range.max
-      });
-    });
-    return unsubscribe;
-  }, [plot, onFrequencyRangeChange]);
-
-  return <canvas ref={plot.canvasRef} />;
-}
-```
-
-### `usePlotResize` - Responsive Sizing
-
-```typescript
-function ResponsivePlot() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { width, height } = usePlotResize(containerRef);
-
-  const plot = usePlot({ /* config */ });
-
-  return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
-      <canvas ref={plot.canvasRef} width={width} height={height} />
-    </div>
-  );
-}
-```
 
 ---
 
@@ -1066,12 +526,11 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
 - Easy to add new traces (threshold, markers, etc.)
 - Easier to test
 
-### Migration Checklist (Current React components)
-1. **FFTDisplay refactor** – Replace the hand-written canvas pipeline in `frontend/src/components/visualization/FFTDisplay.tsx:63-612` with the `usePlot` hook. Keep the existing smoothing/decimation logic outside the library and push the processed arrays into a `TraceHandle1D`. Wire `plot.onZoom`/`plot.onPan` subscriptions inside `useEffect` blocks so their callbacks keep driving `onFrequencyRangeChange` (the same behaviour currently implemented in `FFTDisplay.tsx:438-520`).
-2. **Axis + tick config** – Configure axis ranges and tick formatters via `PlotConfig` instead of DOM overlays. Once the hook owns tick rendering, remove the overlay elements at the bottom of `FFTDisplay.tsx` and rely on the library’s grid + tick drawing.
-3. **Cursor tooltip** – Replace the manual cursor tracking logic (`FFTDisplay.tsx:351-418`) with `plot.onCursor`. Use the provided `canvasX`/`canvasY` to position the tooltip container and `snapped` values for readouts.
-4. **Waterfall integration** – Swap the imperative buffer management in `frontend/src/components/visualization/WaterfallDisplay.tsx:70-189` for `useWaterfall`. Feed FFT rows through `waterfall.addRow`, mirror frequency-range updates with `waterfall.setFrequencyRange`, and forward zoom/pan callbacks so the parent stays in sync (`WaterfallDisplay.tsx:207-278` today).
-5. **Spectrum coordination** – In `frontend/src/components/visualization/SpectrumView.tsx:32-110`, keep the shared `frequencyRange`, `minDb`, and `maxDb` state. After migrating both child components, the parent continues to pass those props down and receives unified zoom events via the new hook subscriptions.
+### Current Usage Notes
+
+- `FFTDisplay` drives a `usePlot` instance and keeps smoothing/decimation in the component. Zoom/pan callbacks feed `onFrequencyRangeChange` just like the legacy version.
+- `WaterfallDisplay` still uses bespoke ImageData management. Once the 2D renderer is ready we will migrate it to the shared hook.
+- `SpectrumView` owns the shared frequency and dB ranges, wiring them into both child plots via `setAxisRange`/`onZoom`/`onPan` hooks.
 
 ### Data Ingress & Event Wiring
 - The plotting library stays agnostic about the FFT source. Continue listening for `window` events (see `FFTDisplay.tsx:63-88` and `WaterfallDisplay.tsx:195-204`), and forward each update through the appropriate trace handle or `addRow`.
@@ -1094,74 +553,13 @@ Based on feedback and iteration:
 6. **✅ Imperative updates**: Trace updates don't trigger React re-renders for performance
 7. **✅ No smoothing in library**: Users handle their own data processing/state
 8. **✅ Smart auto-ranging**: Only auto-range on first data or explicit request
-9. **✅ Unified 1D/2D plotting**: Same `usePlot` hook handles both 1D and 2D traces
-10. **✅ Separate waterfall hook**: `useWaterfall` for optimized streaming use case
-11. **✅ Optional plot container**: Convenience wrapper, but manual layout works fine
-12. **✅ Comprehensive cursor/tooltip API**:
-   - Multiple crosshair styles (crosshair, vertical, horizontal, none)
-   - Smart snap behavior (auto for 1D, free for 2D)
-   - Flexible tooltip content (nearest, all-traces, custom formatters)
-   - Handles mixed 1D + 2D traces elegantly
+9. **🔄 2D traces on the roadmap**: Type definitions are in place; the renderer will land alongside the spectrogram work.
+10. **✅ Optional plot container**: Convenience wrapper, but manual layout works fine
+11. **✅ Cursor events for tooltips**: `plot.onCursor` emits data so host components can render overlays with React DOM.
 
 ## Performance & Rendering Optimizations
 
 ### Dirty Region Tracking
-
-The library should internally optimize rendering by only redrawing what changed:
-
-```typescript
-// Internal optimization (transparent to user)
-class PlotRenderer {
-  private dirtyRegions: Set<'axes' | 'grid' | 'traces' | 'cursor'>;
-
-  // Only re-render what's dirty
-  render() {
-    if (this.dirtyRegions.has('axes')) this.renderAxes();
-    if (this.dirtyRegions.has('grid')) this.renderGrid();
-    if (this.dirtyRegions.has('traces')) this.renderTraces();
-    if (this.dirtyRegions.has('cursor')) this.renderCursor();
-  }
-}
-```
-
-### Multi-Layer Canvas Strategy
-
-Use multiple canvas layers for different update frequencies:
-
-```typescript
-// Implementation detail (internal)
-- Static layer: axes, grid, labels (rarely changes)
-- Data layer: traces (updates frequently)
-- Interaction layer: cursor, selection box (updates on mouse move)
-```
-
-**Benefits:**
-- Cursor movement doesn't re-render traces
-- Zoom/pan only updates affected layers
-- Significant performance improvement for real-time data
-
-### Buffer Management
-
-The library handles buffer reuse internally:
-
-```typescript
-// User just updates data
-trace.update({ x: newX, y: newY });
-
-// Library internally:
-// - Detects if array size changed
-// - Reuses Float32Array buffers when possible
-// - Only processes changed data
-// - Batches updates in RAF
-```
-
-**User doesn't need to worry about:**
-- Canvas context management
-- Buffer pooling
-- Render batching
-- Dirty tracking
-
----
 
 ## Multi-Trace X Coordinates
 
@@ -1246,402 +644,20 @@ function FFTWithDetections({ fftData, detections }) {
 
 ---
 
-## Unified 1D/2D Plotting
+## Future Enhancements
 
-**The same `usePlot` hook handles both 1D and 2D traces!**
+The following items are scoped for upcoming work:
 
-### 2D Image Traces (Heatmaps, Spectrograms)
-
-Use `type: 'image'` to add 2D data:
-
-```typescript
-function Spectrogram({ data }) {
-  const plot = usePlot({
-    axes: {
-      x: { label: 'Frequency', formatter: formatFrequency },
-      y: { label: 'Time', formatter: (t) => `${t.toFixed(1)}s` }
-    },
-    interactions: { zoom: 'both', pan: 'both' }
-  });
-
-  const imageTrace = useRef<TraceHandle2D>();
-
-  useEffect(() => {
-    imageTrace.current = plot.addTrace2D({
-      colorMap: ColorMapName.Plasma,
-      valueRange: { min: -100, max: 0 },  // dB range for color mapping
-      interpolation: InterpolationMode.Nearest
-    });
-  }, []);
-
-  useEffect(() => {
-    if (data && imageTrace.current) {
-      imageTrace.current.update({
-        x: frequencyArray,      // 1D: [f0, f1, f2, ...]
-        y: timeArray,           // 1D: [t0, t1, t2, ...]
-        z: intensityMatrix      // 2D: [[z00, z01, ...], [z10, z11, ...], ...]
-      });
-    }
-  }, [data]);
-
-  return <canvas ref={plot.canvasRef} width={800} height={600} />;
-}
-```
-
-### Streaming Waterfall Hook
-
-For streaming waterfall displays, use the specialized `useWaterfall` hook:
-
-```typescript
-interface WaterfallInstance {
-  canvasRef: RefObject<HTMLCanvasElement>;
-  addRow: (values: Float32Array | number[]) => void;
-  setFrequencyRange: (startFreq: number, endFreq: number) => void;
-  onZoom: (
-    callback: (axis: 'x' | 'y' | 'both', range: AxisRange) => void
-  ) => () => void;
-  onPan: (
-    callback: (axis: 'x' | 'y' | 'both', range: AxisRange) => void
-  ) => () => void;
-  setColorMap: (colorMap: ColorMapName | CustomColorMap) => void;
-  setValueRange: (min: number, max: number) => void;
-}
-```
-
-```typescript
-function WaterfallDisplay({ frequencyRange }) {
-  const waterfall = useWaterfall({
-    frequencyRange,
-    colorMap: ColorMapName.Plasma,
-    valueRange: { min: -100, max: 0 },
-    height: 400,  // number of rows to keep in buffer
-    scrollDirection: ScrollDirection.Down,
-    interactions: { zoom: 'x', pan: 'x' }
-  });
-
-  useEffect(() => {
-    const handleFFT = (e: CustomEvent<FFTData>) => {
-      // Just push new row - waterfall handles scrolling/buffering
-      waterfall.addRow(e.detail.bins);
-    };
-
-    window.addEventListener('fft-data', handleFFT);
-    return () => window.removeEventListener('fft-data', handleFFT);
-  }, []);
-
-  useEffect(() => {
-    waterfall.setFrequencyRange(
-      frequencyRange.startFreq,
-      frequencyRange.endFreq
-    );
-  }, [waterfall, frequencyRange]);
-
-  useEffect(() => {
-    const unsubscribeZoom = waterfall.onZoom((axis, range) => {
-      if (axis !== 'x') return;
-      // Forward to parent so FFT + waterfall stay locked together
-      onFrequencyRangeChange({
-        startFreq: range.min,
-        endFreq: range.max,
-      });
-    });
-    const unsubscribePan = waterfall.onPan((axis, range) => {
-      if (axis !== 'x') return;
-      onFrequencyRangeChange({
-        startFreq: range.min,
-        endFreq: range.max,
-      });
-    });
-    return () => {
-      unsubscribeZoom();
-      unsubscribePan();
-    };
-  }, [waterfall, onFrequencyRangeChange]);
-
-  return <canvas ref={waterfall.canvasRef} width={800} height={400} />;
-}
-```
-
-**Range + color synchronisation**
-- Call `waterfall.setFrequencyRange(start, end)` inside an effect whenever the external range changes.
-- Use `waterfall.setValueRange(minDb, maxDb)` when the power window updates.
-- Subscribe to `waterfall.onZoom`/`waterfall.onPan` and forward x-axis changes to the shared `FrequencyRange` state so FFT and waterfall stay aligned.
-
-**Why separate `useWaterfall`?**
-- Highly optimized for streaming (efficient row shifting, ImageData reuse)
-- Different API pattern (`addRow()` vs full `update()`)
-- Maintains a rolling buffer of fixed height
-- Special implementation details for performance
-
-### Color Map Support
-
-```typescript
-type ColorMapName =
-  | 'plasma'      // current default
-  | 'viridis'
-  | 'turbo'
-  | 'grayscale'
-  | 'jet'
-  | 'hot'
-  | 'cool';
-
-// Custom color maps
-interface CustomColorMap {
-  stops: Array<{ position: number; color: string }>;
-}
-
-// Usage
-imageTrace.setColorMap('viridis');
-// or
-imageTrace.setColorMap({
-  stops: [
-    { position: 0.0, color: '#000000' },
-    { position: 0.5, color: '#ff0000' },
-    { position: 1.0, color: '#ffffff' }
-  ]
-});
-```
-
-### Mixing 1D and 2D Traces
-
-You can overlay 1D traces on top of 2D image traces:
-
-```typescript
-function SpectrogramWithCursor({ data, cursorFreq }) {
-  const plot = usePlot({
-    axes: {
-      x: { label: 'Frequency', formatter: formatFrequency },
-      y: { label: 'Time' }
-    },
-    interactions: { zoom: 'both', pan: 'both' }
-  });
-
-  const imageTrace = useRef<TraceHandle2D>();
-  const cursorTrace = useRef<TraceHandle1D>();
-
-  useEffect(() => {
-    // Add 2D image trace
-    imageTrace.current = plot.addTrace2D({
-      colorMap: ColorMapName.Plasma,
-      valueRange: { min: -100, max: 0 },
-      zIndex: 0  // render first (background)
-    });
-
-    // Add 1D vertical line on top of 2D image
-    cursorTrace.current = plot.addTrace1D({
-      type: Trace1DType.Line,
-      color: '#ffffff',
-      lineWidth: 2,
-      dashPattern: [5, 5],
-      zIndex: 1  // render on top
-    });
-  }, []);
-
-  useEffect(() => {
-    // Update 2D spectrogram
-    if (data && imageTrace.current) {
-      imageTrace.current.update({
-        x: data.frequencies,
-        y: data.times,
-        z: data.intensities
-      });
-    }
-  }, [data]);
-
-  useEffect(() => {
-    // Update 1D cursor line
-    if (cursorTrace.current) {
-      const yRange = plot.getAxisRange('y');
-      cursorTrace.current.update({
-        x: [cursorFreq, cursorFreq],
-        y: [yRange.min, yRange.max]
-      });
-    }
-  }, [cursorFreq]);
-
-  return <canvas ref={plot.canvasRef} width={800} height={600} />;
-}
-```
-
-**This works because `usePlot` accepts any trace type - 1D or 2D!**
-
----
-
-## Plot Container API (Optional)
-
-For multi-plot layouts (e.g., stacked FFT + Waterfall), a container component can simplify arrangement:
-
-```typescript
-import { PlotContainer } from '@/utils/plotting';
-
-function SpectrumView() {
-  return (
-    <PlotContainer
-      layout={LayoutDirection.Vertical}  // or Horizontal, Grid
-      sizes={[250, 400]}  // heights for each plot
-      gap={10}           // spacing between plots
-      syncZoom="x"       // sync x-axis zoom/pan across plots
-    >
-      <FFTDisplay />
-      <WaterfallDisplay />
-    </PlotContainer>
-  );
-}
-```
-
-### PlotContainer Props
-
-```typescript
-interface PlotContainerProps {
-  layout: LayoutDirection;
-  sizes?: number[];           // explicit sizes (px or flex ratios)
-  gap?: number;              // spacing between plots in pixels
-  syncZoom?: 'x' | 'y' | 'both' | false;  // sync zoom/pan
-  syncCursor?: boolean;      // sync cursor position
-  children: ReactNode;
-}
-```
-
-### Example: FFT + Waterfall Stack
-
-```typescript
-function SpectrumView() {
-  const [frequencyRange, setFrequencyRange] = useState({
-    startFreq: 2.4e9,
-    endFreq: 2.5e9
-  });
-
-  return (
-    <PlotContainer
-      layout={LayoutDirection.Vertical}
-      sizes={[250, 400]}
-      gap={10}
-      syncZoom="x"
-    >
-      <FFTDisplay
-        frequencyRange={frequencyRange}
-        onFrequencyRangeChange={setFrequencyRange}
-      />
-      <WaterfallDisplay
-        frequencyRange={frequencyRange}
-        onFrequencyRangeChange={setFrequencyRange}
-      />
-    </PlotContainer>
-  );
-}
-```
-
-**Alternative: Manual Layout**
-
-If you prefer more control, just use regular CSS/flexbox:
-
-```typescript
-function SpectrumView() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ height: 250 }}>
-        <FFTDisplay />
-      </div>
-      <div style={{ height: 400 }}>
-        <WaterfallDisplay />
-      </div>
-    </div>
-  );
-}
-```
-
-**Note:** PlotContainer is a convenience wrapper. Manual layouts work just fine!
-
----
-
-## Additional Features
-
-### Legends (Optional)
-
-Legends can be enabled for multi-trace plots:
-
-```typescript
-const plot = usePlot({
-  axes: { /* ... */ },
-  legend: {
-    show: false,  // default: false
-    position: LegendPosition.TopRight,
-    background: 'rgba(0, 0, 0, 0.8)',
-    textColor: '#ffffff'
-  }
-});
-
-// Traces can have labels for legends
-plot.addTrace1D({
-  type: Trace1DType.Line,
-  color: '#00ff00',
-  lineWidth: 2,
-  label: 'Channel 1'  // shown in legend if enabled
-});
-
-plot.addTrace1D({
-  type: Trace1DType.Line,
-  color: '#0000ff',
-  lineWidth: 2,
-  label: 'Channel 2'
-});
-```
-
-### Color Maps
-
-Supported color maps for 2D traces (use `ColorMapName` enum):
-```typescript
-ColorMapName.Plasma      // default
-ColorMapName.Viridis
-ColorMapName.Turbo
-ColorMapName.Grayscale
-ColorMapName.Jet
-ColorMapName.Hot
-ColorMapName.Cool
-```
-
-**Using a built-in color map:**
-```typescript
-plot.addTrace2D({
-  colorMap: ColorMapName.Viridis,
-  valueRange: { min: -100, max: 0 }
-});
-```
-
-**Custom color maps with gradient stops:**
-```typescript
-interface CustomColorMap {
-  stops: Array<{ position: number; color: string }>;
-}
-
-plot.addTrace2D({
-  colorMap: {
-    stops: [
-      { position: 0.0, color: '#000000' },
-      { position: 0.5, color: '#ff0000' },
-      { position: 1.0, color: '#ffffff' }
-    ]
-  },
-  valueRange: { min: -100, max: 0 }
-});
-```
-
-### Future Considerations
-
-**Not planned for initial version:**
-- Markers/annotations (may add later if needed)
-- Log scale axes (not needed - users can provide log-scaled data like dB, and axes will display linearly)
-- Export to PNG/SVG (not a priority)
-- Advanced legend customization (basic version sufficient for now)
-
----
+- **2D image renderer**: hook `addTrace2D` into the canvas pipeline so spectrograms and heatmaps can share the plotting stack.
+- **Legend + color map controls**: expose a lightweight legend for multi-trace plots and a concrete color-map API once image traces render.
+- **Grid/tick density overrides**: honour `grid.xLines`, `grid.yLines`, and `ticks.count` so callers can tune labeling density.
+- **Render throttling**: support `config.maxRenderRate` to cap redraw frequency when data bursts in faster than the display needs.
+- **Cursor styling callbacks**: allow custom cursor renderers to fall back on the built-in draw routine while tweaking colours/widths.
 
 ## Next Steps
 
-1. Get feedback on this API design
-2. Create detailed implementation plan
-3. Build prototype of `usePlot` hook
-4. Implement core trace types (line, stem, scatter)
-5. Add interaction handlers
-6. Migrate FFTDisplay as proof of concept
-7. Expand to other plot types
+1. Implement the shared 2D/image trace renderer and connect it to `addTrace2D`.
+2. Migrate `WaterfallDisplay` onto the plotting hook once the 2D path is stable.
+3. Wire up grid/tick density overrides and the lightweight legend API.
+4. Add render throttling (`maxRenderRate`) and richer cursor styling options.
+5. Expand tests and docs to cover the new 2D capabilities and integration patterns.
