@@ -33,13 +33,13 @@ export const FFTDisplay = memo(function FFTDisplay({
     () => ({
       axes: {
         x: {
-          label: "Frequency",
+          label: "Frequency (Hz)",
           formatter: (value: number) => formatFrequency(value, true),
           range: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
         },
         y: {
           label: "Power (dB)",
-          formatter: (value: number) => `${value.toFixed(1)} dB`,
+          formatter: (value: number) => `${value.toFixed(1)}`,
           range: { min: minDb, max: maxDb },
         },
       },

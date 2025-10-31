@@ -3,7 +3,7 @@
  * Provides synchronized zoom, pan, and controls
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
@@ -14,20 +14,61 @@ interface SpectrumViewProps {
   centerFreq: number; // Center frequency in Hz
   sampleRate: number; // Sample rate in Hz
   colorMap: ColorMap; // Selected color map
+  availableHeight?: number;
 }
 
 export const SpectrumView = memo(function SpectrumView({
   centerFreq,
   sampleRate,
   colorMap,
+  availableHeight,
 }: SpectrumViewProps) {
   // Display settings
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(1200); // Default width
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
-  const [fftHeight] = useState(250);
-  const [waterfallHeight] = useState(400);
+  const layout = useMemo(() => {
+    const MIN_VIEW_HEIGHT = 620;
+    const CONTROLS_RESERVE = 160;
+    const MIN_FFT_HEIGHT = 220;
+    const MIN_WATERFALL_HEIGHT = 320;
+
+    const fallbackViewHeight =
+      (typeof window !== "undefined"
+        ? window.innerHeight - 260
+        : MIN_VIEW_HEIGHT) || MIN_VIEW_HEIGHT;
+    const containerHeight = Math.max(
+      availableHeight ?? fallbackViewHeight,
+      MIN_VIEW_HEIGHT
+    );
+    const plotAreaHeight = Math.max(
+      containerHeight - CONTROLS_RESERVE,
+      MIN_FFT_HEIGHT + MIN_WATERFALL_HEIGHT
+    );
+
+    let fftHeight = Math.max(Math.round(plotAreaHeight * 0.35), MIN_FFT_HEIGHT);
+    let waterfallHeight = plotAreaHeight - fftHeight;
+
+    if (waterfallHeight < MIN_WATERFALL_HEIGHT) {
+      waterfallHeight = MIN_WATERFALL_HEIGHT;
+      fftHeight = Math.max(plotAreaHeight - waterfallHeight, MIN_FFT_HEIGHT);
+    }
+
+    if (fftHeight < MIN_FFT_HEIGHT) {
+      fftHeight = MIN_FFT_HEIGHT;
+      waterfallHeight = Math.max(
+        plotAreaHeight - fftHeight,
+        MIN_WATERFALL_HEIGHT
+      );
+    }
+
+    return {
+      containerHeight,
+      fftHeight,
+      waterfallHeight,
+    };
+  }, [availableHeight]);
 
   // Frequency range state (shared between FFT and waterfall)
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
@@ -120,6 +161,8 @@ export const SpectrumView = memo(function SpectrumView({
         borderRadius: 8,
         padding: 16,
         border: "1px solid rgba(255, 255, 255, 0.1)",
+        minHeight: layout.containerHeight,
+        boxSizing: "border-box",
       }}
     >
       {/* Header with controls */}
@@ -211,7 +254,7 @@ export const SpectrumView = memo(function SpectrumView({
       <div style={{ marginBottom: 8 }}>
         <FFTDisplay
           width={plotWidth}
-          height={fftHeight}
+          height={layout.fftHeight}
           minDb={minDb}
           maxDb={maxDb}
           frequencyRange={frequencyRange}
@@ -223,7 +266,7 @@ export const SpectrumView = memo(function SpectrumView({
       <div>
         <WaterfallDisplay
           width={plotWidth}
-          height={waterfallHeight}
+          height={layout.waterfallHeight}
           colorMap={colorMap}
           minDb={minDb}
           maxDb={maxDb}
