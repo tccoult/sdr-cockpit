@@ -11,6 +11,7 @@ import { FFTDisplay } from "./FFTDisplay";
 import { WaterfallDisplay } from "./WaterfallDisplay";
 
 interface SpectrumViewProps {
+  taskId: string;
   centerFreq: number; // Center frequency in Hz
   sampleRate: number; // Sample rate in Hz
   colorMap: ColorMap; // Selected color map
@@ -18,6 +19,7 @@ interface SpectrumViewProps {
 }
 
 export const SpectrumView = memo(function SpectrumView({
+  taskId,
   centerFreq,
   sampleRate,
   colorMap,
@@ -78,6 +80,9 @@ export const SpectrumView = memo(function SpectrumView({
 
   // Store current FFT data for auto-ranging
   const currentFFTRef = useRef<FFTData | null>(null);
+  useEffect(() => {
+    currentFFTRef.current = null;
+  }, [taskId]);
 
   // Listen to FFT data events to track current data
   useEffect(() => {
@@ -258,6 +263,7 @@ export const SpectrumView = memo(function SpectrumView({
           minDb={minDb}
           maxDb={maxDb}
           frequencyRange={frequencyRange}
+          dataKey={taskId}
           onFrequencyRangeChange={handleFrequencyRangeChange}
         />
       </div>
@@ -271,6 +277,7 @@ export const SpectrumView = memo(function SpectrumView({
           minDb={minDb}
           maxDb={maxDb}
           frequencyRange={frequencyRange}
+          dataKey={taskId}
           onFrequencyRangeChange={handleFrequencyRangeChange}
         />
       </div>

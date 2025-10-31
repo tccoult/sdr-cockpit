@@ -184,7 +184,8 @@ export class MockFFTGenerator {
           break;
         }
         case "fm": {
-          linearShape = Math.exp(-0.5 * Math.pow(distance / widthBins, 1.5));
+          const normalized = Math.abs(distance) / widthBins;
+          linearShape = Math.exp(-0.5 * Math.pow(normalized, 1.5));
           break;
         }
         case "cw": {

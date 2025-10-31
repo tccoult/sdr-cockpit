@@ -16,6 +16,7 @@ interface FFTDisplayProps {
   maxDb: number;
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
+  dataKey?: string;
 }
 
 const SMOOTHING_FACTOR = 0.95;
@@ -28,6 +29,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   maxDb,
   frequencyRange,
   onFrequencyRangeChange,
+  dataKey,
 }: FFTDisplayProps) {
   const plotConfig = useMemo(
     () => ({
@@ -113,6 +115,19 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot]);
 
   useEffect(() => {
+    smoothingRef.current = null;
+    fftMetaRef.current = null;
+    const trace = traceRef.current;
+    if (trace) {
+      trace.update({
+        x: new Float32Array(0),
+        y: new Float32Array(0),
+      });
+    }
+    plot.requestRender();
+  }, [plot, dataKey]);
+
+  useEffect(() => {
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
       const incomingFFT = customEvent.detail;
@@ -162,16 +177,21 @@ export const FFTDisplay = memo(function FFTDisplay({
       const powers = new Float32Array(maxPoints);
       const step = maxPoints > 1 ? (rangeBinCount - 1) / (maxPoints - 1) : 0;
 
+      const fillNaN = (index: number) => {
+        freqs[index] = Number.NaN;
+        powers[index] = Number.NaN;
+      };
+
       for (let i = 0; i < maxPoints; i += 1) {
         const offset = maxPoints > 1 ? Math.round(i * step) : 0;
         const binIndex = Math.min(rangeBinCount - 1, offset) + startBin;
-        freqs[i] = fftStart + binIndex * binWidth;
-        let power = smoothed[binIndex];
-        if (!Number.isFinite(power) || power < minDb) {
-          power = minDb;
-        } else if (power > maxDb) {
-          power = maxDb;
+        const freq = fftStart + binIndex * binWidth;
+        const power = smoothed[binIndex];
+        if (!Number.isFinite(power)) {
+          fillNaN(i);
+          continue;
         }
+        freqs[i] = freq;
         powers[i] = power;
       }
 

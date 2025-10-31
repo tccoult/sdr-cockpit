@@ -420,6 +420,7 @@ function App() {
               }}
             >
               <SpectrumView
+                taskId={selectedTask.id}
                 centerFreq={selectedTask.frequency}
                 sampleRate={selectedTask.sampleRate}
                 colorMap={colorMap}

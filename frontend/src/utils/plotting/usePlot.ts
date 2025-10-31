@@ -617,7 +617,10 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
           for (let i = 0; i < length; i += 1) {
             const xVal = (xData as ArrayLike<number>)[i];
             const yVal = (yData as ArrayLike<number>)[i];
-            if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+            if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) {
+              hasPoint = false;
+              continue;
+            }
             const cx = projectX(xVal);
             const cy = projectY(yVal);
             if (!hasPoint) {
