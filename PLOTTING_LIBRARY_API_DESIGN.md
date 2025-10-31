@@ -93,15 +93,24 @@ interface PlotInstance {
   autoRange: (axis: 'x' | 'y' | 'both', padding?: number) => void;
 
   // Interaction events (optional)
-  onZoom: (callback: (range: AxisRange) => void) => void;
-  onPan: (callback: (range: AxisRange) => void) => void;
-  onCursor: (callback: (info: CursorInfo | null) => void) => void;
+  onZoom: (
+    callback: (axis: 'x' | 'y' | 'both', range: AxisRange) => void
+  ) => () => void;
+  onPan: (
+    callback: (axis: 'x' | 'y' | 'both', range: AxisRange) => void
+  ) => () => void;
+  onCursor: (callback: (info: CursorInfo | null) => void) => () => void;
 
   // Manual render control (usually not needed)
   requestRender: () => void;
 
   // Cleanup (usually automatic)
   destroy: () => void;
+}
+
+interface AxisRange {
+  min: number;
+  max: number;
 }
 
 // Handle returned by addTrace1D for updating/removing 1D traces
@@ -119,6 +128,24 @@ interface TraceHandle2D {
   setConfig: (config: Partial<Trace2DConfig>) => void;
   remove: () => void;
 }
+
+interface CursorInfo {
+  canvasX: number;
+  canvasY: number;
+  dataX: number;
+  dataY: number;
+  snapped: null | {
+    traceId: string;
+    x: number;
+    y: number;
+  };
+}
+
+// `snapped` is non-null when the cursor is locked to the nearest 1D data
+// point. The library provides a stable `traceId` that matches the trace
+// returned by `addTrace1D/2D`, so host components can look up metadata as
+// needed. When snap is disabled (e.g., for 2D traces) the `dataX`/`dataY`
+// fields still reflect the sampled values under the cursor.
 ```
 
 ---
@@ -795,30 +822,47 @@ function SignalEnvelope({ timeData, envelope }) {
 ```typescript
 const plot = usePlot({ /* config */ });
 
-plot.onZoom((range) => {
-  console.log('New range:', range);
-  // { x: { min, max }, y: { min, max } }
+useEffect(() => {
+  const unsubscribe = plot.onZoom((axis, range) => {
+    if (axis !== 'x') return;
+    console.log('New x range:', range);
+    setFrequencyRange({ startFreq: range.min, endFreq: range.max });
+  });
+  return unsubscribe;
+}, [plot]);
 
-  // Update parent state if needed
-  setFrequencyRange({ startFreq: range.x.min, endFreq: range.x.max });
-});
+useEffect(() => {
+  const unsubscribe = plot.onPan((axis, range) => {
+    if (axis !== 'x') return;
+    console.log('Pan delta:', range);
+    setFrequencyRange({ startFreq: range.min, endFreq: range.max });
+  });
+  return unsubscribe;
+}, [plot]);
 ```
 
 ### Cursor Events
 
 ```typescript
-plot.onCursor((info) => {
-  if (info) {
-    console.log(`Cursor at (${info.x}, ${info.y})`);
+useEffect(() => {
+  const unsubscribe = plot.onCursor((info) => {
+    if (!info) {
+      setTooltip({ visible: false });
+      return;
+    }
+
+    console.log(`Cursor canvas position: (${info.canvasX}, ${info.canvasY})`);
     console.log(`Data values: x=${info.dataX}, y=${info.dataY}`);
 
-    // Update tooltip state
-    setTooltip({ visible: true, x: info.canvasX, y: info.canvasY,
-                 text: `${formatFrequency(info.dataX)}, ${info.dataY.toFixed(1)} dBm` });
-  } else {
-    setTooltip({ visible: false });
-  }
-});
+    setTooltip({
+      visible: true,
+      x: info.canvasX,
+      y: info.canvasY,
+      text: `${formatFrequency(info.dataX)}, ${info.dataY.toFixed(1)} dBm`,
+    });
+  });
+  return unsubscribe;
+}, [plot]);
 ```
 
 ---
@@ -841,15 +885,20 @@ function FFTDisplay({ frequencyRange, onFrequencyRangeChange }) {
   // Sync external range changes to plot
   useEffect(() => {
     plot.setAxisRange('x', frequencyRange.startFreq, frequencyRange.endFreq);
-  }, [frequencyRange]);
+  }, [plot, frequencyRange]);
 
   // Sync plot range changes to external state
-  plot.onZoom((range) => {
-    onFrequencyRangeChange({
-      startFreq: range.x.min,
-      endFreq: range.x.max
+  useEffect(() => {
+    if (!onFrequencyRangeChange) return;
+    const unsubscribe = plot.onZoom((axis, range) => {
+      if (axis !== 'x') return;
+      onFrequencyRangeChange({
+        startFreq: range.min,
+        endFreq: range.max
+      });
     });
-  });
+    return unsubscribe;
+  }, [plot, onFrequencyRangeChange]);
 
   return <canvas ref={plot.canvasRef} />;
 }
@@ -911,6 +960,9 @@ export type {
   TraceData,
   CursorInfo,
   AxisRange,
+  TraceHandle1D,
+  TraceHandle2D,
+  WaterfallInstance,
   // ... etc
 };
 ```
@@ -995,9 +1047,14 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
     });
   }, []);
 
-  plot.onZoom((range) => {
-    onFrequencyRangeChange({ startFreq: range.x.min, endFreq: range.x.max });
-  });
+  useEffect(() => {
+    if (!onFrequencyRangeChange) return;
+    const unsubscribe = plot.onZoom((axis, range) => {
+      if (axis !== 'x') return;
+      onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
+    });
+    return unsubscribe;
+  }, [plot, onFrequencyRangeChange]);
 
   return <canvas ref={plot.canvasRef} width={width} height={height} />;
 }
@@ -1008,6 +1065,17 @@ function FFTDisplay({ width, height, frequencyRange, onFrequencyRangeChange, min
 - All plotting logic reusable
 - Easy to add new traces (threshold, markers, etc.)
 - Easier to test
+
+### Migration Checklist (Current React components)
+1. **FFTDisplay refactor** – Replace the hand-written canvas pipeline in `frontend/src/components/visualization/FFTDisplay.tsx:63-612` with the `usePlot` hook. Keep the existing smoothing/decimation logic outside the library and push the processed arrays into a `TraceHandle1D`. Wire `plot.onZoom`/`plot.onPan` subscriptions inside `useEffect` blocks so their callbacks keep driving `onFrequencyRangeChange` (the same behaviour currently implemented in `FFTDisplay.tsx:438-520`).
+2. **Axis + tick config** – Configure axis ranges and tick formatters via `PlotConfig` instead of DOM overlays. Once the hook owns tick rendering, remove the overlay elements at the bottom of `FFTDisplay.tsx` and rely on the library’s grid + tick drawing.
+3. **Cursor tooltip** – Replace the manual cursor tracking logic (`FFTDisplay.tsx:351-418`) with `plot.onCursor`. Use the provided `canvasX`/`canvasY` to position the tooltip container and `snapped` values for readouts.
+4. **Waterfall integration** – Swap the imperative buffer management in `frontend/src/components/visualization/WaterfallDisplay.tsx:70-189` for `useWaterfall`. Feed FFT rows through `waterfall.addRow`, mirror frequency-range updates with `waterfall.setFrequencyRange`, and forward zoom/pan callbacks so the parent stays in sync (`WaterfallDisplay.tsx:207-278` today).
+5. **Spectrum coordination** – In `frontend/src/components/visualization/SpectrumView.tsx:32-110`, keep the shared `frequencyRange`, `minDb`, and `maxDb` state. After migrating both child components, the parent continues to pass those props down and receives unified zoom events via the new hook subscriptions.
+
+### Data Ingress & Event Wiring
+- The plotting library stays agnostic about the FFT source. Continue listening for `window` events (see `FFTDisplay.tsx:63-88` and `WaterfallDisplay.tsx:195-204`), and forward each update through the appropriate trace handle or `addRow`.
+- Retain any upstream smoothing, decimation, or thresholding logic in the components; the library focuses solely on rendering performance.
 
 ---
 
@@ -1225,6 +1293,22 @@ function Spectrogram({ data }) {
 For streaming waterfall displays, use the specialized `useWaterfall` hook:
 
 ```typescript
+interface WaterfallInstance {
+  canvasRef: RefObject<HTMLCanvasElement>;
+  addRow: (values: Float32Array | number[]) => void;
+  setFrequencyRange: (startFreq: number, endFreq: number) => void;
+  onZoom: (
+    callback: (axis: 'x' | 'y' | 'both', range: AxisRange) => void
+  ) => () => void;
+  onPan: (
+    callback: (axis: 'x' | 'y' | 'both', range: AxisRange) => void
+  ) => () => void;
+  setColorMap: (colorMap: ColorMapName | CustomColorMap) => void;
+  setValueRange: (min: number, max: number) => void;
+}
+```
+
+```typescript
 function WaterfallDisplay({ frequencyRange }) {
   const waterfall = useWaterfall({
     frequencyRange,
@@ -1245,9 +1329,43 @@ function WaterfallDisplay({ frequencyRange }) {
     return () => window.removeEventListener('fft-data', handleFFT);
   }, []);
 
+  useEffect(() => {
+    waterfall.setFrequencyRange(
+      frequencyRange.startFreq,
+      frequencyRange.endFreq
+    );
+  }, [waterfall, frequencyRange]);
+
+  useEffect(() => {
+    const unsubscribeZoom = waterfall.onZoom((axis, range) => {
+      if (axis !== 'x') return;
+      // Forward to parent so FFT + waterfall stay locked together
+      onFrequencyRangeChange({
+        startFreq: range.min,
+        endFreq: range.max,
+      });
+    });
+    const unsubscribePan = waterfall.onPan((axis, range) => {
+      if (axis !== 'x') return;
+      onFrequencyRangeChange({
+        startFreq: range.min,
+        endFreq: range.max,
+      });
+    });
+    return () => {
+      unsubscribeZoom();
+      unsubscribePan();
+    };
+  }, [waterfall, onFrequencyRangeChange]);
+
   return <canvas ref={waterfall.canvasRef} width={800} height={400} />;
 }
 ```
+
+**Range + color synchronisation**
+- Call `waterfall.setFrequencyRange(start, end)` inside an effect whenever the external range changes.
+- Use `waterfall.setValueRange(minDb, maxDb)` when the power window updates.
+- Subscribe to `waterfall.onZoom`/`waterfall.onPan` and forward x-axis changes to the shared `FrequencyRange` state so FFT and waterfall stay aligned.
 
 **Why separate `useWaterfall`?**
 - Highly optimized for streaming (efficient row shifting, ImageData reuse)

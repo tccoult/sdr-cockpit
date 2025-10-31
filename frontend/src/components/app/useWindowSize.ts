@@ -1,24 +1,22 @@
 import { useLayoutEffect, useState } from "react";
 
 export function useWindowSize() {
-  const [size, setSize] = useState([window.innerWidth, window.innerHeight]);
+  const [size, setSize] = useState<[number, number]>([0, 0]);
 
   useLayoutEffect(() => {
     let resizeTimer: number;
 
-    function handleResize() {
-      // Clear any existing timer
-      clearTimeout(resizeTimer);
-
-      resizeTimer = window.setTimeout(() => {
-        setSize([window.innerWidth, window.innerHeight]);
-      }, 100);
+    function updateSize() {
+      setSize([window.innerWidth, window.innerHeight]);
     }
 
-    window.addEventListener("resize", handleResize);
+    function handleResize() {
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(updateSize, 100);
+    }
 
-    // Set initial size
-    handleResize();
+    updateSize();
+    window.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);

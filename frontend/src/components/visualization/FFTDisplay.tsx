@@ -1,12 +1,13 @@
-/**
- * High-performance Canvas-based FFT display
- * Optimized for 60 FPS real-time rendering with polished interactions
- * Uses DOM overlays for crisp text rendering
- */
-
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
+import {
+  CursorStyle,
+  Trace1DType,
+  usePlot,
+  type CursorInfo,
+  type TraceHandle1D,
+} from "../../utils/plotting";
 
 interface FFTDisplayProps {
   width: number;
@@ -15,21 +16,11 @@ interface FFTDisplayProps {
   maxDb: number;
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
+  dataKey?: string;
 }
 
-interface CursorInfo {
-  x: number;
-  y: number;
-  freq: number;
-  power: number;
-}
-
-interface ZoomSelection {
-  startX: number;
-  endX: number;
-  startFreq: number;
-  endFreq: number;
-}
+const SMOOTHING_FACTOR = 0.95;
+const MAX_POINTS = 2048;
 
 export const FFTDisplay = memo(function FFTDisplay({
   width,
@@ -38,486 +29,198 @@ export const FFTDisplay = memo(function FFTDisplay({
   maxDb,
   frequencyRange,
   onFrequencyRangeChange,
+  dataKey,
 }: FFTDisplayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const [currentFFT, setCurrentFFT] = useState<FFTData | null>(null);
-  const [cursorInfo, setCursorInfo] = useState<CursorInfo | null>(null);
-  const [zoomSelection, setZoomSelection] = useState<ZoomSelection | null>(
+  const plotConfig = useMemo(
+    () => ({
+      axes: {
+        x: {
+          label: "Frequency (Hz)",
+          formatter: (value: number) => formatFrequency(value, true),
+          range: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+        },
+        y: {
+          label: "Power (dB)",
+          formatter: (value: number) => `${value.toFixed(1)}`,
+          range: { min: minDb, max: maxDb },
+        },
+      },
+      interactions: {
+        zoom: "x" as const,
+        pan: "x" as const,
+        boxSelect: true,
+        cursor: {
+          style: CursorStyle.Vertical,
+          snap: true,
+        },
+      },
+      background: "rgba(10, 10, 15, 0.85)",
+      grid: {
+        show: true,
+        color: "rgba(255, 255, 255, 0.1)",
+      },
+      margins: { top: 20, right: 30, bottom: 40, left: 60 },
+    }),
+    [frequencyRange, minDb, maxDb]
+  );
+
+  const plot = usePlot(plotConfig);
+  const traceRef = useRef<TraceHandle1D | null>(null);
+  const smoothingRef = useRef<Float32Array | null>(null);
+  const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
-  const [isSelecting, setIsSelecting] = useState(false);
+  const [cursorInfo, setCursorInfo] = useState<CursorInfo | null>(null);
 
-  // Canvas margins for axes and labels
-  const margin = useMemo(
-    () => ({ top: 20, right: 30, bottom: 40, left: 60 }),
-    []
-  );
+  useEffect(() => {
+    const handleZoom = (
+      axis: "x" | "y" | "both",
+      range: { min: number; max: number }
+    ) => {
+      if (axis !== "x" || !onFrequencyRangeChange) return;
+      onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
+    };
+    return plot.onZoom(handleZoom);
+  }, [plot, onFrequencyRangeChange]);
 
-  const plotWidth = Math.max(0, width - margin.left - margin.right);
-  const plotHeight = Math.max(0, height - margin.top - margin.bottom);
+  useEffect(() => {
+    const handlePan = (
+      axis: "x" | "y" | "both",
+      range: { min: number; max: number }
+    ) => {
+      if (axis !== "x" || !onFrequencyRangeChange) return;
+      onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
+    };
+    return plot.onPan(handlePan);
+  }, [plot, onFrequencyRangeChange]);
 
-  const [smoothedFFT, setSmoothedFFT] = useState<Float32Array | null>(null);
-  const smoothingFactor = 0.9; // 0-1, higher = more smoothing (try 0.5-0.8)
+  useEffect(() => {
+    const unsubscribeCursor = plot.onCursor((info) => {
+      setCursorInfo(info);
+    });
+    return unsubscribeCursor;
+  }, [plot]);
+
+  useEffect(() => {
+    const trace = plot.addTrace1D({
+      type: Trace1DType.Line,
+      color: "#FF00FF",
+      lineWidth: 2,
+    });
+    traceRef.current = trace;
+    return () => {
+      trace.remove();
+      traceRef.current = null;
+    };
+  }, [plot]);
+
+  useEffect(() => {
+    smoothingRef.current = null;
+    fftMetaRef.current = null;
+    const trace = traceRef.current;
+    if (trace) {
+      trace.update({
+        x: new Float32Array(0),
+        y: new Float32Array(0),
+      });
+    }
+    plot.requestRender();
+  }, [plot, dataKey]);
 
   useEffect(() => {
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
-      const newFFT = customEvent.detail;
-
-      // Blend with previous frame
-      if (smoothedFFT && smoothedFFT.length === newFFT.bins.length) {
-        const blended = new Float32Array(newFFT.bins.length);
-        for (let i = 0; i < newFFT.bins.length; i++) {
-          blended[i] =
-            smoothedFFT[i] * smoothingFactor +
-            newFFT.bins[i] * (1 - smoothingFactor);
-        }
-        setCurrentFFT({ ...newFFT, bins: blended });
-        setSmoothedFFT(blended);
-      } else {
-        // First frame or size changed
-        setCurrentFFT(newFFT);
-        setSmoothedFFT(newFFT.bins);
+      const incomingFFT = customEvent.detail;
+      const bins = incomingFFT.bins;
+      if (!bins.length) {
+        return;
       }
+
+      let smoothed = smoothingRef.current;
+      if (!smoothed || smoothed.length !== bins.length) {
+        smoothed = new Float32Array(bins);
+      } else {
+        for (let i = 0; i < bins.length; i += 1) {
+          smoothed[i] =
+            smoothed[i] * SMOOTHING_FACTOR + bins[i] * (1 - SMOOTHING_FACTOR);
+        }
+      }
+      smoothingRef.current = smoothed;
+      fftMetaRef.current = {
+        sampleRate: incomingFFT.sampleRate,
+        centerFreq: incomingFFT.centerFreq,
+      };
+
+      const trace = traceRef.current;
+      if (!trace) {
+        return;
+      }
+
+      const sampleRate = incomingFFT.sampleRate;
+      const centerFreq = incomingFFT.centerFreq;
+      const binCount = smoothed.length;
+      if (!binCount) {
+        return;
+      }
+
+      const binWidth = sampleRate / binCount;
+      const fftStart = centerFreq - sampleRate / 2;
+      const { startFreq, endFreq } = frequencyRange;
+      let startBin = Math.floor((startFreq - fftStart) / binWidth);
+      let endBin = Math.ceil((endFreq - fftStart) / binWidth);
+      startBin = Math.max(0, Math.min(binCount - 1, startBin));
+      endBin = Math.max(startBin + 1, Math.min(binCount, endBin));
+
+      const rangeBinCount = endBin - startBin;
+      const maxPoints = Math.min(MAX_POINTS, Math.max(1, rangeBinCount));
+      const freqs = new Float32Array(maxPoints);
+      const powers = new Float32Array(maxPoints);
+      const step = maxPoints > 1 ? (rangeBinCount - 1) / (maxPoints - 1) : 0;
+
+      const fillNaN = (index: number) => {
+        freqs[index] = Number.NaN;
+        powers[index] = Number.NaN;
+      };
+
+      for (let i = 0; i < maxPoints; i += 1) {
+        const offset = maxPoints > 1 ? Math.round(i * step) : 0;
+        const binIndex = Math.min(rangeBinCount - 1, offset) + startBin;
+        const freq = fftStart + binIndex * binWidth;
+        const power = smoothed[binIndex];
+        if (!Number.isFinite(power)) {
+          fillNaN(i);
+          continue;
+        }
+        freqs[i] = freq;
+        powers[i] = power;
+      }
+
+      trace.update({
+        x: freqs,
+        y: powers,
+      });
     };
 
     window.addEventListener("fft-data", handleFFTData);
     return () => window.removeEventListener("fft-data", handleFFTData);
-  }, [smoothedFFT]);
-
-  // Convert FFT data to chart data format (same as recharts version)
-  const chartData = useMemo(() => {
-    if (!currentFFT) return [];
-
-    const { centerFreq, sampleRate, bins } = currentFFT;
-    const { startFreq, endFreq } = frequencyRange;
-    const binWidth = sampleRate / bins.length;
-
-    const data: { freq: number; power: number }[] = [];
-
-    // Calculate which bins to display
-    const startBin = Math.max(
-      0,
-      Math.floor((startFreq - centerFreq + sampleRate / 2) / binWidth)
-    );
-    const endBin = Math.min(
-      bins.length,
-      Math.ceil((endFreq - centerFreq + sampleRate / 2) / binWidth)
-    );
-
-    // Sample bins for display (limit to ~512 points for performance)
-    const step = Math.max(1, Math.floor((endBin - startBin) / 512));
-
-    for (let i = startBin; i < endBin; i += step) {
-      const freq = centerFreq - sampleRate / 2 + i * binWidth;
-      const power = bins[i];
-      data.push({ freq, power });
-    }
-
-    return data;
-  }, [currentFFT, frequencyRange]);
-
-  // Coordinate transformation utilities
-  const freqToX = useCallback(
-    (freq: number): number => {
-      const { startFreq, endFreq } = frequencyRange;
-      const normalized = (freq - startFreq) / (endFreq - startFreq);
-      return margin.left + normalized * plotWidth;
-    },
-    [frequencyRange, plotWidth, margin.left]
-  );
-
-  const xToFreq = useCallback(
-    (x: number): number => {
-      const { startFreq, endFreq } = frequencyRange;
-      const normalized = (x - margin.left) / plotWidth;
-      return startFreq + normalized * (endFreq - startFreq);
-    },
-    [frequencyRange, plotWidth, margin.left]
-  );
-
-  const dbToY = useCallback(
-    (db: number): number => {
-      const normalized = (db - minDb) / (maxDb - minDb);
-      return margin.top + plotHeight - normalized * plotHeight;
-    },
-    [minDb, maxDb, plotHeight, margin.top]
-  );
-
-  // Calculate intelligent tick spacing
-  const calculateTicks = useCallback(
-    (min: number, max: number, targetCount: number = 8): number[] => {
-      const range = max - min;
-      const roughStep = range / (targetCount - 1);
-      const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-      const residual = roughStep / magnitude;
-
-      let step: number;
-      if (residual > 5) step = 10 * magnitude;
-      else if (residual > 2) step = 5 * magnitude;
-      else if (residual > 1) step = 2 * magnitude;
-      else step = magnitude;
-
-      const ticks: number[] = [];
-      const start = Math.ceil(min / step) * step;
-      for (let tick = start; tick <= max; tick += step) {
-        ticks.push(tick);
-      }
-      return ticks;
-    },
-    []
-  );
-
-  // Calculate ticks for overlays
-  const freqTicks = useMemo(
-    () => calculateTicks(frequencyRange.startFreq, frequencyRange.endFreq, 8),
-    [frequencyRange, calculateTicks]
-  );
-
-  const dbTicks = useMemo(
-    () => calculateTicks(minDb, maxDb, 8),
-    [minDb, maxDb, calculateTicks]
-  );
-
-  // Main render function (NO TEXT RENDERING - only graphics)
-  const render = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Fill background
-    ctx.fillStyle = "rgba(10, 10, 15, 0.8)";
-    ctx.fillRect(0, 0, width, height);
-
-    // ===== GRID AND AXES =====
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-
-    // Frequency (vertical) grid lines
-    freqTicks.forEach((freq) => {
-      const x = freqToX(freq);
-      ctx.beginPath();
-      ctx.moveTo(x, margin.top);
-      ctx.lineTo(x, height - margin.bottom);
-      ctx.stroke();
-    });
-
-    // Power (horizontal) grid lines
-    dbTicks.forEach((db) => {
-      const y = dbToY(db);
-      ctx.beginPath();
-      ctx.moveTo(margin.left, y);
-      ctx.lineTo(width - margin.right, y);
-      ctx.stroke();
-    });
-
-    ctx.restore();
-
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    ctx.lineWidth = 1;
-
-    // Y-Axis (left)
-    ctx.beginPath();
-    ctx.moveTo(margin.left, margin.top);
-    ctx.lineTo(margin.left, height - margin.bottom);
-    ctx.stroke();
-
-    // X-Axis (bottom)
-    ctx.beginPath();
-    ctx.moveTo(margin.left, height - margin.bottom);
-    ctx.lineTo(width - margin.right, height - margin.bottom);
-    ctx.stroke();
-
-    ctx.restore();
-
-    // ===== FFT TRACE =====
-    if (chartData.length > 0) {
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([]);
-
-      const path = new Path2D();
-      chartData.forEach((point, i) => {
-        const x = freqToX(point.freq);
-        const y = dbToY(point.power);
-
-        if (i === 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      });
-      ctx.lineWidth = 2.0;
-      ctx.strokeStyle = "#FF00FF";
-      ctx.stroke(path);
-    }
-
-    // ===== ZOOM SELECTION AREA =====
-    if (zoomSelection && isSelecting) {
-      const x1 = Math.min(zoomSelection.startX, zoomSelection.endX);
-      const x2 = Math.max(zoomSelection.startX, zoomSelection.endX);
-      const selectionWidth = x2 - x1;
-
-      // Semi-transparent selection box
-      ctx.fillStyle = "rgba(255, 0, 255, 0.05)";
-      ctx.fillRect(x1, margin.top, selectionWidth, plotHeight);
-
-      // Selection borders
-      ctx.strokeStyle = "rgba(255, 0, 255, 0.2)";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([]);
-      ctx.strokeRect(x1, margin.top, selectionWidth, plotHeight);
-    }
-
-    // ===== CURSOR CROSSHAIR =====
-    if (cursorInfo) {
-      const x = freqToX(cursorInfo.freq);
-      const y = dbToY(cursorInfo.power);
-
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(x, margin.top);
-      ctx.lineTo(x, height - margin.bottom);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#FFFF00";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }, [
-    width,
-    height,
-    margin,
-    plotHeight,
-    chartData,
-    freqTicks,
-    dbTicks,
-    cursorInfo,
-    zoomSelection,
-    isSelecting,
-    freqToX,
-    dbToY,
-  ]);
-
-  // Request render on next frame
-  const requestRender = useCallback(() => {
-    if (animationFrameRef.current !== null) return; // Already scheduled
-
-    animationFrameRef.current = requestAnimationFrame(() => {
-      render();
-      animationFrameRef.current = null;
-    });
-  }, [render]);
+  }, [frequencyRange, maxDb, minDb]);
 
   useEffect(() => {
-    requestRender();
-  }, [requestRender]);
+    const range = plot.getAxisRange("x");
+    if (
+      range.min !== frequencyRange.startFreq ||
+      range.max !== frequencyRange.endFreq
+    ) {
+      plot.setAxisRange("x", frequencyRange.startFreq, frequencyRange.endFreq);
+    }
+  }, [plot, frequencyRange]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-
-    // Scale canvas for high-DPI
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
-    // Scale all drawing operations
-    ctx.scale(dpr, dpr);
-  }, [width, height]);
-
-  const [isPanning, setIsPanning] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number } | null>(null);
-
-  // Mouse move handler - update cursor info
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas || !chartData.length) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      // Check if cursor is in plot area
-      if (
-        x < margin.left ||
-        x > width - margin.right ||
-        y < margin.top ||
-        y > height - margin.bottom
-      ) {
-        setCursorInfo(null);
-        if (isSelecting && zoomSelection) {
-          setZoomSelection({ ...zoomSelection, endX: x });
-        }
-        return;
-      }
-
-      const freq = xToFreq(x);
-
-      // Find closest data point
-      let closestPoint = chartData[0];
-      let minDistance = Math.abs(chartData[0].freq - freq);
-
-      for (const point of chartData) {
-        const distance = Math.abs(point.freq - freq);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPoint = point;
-        }
-      }
-
-      setCursorInfo({
-        x,
-        y,
-        freq: closestPoint.freq,
-        power: closestPoint.power,
-      });
-
-      if (isPanning && dragStart) {
-        if (!onFrequencyRangeChange) return;
-
-        const deltaX = e.clientX - dragStart.x;
-        const { startFreq, endFreq } = frequencyRange;
-        const span = endFreq - startFreq;
-        const freqShift = -(deltaX / plotWidth) * span; // Use plotWidth
-
-        onFrequencyRangeChange({
-          startFreq: startFreq + freqShift,
-          endFreq: endFreq + freqShift,
-        });
-
-        setDragStart({ x: e.clientX });
-        return; // Don't show cursor info while panning
-      }
-
-      // Update zoom selection end
-      if (isSelecting && zoomSelection) {
-        setZoomSelection({
-          ...zoomSelection,
-          endX: x,
-          endFreq: freq,
-        });
-      }
-    },
-    [
-      chartData,
-      margin,
-      width,
-      height,
-      isPanning,
-      dragStart,
-      isSelecting,
-      zoomSelection,
-      onFrequencyRangeChange,
-      frequencyRange,
-      plotWidth,
-      xToFreq,
-    ]
-  );
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-
-      if (x < margin.left || x > width - margin.right) return;
-
-      if (e.shiftKey) {
-        // SHIFT key is pressed
-        const freq = xToFreq(x);
-        setIsSelecting(true); // Start region zoom
-        setZoomSelection({
-          startX: x,
-          endX: x,
-          startFreq: freq,
-          endFreq: freq,
-        });
-      } else {
-        // No shift key
-        setIsPanning(true); // Start panning
-        setDragStart({ x: e.clientX });
-      }
-    },
-    [margin, width, xToFreq]
-  );
-
-  // Mouse up - complete zoom
-  const handleMouseUp = useCallback(() => {
-    if (isSelecting && zoomSelection && onFrequencyRangeChange) {
-      const newStartFreq = Math.min(
-        zoomSelection.startFreq,
-        zoomSelection.endFreq
-      );
-      const newEndFreq = Math.max(
-        zoomSelection.startFreq,
-        zoomSelection.endFreq
-      );
-
-      // Only zoom if selection is significant (> 1kHz)
-      if (newEndFreq - newStartFreq > 1000) {
-        onFrequencyRangeChange({
-          startFreq: newStartFreq,
-          endFreq: newEndFreq,
-        });
-      }
+    const range = plot.getAxisRange("y");
+    if (range.min !== minDb || range.max !== maxDb) {
+      plot.setAxisRange("y", minDb, maxDb);
     }
-
-    setIsPanning(false);
-    setIsSelecting(false);
-    setZoomSelection(null);
-    setDragStart(null);
-  }, [isSelecting, zoomSelection, onFrequencyRangeChange]);
-
-  // Mouse leave - cancel cursor and selection
-  const handleMouseLeave = useCallback(() => {
-    setCursorInfo(null);
-    if (isSelecting) {
-      setIsSelecting(false);
-      setZoomSelection(null);
-    }
-  }, [isSelecting]);
-
-  // Wheel zoom
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      e.preventDefault();
-      if (!onFrequencyRangeChange) return;
-
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      const { startFreq, endFreq } = frequencyRange;
-      const centerFreq = (startFreq + endFreq) / 2;
-      const span = (endFreq - startFreq) / 2;
-      const newSpan = span * zoomFactor;
-
-      onFrequencyRangeChange({
-        startFreq: centerFreq - newSpan,
-        endFreq: centerFreq + newSpan,
-      });
-    },
-    [frequencyRange, onFrequencyRangeChange]
-  );
+  }, [plot, minDb, maxDb]);
 
   return (
     <div
@@ -525,88 +228,40 @@ export const FFTDisplay = memo(function FFTDisplay({
         position: "relative",
         width,
         height,
-        background: "rgba(10, 10, 15, 0.8)",
+        background: "rgba(10, 10, 15, 0.85)",
         borderRadius: 4,
         overflow: "hidden",
       }}
     >
       <canvas
-        ref={canvasRef}
+        ref={plot.canvasRef}
         width={width}
         height={height}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onWheel={handleWheel}
         style={{
           display: "block",
-          cursor: isPanning
-            ? "grabbing"
-            : isSelecting
-            ? "crosshair"
-            : "default",
+          width: "100%",
+          height: "100%",
         }}
       />
-
-      {/* X-axis (frequency) labels - DOM overlay */}
-      {freqTicks.map((freq) => (
-        <div
-          key={`freq-${freq}`}
-          style={{
-            position: "absolute",
-            left: freqToX(freq),
-            bottom: margin.bottom - 20,
-            transform: "translateX(-50%)",
-            color: "white",
-            fontSize: "12px",
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {formatFrequency(freq, true)}
-        </div>
-      ))}
-
-      {/* Y-axis (power) labels - DOM overlay */}
-      {dbTicks.map((db) => (
-        <div
-          key={`db-${db}`}
-          style={{
-            position: "absolute",
-            left: margin.left - 10,
-            top: dbToY(db),
-            transform: "translate(-100%, -50%)",
-            color: "rgba(255, 255, 255, 1.0)",
-            fontSize: "12px",
-            textAlign: "right",
-            pointerEvents: "none",
-          }}
-        >
-          {db.toFixed(0)}
-        </div>
-      ))}
-
-      {/* Cursor tooltip */}
       {cursorInfo && (
         <div
           style={{
             position: "absolute",
-            left: freqToX(cursorInfo.freq) + 20,
-            top: dbToY(cursorInfo.power) - 30,
+            left: Math.min(Math.max(cursorInfo.canvasX + 16, 8), width - 150),
+            top: Math.min(Math.max(cursorInfo.canvasY - 40, 8), height - 60),
             background: "rgba(20, 20, 30, 0.95)",
             border: "1px solid rgba(255, 255, 255, 0.2)",
-            borderRadius: "4px",
-            padding: "8px 12px",
-            color: "white",
-            fontSize: "12px",
+            borderRadius: 4,
+            padding: "6px 10px",
+            color: "#ffffff",
+            fontSize: 12,
             pointerEvents: "none",
             whiteSpace: "nowrap",
-            zIndex: 10,
+            zIndex: 2,
           }}
         >
-          <div>Frequency: {formatFrequency(cursorInfo.freq)}</div>
-          <div>Power: {cursorInfo.power.toFixed(1)} dB</div>
+          <div>Frequency: {formatFrequency(cursorInfo.dataX)}</div>
+          <div>Power: {cursorInfo.dataY.toFixed(1)} dB</div>
         </div>
       )}
     </div>

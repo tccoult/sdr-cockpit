@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "./components/common/Button";
 import { TaskSidebar } from "./components/tasks/TaskSidebar";
 import { TaskWizard } from "./components/tasks/TaskWizard";
+import { useWindowSize } from "./components/app/useWindowSize";
 import { SpectrumView } from "./components/visualization/SpectrumView";
-import { useWindowSize } from "./hooks/useWindowSize";
+import { PlotSandbox } from "./components/visualization/PlotSandbox";
 import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
 import { formatFrequency } from "./utils/formatters";
@@ -22,10 +23,11 @@ import {
 } from "./utils/mockTaskGenerator";
 
 function App() {
-  const { width } = useWindowSize(); // Get dynamic width
+  const { width, height: windowHeight } = useWindowSize(); // Get dynamic size
   const isMobile = width < 1024;
 
   const colorMap = PLASMA;
+  const showPlotSandbox = import.meta.env.VITE_PLOT_SANDBOX === "true";
 
   // Task state
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -42,6 +44,8 @@ function App() {
   // Mock data generators (one per task)
   const generatorsRef = useRef<Map<string, MockFFTGenerator>>(new Map());
   const intervalRef = useRef<number | null>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Initialize with demo tasks
   useEffect(() => {
@@ -106,6 +110,25 @@ function App() {
       }
     };
   }, [selectedTask, isWizardOpen]);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const nextHeight = entry.contentRect.height;
+      setHeaderHeight((prev) =>
+        Math.abs(prev - nextHeight) < 1 ? prev : nextHeight
+      );
+    });
+    observer.observe(headerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const viewerHeight = Math.max(
+    windowHeight - headerHeight - 32,
+    720
+  );
 
   // Update task uptimes and recordings
   useEffect(() => {
@@ -245,6 +268,7 @@ function App() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <div
+          ref={headerRef}
           style={{
             padding: "16px 24px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
@@ -380,24 +404,42 @@ function App() {
           style={{
             flex: 1,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
-            padding: 20,
+            padding: "0 20px 20px",
             overflow: "auto",
+            minHeight: viewerHeight,
           }}
         >
           {selectedTask ? (
             <div
               style={{
                 width: "100%",
+                minHeight: viewerHeight,
                 animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
               <SpectrumView
+                taskId={selectedTask.id}
                 centerFreq={selectedTask.frequency}
                 sampleRate={selectedTask.sampleRate}
                 colorMap={colorMap}
+                availableHeight={viewerHeight}
               />
+              {showPlotSandbox && (
+                <div
+                  style={{
+                    marginTop: 24,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <PlotSandbox
+                    width={Math.min(Math.max(width - 160, 360), 960)}
+                    height={260}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div

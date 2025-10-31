@@ -17,6 +17,7 @@ interface WaterfallDisplayProps {
   maxDb: number;
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
+  dataKey?: string;
 }
 
 const shiftImageDown = (
@@ -43,6 +44,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   maxDb,
   frequencyRange,
   onFrequencyRangeChange,
+  dataKey,
 }: WaterfallDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallDataRef = useRef<ImageData | null>(null);
@@ -90,7 +92,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       data[i + 2] = 0; // B
       data[i + 3] = 255; // A
     }
-  }, [plotWidthInt, plotHeightInt]);
+  }, [plotWidthInt, plotHeightInt, dataKey]);
 
   // Build color lookup table when colormap changes
   useEffect(() => {
@@ -120,6 +122,30 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       animationFrameRef.current = null;
     });
   }, [render]);
+
+  useEffect(() => {
+    setIsDragging(false);
+    setDragStart(null);
+    lastMouseYRef.current = 0;
+    const buffer = waterfallDataRef.current;
+    if (buffer) {
+      const data = buffer.data;
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+        data[i + 3] = 255;
+      }
+    }
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    requestRender();
+  }, [dataKey, requestRender]);
 
   const addFFTRow = useCallback(
     (fftData: FFTData) => {
