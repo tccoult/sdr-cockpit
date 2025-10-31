@@ -382,9 +382,9 @@ function App() {
           style={{
             flex: 1,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
-            padding: 20,
+            padding: "0 20px 20px",
             overflow: "auto",
           }}
         >

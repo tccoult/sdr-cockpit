@@ -1,15 +1,11 @@
-import {
-  memo,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   Trace1DType,
+  CursorStyle,
   usePlot,
   type PlotConfig,
   type TraceHandle1D,
+  type CursorInfo,
 } from "../../utils/plotting";
 
 interface PlotSandboxProps {
@@ -43,9 +39,10 @@ function buildConfig(): PlotConfig {
     interactions: {
       zoom: "x",
       pan: "x",
+      boxSelect: true,
       cursor: {
-        style: "vertical",
-        snap: false,
+        style: CursorStyle.Crosshair,
+        snap: true,
       },
     },
   };
@@ -55,7 +52,8 @@ export const PlotSandbox = memo(function PlotSandbox({
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
 }: PlotSandboxProps) {
-  const plot = usePlot(buildConfig());
+  const config = useMemo(buildConfig, []);
+  const plot = usePlot(config);
   const traceRef = useRef<TraceHandle1D | null>(null);
   const animationRef = useRef<number | null>(null);
   const frameCounterRef = useRef(0);
@@ -134,7 +132,7 @@ export const PlotSandbox = memo(function PlotSandbox({
   }, [plot, xValues]);
 
   useEffect(() => {
-    const handleCursor = (info: Parameters<typeof plot.onCursor>[0]) => {
+    const handleCursor = (info: CursorInfo | null) => {
       const tooltip = cursorInfoRef.current;
       if (!tooltip) {
         return;
@@ -147,9 +145,9 @@ export const PlotSandbox = memo(function PlotSandbox({
       tooltip.style.transform = `translate(${info.canvasX + 12}px, ${
         info.canvasY - 36
       }px)`;
-      tooltip.textContent = `f=${info.dataX.toFixed(3)}  amp=${info.dataY.toFixed(
-        2
-      )}`;
+      tooltip.textContent = `f=${info.dataX.toFixed(
+        3
+      )}  amp=${info.dataY.toFixed(2)}`;
     };
     const unsubscribe = plot.onCursor(handleCursor);
     return () => {
@@ -161,75 +159,7 @@ export const PlotSandbox = memo(function PlotSandbox({
     const canvas = plot.canvasRef.current;
     if (!canvas) return;
     canvas.style.touchAction = "none";
-
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      plot.simulateWheel({
-        clientX: event.clientX,
-        clientY: event.clientY,
-        deltaY: event.deltaY,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-      });
-    };
-
-    const handlePointerDown = (event: PointerEvent) => {
-      event.preventDefault();
-      canvas.setPointerCapture(event.pointerId);
-      plot.simulatePointerDown({
-        clientX: event.clientX,
-        clientY: event.clientY,
-        shiftKey: event.shiftKey,
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        pointerId: event.pointerId,
-      });
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      plot.simulatePointerMove({
-        clientX: event.clientX,
-        clientY: event.clientY,
-        shiftKey: event.shiftKey,
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        pointerId: event.pointerId,
-      });
-    };
-
-    const handlePointerUp = (event: PointerEvent) => {
-      plot.simulatePointerUp({
-        clientX: event.clientX,
-        clientY: event.clientY,
-        shiftKey: event.shiftKey,
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        pointerId: event.pointerId,
-      });
-      try {
-        canvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // ignore if pointer capture not set
-      }
-    };
-
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
-    canvas.addEventListener("pointerdown", handlePointerDown);
-    canvas.addEventListener("pointermove", handlePointerMove);
-    canvas.addEventListener("pointerup", handlePointerUp);
-    canvas.addEventListener("pointercancel", handlePointerUp);
-
-    return () => {
-      canvas.removeEventListener("wheel", handleWheel);
-      canvas.removeEventListener("pointerdown", handlePointerDown);
-      canvas.removeEventListener("pointermove", handlePointerMove);
-      canvas.removeEventListener("pointerup", handlePointerUp);
-      canvas.removeEventListener("pointercancel", handlePointerUp);
-    };
+    canvas.style.cursor = "crosshair";
   }, [plot]);
 
   return (
@@ -291,7 +221,8 @@ export const PlotSandbox = memo(function PlotSandbox({
         }}
       >
         <div>• Wheel to zoom horizontally</div>
-        <div>• Drag to pan (shift disables panning)</div>
+        <div>• Drag to pan</div>
+        <div>• Hold Shift + drag to box-zoom</div>
       </div>
     </div>
   );

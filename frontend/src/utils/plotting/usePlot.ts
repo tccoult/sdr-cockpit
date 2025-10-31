@@ -3,12 +3,10 @@ import {
   useEffect,
   useMemo,
   useRef,
-  type MutableRefObject,
 } from "react";
 import type {
   AxisRange,
   PlotConfig,
-  PlotInstance,
   PlotInstanceInternal,
   PlotDebugApi,
   Trace1DConfig,
@@ -18,10 +16,11 @@ import type {
   TraceHandle1D,
   TraceHandle2D,
   CursorInfo,
-  WheelEventLike,
-  PointerEventLike,
+  CursorRenderArgs,
 } from "./types";
-import { Trace1DType } from "./types";
+import { Trace1DType, CursorStyle } from "./types";
+
+type TraceRegistry = Map<string, TraceRecord>;
 
 type TraceRecord1D = {
   id: string;
@@ -41,24 +40,37 @@ type TraceRecord2D = {
 
 type TraceRecord = TraceRecord1D | TraceRecord2D;
 
-type TraceRegistry = Map<string, TraceRecord>;
-
-type ProjectionMetrics = {
+type Projection = {
   projectX: (value: number) => number;
   projectY: (value: number) => number;
   invertX: (pixel: number) => number;
   invertY: (pixel: number) => number;
-  plotRect: { left: number; top: number; width: number; height: number };
+  rect: { left: number; top: number; width: number; height: number };
 };
 
+type PointerMode = "idle" | "pan" | "box";
+
 type PointerState = {
-  active: boolean;
+  mode: PointerMode;
   pointerId: number | null;
   lastX: number;
   lastY: number;
-  isPanning: boolean;
-  panX: boolean;
-  panY: boolean;
+  panStartX: AxisRange;
+  panStartY: AxisRange;
+  boxStartX: number;
+};
+
+type PointerInput = {
+  clientX: number;
+  clientY: number;
+  shiftKey?: boolean;
+  pointerId?: number | null;
+};
+
+type WheelInput = {
+  clientX: number;
+  clientY: number;
+  deltaY: number;
 };
 
 const DEFAULT_AXIS_RANGE: AxisRange = { min: 0, max: 1 };
@@ -71,15 +83,92 @@ const DEFAULT_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const DEFAULT_FONT_SIZE = 12;
 const FALLBACK_CANVAS_WIDTH = 640;
 const FALLBACK_CANVAS_HEIGHT = 360;
+const CURSOR_LINE_COLOR = "rgba(255, 255, 255, 0.7)";
+const CURSOR_LINE_WIDTH = 1;
+const CURSOR_HIGHLIGHT_COLOR = "#ffff7a";
+const CURSOR_HIGHLIGHT_RADIUS = 5;
+const CURSOR_HIGHLIGHT_LINE_WIDTH = 2;
+const BOX_SELECT_FILL = "rgba(255, 0, 255, 0.12)";
+const BOX_SELECT_STROKE = "rgba(255, 0, 255, 0.45)";
+const BOX_SELECT_MIN_PIXELS = 8;
 
-const warnNotImplemented = (method: string) => {
-  if (import.meta.env.MODE !== "production") {
-    // eslint-disable-next-line no-console
-    console.warn(`[plotting] ${method} is not implemented yet.`);
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+function cursorEquals(a: CursorInfo | null, b: CursorInfo | null): boolean {
+  if (a === b) {
+    return true;
   }
+  if (!a || !b) {
+    return a === b;
+  }
+  if (
+    a.canvasX !== b.canvasX ||
+    a.canvasY !== b.canvasY ||
+    a.dataX !== b.dataX ||
+    a.dataY !== b.dataY
+  ) {
+    return false;
+  }
+  if (a.snapped === null || b.snapped === null) {
+    return a.snapped === b.snapped;
+  }
+  return (
+    a.snapped.traceId === b.snapped.traceId &&
+    a.snapped.x === b.snapped.x &&
+    a.snapped.y === b.snapped.y
+  );
+}
+
+const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+
+const defaultCursorRender: CursorRenderArgs["renderDefault"] = ({
+  ctx,
+  projection,
+  cursor,
+  style,
+}) => {
+  const { rect } = projection;
+  ctx.save();
+  ctx.strokeStyle = CURSOR_LINE_COLOR;
+  ctx.lineWidth = CURSOR_LINE_WIDTH;
+  ctx.setLineDash([]);
+
+  if (style === CursorStyle.Crosshair || style === CursorStyle.Vertical) {
+    ctx.beginPath();
+    ctx.moveTo(cursor.canvasX, rect.top);
+    ctx.lineTo(cursor.canvasX, rect.top + rect.height);
+    ctx.stroke();
+  }
+
+  if (style === CursorStyle.Crosshair || style === CursorStyle.Horizontal) {
+    ctx.beginPath();
+    ctx.moveTo(rect.left, cursor.canvasY);
+    ctx.lineTo(rect.left + rect.width, cursor.canvasY);
+    ctx.stroke();
+  }
+
+  if (style === CursorStyle.Crosshair || style === CursorStyle.Vertical) {
+    ctx.strokeStyle = CURSOR_HIGHLIGHT_COLOR;
+    ctx.lineWidth = CURSOR_HIGHLIGHT_LINE_WIDTH;
+    ctx.beginPath();
+    ctx.arc(cursor.canvasX, cursor.canvasY, CURSOR_HIGHLIGHT_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 };
 
-type CursorListener = Parameters<PlotInstance["onCursor"]>[0];
+const defaultCursorOptions = {
+  style: CursorStyle.Crosshair,
+  snap: true,
+};
+
+const defaultInteractions = {
+  zoom: "x" as "x" | "y" | "both",
+  pan: "x" as "x" | "y" | "both",
+  cursor: true,
+  boxSelect: true,
+};
 
 function resolveMargins(config: PlotConfig) {
   return {
@@ -87,6 +176,25 @@ function resolveMargins(config: PlotConfig) {
     right: config.margins?.right ?? DEFAULT_MARGINS.right,
     bottom: config.margins?.bottom ?? DEFAULT_MARGINS.bottom,
     left: config.margins?.left ?? DEFAULT_MARGINS.left,
+  };
+}
+
+function resolveInteractions(config: PlotConfig) {
+  const merged = { ...defaultInteractions, ...(config.interactions ?? {}) };
+  return merged;
+}
+
+function resolveCursorConfig(config: PlotConfig) {
+  const { cursor } = config.interactions ?? {};
+  if (cursor === undefined || cursor === true) {
+    return defaultCursorOptions;
+  }
+  if (!cursor) {
+    return { style: CursorStyle.None, snap: false };
+}
+  return {
+    style: cursor.style ?? CursorStyle.Crosshair,
+    snap: cursor.snap ?? true,
   };
 }
 
@@ -135,23 +243,6 @@ function fallbackFormatter(value: number): string {
   return value.toFixed(abs < 1 ? 3 : 2);
 }
 
-function getTickValues(
-  range: AxisRange,
-  axisConfig: PlotConfig["axes"]["x"],
-  fallbackCount: number,
-  override?: number | "auto"
-) {
-  const axisCount = axisConfig.ticks?.count;
-  let targetCount: number | undefined;
-  if (typeof axisCount === "number" && axisCount > 0) {
-    targetCount = axisCount;
-  } else if (typeof override === "number" && override > 0) {
-    targetCount = override;
-  }
-
-  return niceTicks(range.min, range.max, targetCount ?? fallbackCount);
-}
-
 function formatTick(axisConfig: PlotConfig["axes"]["x"], value: number) {
   const formatter =
     axisConfig.ticks?.formatter ??
@@ -187,164 +278,38 @@ function zoomRange(range: AxisRange, factor: number, anchor: number): AxisRange 
   return { min: newMin, max: newMin + targetSpan };
 }
 
-function axisOptionEnabled(
-  option: PlotConfig["interactions"] extends infer T
-    ? T extends { pan?: infer P }
-      ? P
-      : unknown
-    : unknown,
-  axis: "x" | "y"
-) {
+function axisAllows(option: boolean | "x" | "y" | "both", axis: "x" | "y") {
   if (!option) return false;
-  if (option === true) return true;
-  if (option === "both") return true;
-  if (option === axis) return true;
-  if (typeof option === "string") {
-    return option === axis;
-  }
-  return false;
+  if (option === true || option === "both") return true;
+  return option === axis;
 }
 
-function zoomOptionEnabled(
-  option: PlotConfig["interactions"] extends infer T
-    ? T extends { zoom?: infer P }
-      ? P
-      : unknown
-    : unknown,
-  axis: "x" | "y"
-) {
-  if (option === undefined || option === false) {
-    return false;
-  }
-  if (option === true || option === "both") {
-    return true;
-  }
-  if (option === "x") {
-    return axis === "x";
-  }
-  if (option === "y") {
-    return axis === "y";
-  }
-  return false;
-}
+const createPointerState = (): PointerState => ({
+  mode: "idle",
+  pointerId: null,
+  lastX: 0,
+  lastY: 0,
+  panStartX: { ...DEFAULT_AXIS_RANGE },
+  panStartY: { ...DEFAULT_AXIS_RANGE },
+  boxStartX: 0,
+});
 
-function cursorOptionEnabled(option: PlotConfig["interactions"] extends infer T
-  ? T extends { cursor?: infer C }
-    ? C
-    : unknown
-  : unknown) {
-  if (option === undefined) return true;
-  if (option === false) return false;
-  if (typeof option === "object" && option !== null) {
-    if (option.style === undefined) return true;
-    return option.style !== "none";
-  }
-  return Boolean(option);
-}
-
-function createTraceHandle1D(
-  tracesRef: MutableRefObject<TraceRegistry>,
-  record: TraceRecord1D,
-  requestRender: () => void
-): TraceHandle1D {
-  const ensureActive = () => {
-    if (record.removed) {
-      throw new Error(
-        `[plotting] Trace "${record.id}" has been removed and cannot be updated.`
-      );
-    }
-  };
-
-  return {
-    update: (data) => {
-      ensureActive();
-      record.data = data;
-      requestRender();
-    },
-    setVisible: (visible) => {
-      ensureActive();
-      record.visible = visible;
-      requestRender();
-    },
-    setConfig: (config) => {
-      ensureActive();
-      record.config = { ...record.config, ...config };
-      requestRender();
-    },
-    remove: () => {
-      if (record.removed) {
-        return;
-      }
-      record.removed = true;
-      tracesRef.current.delete(record.id);
-      requestRender();
-    },
-  };
-}
-
-function createTraceHandle2D(
-  tracesRef: MutableRefObject<TraceRegistry>,
-  record: TraceRecord2D,
-  requestRender: () => void
-): TraceHandle2D {
-  const ensureActive = () => {
-    if (record.removed) {
-      throw new Error(
-        `[plotting] Trace "${record.id}" has been removed and cannot be updated.`
-      );
-    }
-  };
-
-  return {
-    update: (data) => {
-      ensureActive();
-      record.data = data;
-      requestRender();
-    },
-    setVisible: (visible) => {
-      ensureActive();
-      record.visible = visible;
-      requestRender();
-    },
-    setConfig: (config) => {
-      ensureActive();
-      record.config = { ...record.config, ...config };
-      requestRender();
-    },
-    remove: () => {
-      if (record.removed) {
-        return;
-      }
-      record.removed = true;
-      tracesRef.current.delete(record.id);
-      requestRender();
-    },
-  };
-}
+type CursorListener = (info: CursorInfo | null) => void;
 
 export function usePlot(config: PlotConfig): PlotInstanceInternal {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const configRef = useRef(config);
+  const projectionRef = useRef<Projection | null>(null);
+  const frameRef = useRef<number | null>(null);
   const tracesRef = useRef<TraceRegistry>(new Map());
   const nextTraceIdRef = useRef(0);
-
-  const axisRangesRef = useRef<Record<"x" | "y", AxisRange>>({
+  const axisRangeRef = useRef<Record<"x" | "y", AxisRange>>({
     x: config.axes.x.range ?? { ...DEFAULT_AXIS_RANGE },
     y: config.axes.y.range ?? { ...DEFAULT_AXIS_RANGE },
   });
-
-  const projectionRef = useRef<ProjectionMetrics | null>(null);
-  const pointerStateRef = useRef<PointerState>({
-    active: false,
-    pointerId: null,
-    lastX: 0,
-    lastY: 0,
-    isPanning: false,
-    panX: false,
-    panY: false,
-  });
-  const lastCursorInfoRef = useRef<CursorInfo | null>(null);
-
+  const pointerStateRef = useRef<PointerState>(createPointerState());
+  const selectionRef = useRef<{ active: boolean; start: number; current: number } | null>(null);
+  const cursorStateRef = useRef<CursorInfo | null>(null);
   const zoomListenersRef = useRef(
     new Set<(axis: "x" | "y" | "both", range: AxisRange) => void>()
   );
@@ -353,14 +318,109 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
   );
   const cursorListenersRef = useRef(new Set<CursorListener>());
 
+  const renderCursorCallbackRef = useRef<CursorRenderArgs["renderDefault"]>(defaultCursorRender);
+  const cursorRenderProp = config.cursor?.render;
+  useEffect(() => {
+    renderCursorCallbackRef.current = cursorRenderProp ?? defaultCursorRender;
+  }, [cursorRenderProp]);
+
   useEffect(() => {
     configRef.current = config;
+    scheduleRender();
   }, [config]);
 
-  const renderPlot = useCallback(() => {
+  const scheduleRender = useCallback(() => {
+    if (frameRef.current !== null || !canvasRef.current) {
+      return;
+    }
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = null;
+      render();
+    });
+  }, []);
+
+  const emitZoom = useCallback(
+    (axis: "x" | "y", range: AxisRange) => {
+      zoomListenersRef.current.forEach((listener) =>
+        listener(axis, range)
+      );
+    },
+    []
+  );
+
+  const emitPan = useCallback(
+    (axis: "x" | "y", range: AxisRange) => {
+      panListenersRef.current.forEach((listener) =>
+        listener(axis, range)
+      );
+    },
+    []
+  );
+
+  const emitCursor = useCallback(
+    (cursor: CursorInfo | null): boolean => {
+      if (cursorEquals(cursorStateRef.current, cursor)) {
+        return false;
+      }
+      cursorStateRef.current = cursor;
+      cursorListenersRef.current.forEach((listener) => listener(cursor));
+      return true;
+    },
+    []
+  );
+
+  const applyAxisRange = useCallback(
+    (axis: "x" | "y", min: number, max: number, source: "pan" | "zoom" | "manual") => {
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return;
+      }
+      if (min === max) {
+        return;
+      }
+      const prev = axisRangeRef.current[axis];
+      if (Math.abs(prev.min - min) < 1e-9 && Math.abs(prev.max - max) < 1e-9) {
+        return;
+      }
+      axisRangeRef.current[axis] = { min, max };
+      if (source === "pan") {
+        emitPan(axis, axisRangeRef.current[axis]);
+      } else if (source === "zoom") {
+        emitZoom(axis, axisRangeRef.current[axis]);
+      }
+      scheduleRender();
+    },
+    [emitPan, emitZoom, scheduleRender]
+  );
+
+  const findNearestPoint1D = useCallback(
+    (value: number): { traceId: string; x: number; y: number } | null => {
+      let closest: { traceId: string; x: number; y: number } | null = null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      tracesRef.current.forEach((record) => {
+        if (!isTrace1D(record) || record.removed || !record.visible || !record.data) {
+          return;
+        }
+        const { x, y } = record.data;
+        const length = Math.min(x.length, y.length);
+        for (let i = 0; i < length; i += 1) {
+          const xVal = (x as ArrayLike<number>)[i];
+          const yVal = (y as ArrayLike<number>)[i];
+          if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+          const distance = Math.abs(xVal - value);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            closest = { traceId: record.id, x: xVal, y: yVal };
+          }
+        }
+      });
+      return closest;
+    },
+    []
+  );
+
+  const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -376,14 +436,14 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     let cssWidth = rect.width || canvas.clientWidth;
     let cssHeight = rect.height || canvas.clientHeight;
     if (!cssWidth) {
-      const widthAttr = Number(canvas.getAttribute("width"));
-      cssWidth = widthAttr || FALLBACK_CANVAS_WIDTH;
-      canvas.style.width = `${cssWidth}px`;
+      const fallback = Number(canvas.getAttribute("width")) || FALLBACK_CANVAS_WIDTH;
+      cssWidth = fallback;
+      canvas.style.width = `${fallback}px`;
     }
     if (!cssHeight) {
-      const heightAttr = Number(canvas.getAttribute("height"));
-      cssHeight = heightAttr || FALLBACK_CANVAS_HEIGHT;
-      canvas.style.height = `${cssHeight}px`;
+      const fallback = Number(canvas.getAttribute("height")) || FALLBACK_CANVAS_HEIGHT;
+      cssHeight = fallback;
+      canvas.style.height = `${fallback}px`;
     }
 
     const pixelWidth = Math.max(1, Math.round(cssWidth * dpr));
@@ -393,13 +453,8 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       canvas.height = pixelHeight;
     }
 
-    if (ctx.resetTransform) {
-      ctx.resetTransform();
-    } else {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
     ctx.imageSmoothingEnabled = true;
 
     const margins = resolveMargins(cfg);
@@ -414,8 +469,8 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, cssWidth, cssHeight);
 
-    const xRange = axisRangesRef.current.x;
-    const yRange = axisRangesRef.current.y;
+    const xRange = axisRangeRef.current.x;
+    const yRange = axisRangeRef.current.y;
     const xSpan = xRange.max - xRange.min || 1;
     const ySpan = yRange.max - yRange.min || 1;
 
@@ -433,7 +488,7 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       projectY,
       invertX,
       invertY,
-      plotRect: {
+      rect: {
         left: margins.left,
         top: margins.top,
         width: plotWidth,
@@ -441,33 +496,15 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       },
     };
 
-    const gridConfig = cfg.grid ?? {};
-    const showGrid = gridConfig.show !== false;
-    const textColor = cfg.textColor ?? DEFAULT_TEXT_COLOR;
-    const fontSize = cfg.fontSize ?? DEFAULT_FONT_SIZE;
-    const fontFamily = cfg.fontFamily ?? DEFAULT_FONT_FAMILY;
-    ctx.font = `${fontSize}px ${fontFamily}`;
-
-    const xTicks = getTickValues(
-      xRange,
-      cfg.axes.x,
-      8,
-      gridConfig.xLines
-    );
-    const yTicks = getTickValues(
-      yRange,
-      cfg.axes.y,
-      8,
-      gridConfig.yLines
-    );
-
-    if (showGrid) {
+    const grid = cfg.grid ?? { show: true };
+    if (grid.show !== false) {
       ctx.save();
-      ctx.strokeStyle = gridConfig.color ?? DEFAULT_GRID_COLOR;
-      ctx.lineWidth = gridConfig.lineWidth ?? 1;
-      ctx.setLineDash(
-        Array.isArray(gridConfig.dashPattern) ? gridConfig.dashPattern : [3, 3]
-      );
+      ctx.strokeStyle = grid.color ?? DEFAULT_GRID_COLOR;
+      ctx.lineWidth = grid.lineWidth ?? 1;
+      ctx.setLineDash([4, 4]);
+
+      const xTicks = niceTicks(xRange.min, xRange.max, 8);
+      const yTicks = niceTicks(yRange.min, yRange.max, 8);
 
       for (const tick of xTicks) {
         const x = projectX(tick);
@@ -476,7 +513,6 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         ctx.lineTo(x, margins.top + plotHeight);
         ctx.stroke();
       }
-
       for (const tick of yTicks) {
         const y = projectY(tick);
         ctx.beginPath();
@@ -484,44 +520,46 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         ctx.lineTo(margins.left + plotWidth, y);
         ctx.stroke();
       }
-
       ctx.restore();
     }
 
     ctx.save();
     ctx.strokeStyle = DEFAULT_AXIS_LINE_COLOR;
     ctx.lineWidth = 1;
-    ctx.setLineDash([]);
-
     ctx.beginPath();
     ctx.moveTo(margins.left, margins.top);
     ctx.lineTo(margins.left, margins.top + plotHeight);
     ctx.stroke();
-
     ctx.beginPath();
     ctx.moveTo(margins.left, margins.top + plotHeight);
     ctx.lineTo(margins.left + plotWidth, margins.top + plotHeight);
     ctx.stroke();
     ctx.restore();
 
-    ctx.fillStyle = textColor;
+    ctx.save();
+    ctx.fillStyle = cfg.textColor ?? DEFAULT_TEXT_COLOR;
+    ctx.font = `${cfg.fontSize ?? DEFAULT_FONT_SIZE}px ${
+      cfg.fontFamily ?? DEFAULT_FONT_FAMILY
+    }`;
     ctx.textBaseline = "top";
     ctx.textAlign = "center";
 
-    for (const tick of xTicks) {
-      const x = projectX(tick);
+    for (const tick of niceTicks(xRange.min, xRange.max, 8)) {
       ctx.fillText(
         formatTick(cfg.axes.x, tick),
-        x,
+        projectX(tick),
         margins.top + plotHeight + 6
       );
     }
 
     ctx.textBaseline = "middle";
     ctx.textAlign = "right";
-    for (const tick of yTicks) {
-      const y = projectY(tick);
-      ctx.fillText(formatTick(cfg.axes.y, tick), margins.left - 6, y);
+    for (const tick of niceTicks(yRange.min, yRange.max, 8)) {
+      ctx.fillText(
+        formatTick(cfg.axes.y, tick),
+        margins.left - 6,
+        projectY(tick)
+      );
     }
 
     if (cfg.axes.x.label) {
@@ -543,158 +581,468 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       ctx.fillText(cfg.axes.y.label, 0, 0);
       ctx.restore();
     }
-
-    ctx.save();
-    ctx.setLineDash([]);
+    ctx.restore();
 
     const sortedTraces = Array.from(tracesRef.current.values()).filter(
       (record) => !record.removed && record.visible
     );
     sortedTraces.sort((a, b) => {
-      const zA = (a as TraceRecord1D).config?.zIndex ?? 0;
-      const zB = (b as TraceRecord1D).config?.zIndex ?? 0;
+      const zA = "config" in a && "zIndex" in a.config ? a.config.zIndex ?? 0 : 0;
+      const zB = "config" in b && "zIndex" in b.config ? b.config.zIndex ?? 0 : 0;
       return zA - zB;
     });
 
     for (const record of sortedTraces) {
-      if (!isTrace1D(record)) {
+      if (!isTrace1D(record) || !record.data) {
         continue;
       }
       const { config: traceConfig, data } = record;
-      if (!data) continue;
-      if (traceConfig.type !== Trace1DType.Line) {
-        if (import.meta.env.MODE !== "production") {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[plotting] Trace type "${traceConfig.type}" not yet implemented.`
-          );
-        }
-        continue;
-      }
-
       const xData = data.x;
       const yData = data.y;
       const length = Math.min(xData.length, yData.length);
       if (length === 0) continue;
 
-      ctx.strokeStyle = traceConfig.color;
+      const strokeColor = traceConfig.color ?? "#00ffc8";
+      const opacity = traceConfig.opacity ?? 1;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.strokeStyle = strokeColor;
       ctx.lineWidth = traceConfig.lineWidth ?? 2;
-      ctx.globalAlpha = traceConfig.opacity ?? 1;
-      if (traceConfig.dashPattern) {
-        ctx.setLineDash(traceConfig.dashPattern);
-      } else {
-        ctx.setLineDash([]);
-      }
+      ctx.setLineDash(traceConfig.dashPattern ?? []);
 
-      let hasPoint = false;
-      ctx.beginPath();
-      for (let i = 0; i < length; i += 1) {
-        const xValue = (xData as ArrayLike<number>)[i];
-        const yValue = (yData as ArrayLike<number>)[i];
-        if (!Number.isFinite(xValue) || !Number.isFinite(yValue)) {
-          continue;
+      switch (traceConfig.type) {
+        case Trace1DType.Line: {
+          ctx.beginPath();
+          let hasPoint = false;
+          for (let i = 0; i < length; i += 1) {
+            const xVal = (xData as ArrayLike<number>)[i];
+            const yVal = (yData as ArrayLike<number>)[i];
+            if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+            const cx = projectX(xVal);
+            const cy = projectY(yVal);
+            if (!hasPoint) {
+              ctx.moveTo(cx, cy);
+              hasPoint = true;
+            } else {
+              ctx.lineTo(cx, cy);
+            }
+          }
+          if (hasPoint) {
+            ctx.stroke();
+          }
+          break;
         }
-        const cx = projectX(xValue);
-        const cy = projectY(yValue);
-        if (!hasPoint) {
-          ctx.moveTo(cx, cy);
-          hasPoint = true;
-        } else {
-          ctx.lineTo(cx, cy);
+        case Trace1DType.Scatter: {
+          const radius = traceConfig.pointSize ?? 3;
+          ctx.beginPath();
+          for (let i = 0; i < length; i += 1) {
+            const xVal = (xData as ArrayLike<number>)[i];
+            const yVal = (yData as ArrayLike<number>)[i];
+            if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+            ctx.moveTo(projectX(xVal) + radius, projectY(yVal));
+            ctx.arc(projectX(xVal), projectY(yVal), radius, 0, Math.PI * 2);
+          }
+          ctx.fillStyle = strokeColor;
+          ctx.fill();
+          break;
+        }
+        case Trace1DType.Area: {
+          const baseline = traceConfig.baseline ?? 0;
+          const baselineY = projectY(baseline);
+          ctx.beginPath();
+          let started = false;
+          for (let i = 0; i < length; i += 1) {
+            const xVal = (xData as ArrayLike<number>)[i];
+            const yVal = (yData as ArrayLike<number>)[i];
+            if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+            const cx = projectX(xVal);
+            const cy = projectY(yVal);
+            if (!started) {
+              ctx.moveTo(cx, baselineY);
+              ctx.lineTo(cx, cy);
+              started = true;
+            } else {
+              ctx.lineTo(cx, cy);
+            }
+          }
+          if (started) {
+            const lastX = projectX((xData as ArrayLike<number>)[length - 1]);
+            ctx.lineTo(lastX, baselineY);
+            ctx.closePath();
+            ctx.fillStyle = traceConfig.fillColor ?? strokeColor;
+            ctx.globalAlpha = traceConfig.fillOpacity ?? 0.2;
+            ctx.fill();
+            ctx.globalAlpha = opacity;
+            ctx.stroke();
+          }
+          break;
+        }
+        default: {
+          if (import.meta.env.MODE !== "production") {
+            // eslint-disable-next-line no-console
+            console.warn(`[plotting] Trace type "${traceConfig.type}" not implemented yet.`);
+          }
+          break;
         }
       }
-      if (hasPoint) {
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
+      ctx.restore();
     }
 
-    ctx.restore();
+    if (selectionRef.current?.active) {
+      const { start, current } = selectionRef.current;
+      const left = clamp(Math.min(start, current), margins.left, margins.left + plotWidth);
+      const right = clamp(Math.max(start, current), margins.left, margins.left + plotWidth);
+      if (right - left >= BOX_SELECT_MIN_PIXELS) {
+        ctx.save();
+        ctx.fillStyle = BOX_SELECT_FILL;
+        ctx.strokeStyle = BOX_SELECT_STROKE;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.fillRect(left, margins.top, right - left, plotHeight);
+        ctx.strokeRect(left, margins.top, right - left, plotHeight);
+        ctx.restore();
+      }
+    }
+
+    const cursor = cursorStateRef.current;
+    const cursorConfig = resolveCursorConfig(cfg);
+    if (cursor && cursorConfig.style !== CursorStyle.None) {
+      const renderArgs: CursorRenderArgs = {
+        ctx,
+        projection: projectionRef.current!,
+        cursor,
+        style: cursorConfig.style,
+        renderDefault: defaultCursorRender,
+      };
+      renderCursorCallbackRef.current(renderArgs);
+    }
   }, []);
 
-  const requestRender = useCallback(() => {
-    renderPlot();
-  }, [renderPlot]);
-
-  const applyAxisRange = useCallback(
-    (axis: "x" | "y", min: number, max: number, reason?: "zoom" | "pan") => {
-      if (!Number.isFinite(min) || !Number.isFinite(max)) {
-        return;
-      }
-      if (min === max) {
-        return;
-      }
-      let nextMin = min;
-      let nextMax = max;
-      if (nextMin > nextMax) {
-        const tmp = nextMin;
-        nextMin = nextMax;
-        nextMax = tmp;
-      }
-      const prev = axisRangesRef.current[axis];
-      const sameMin = Math.abs(prev.min - nextMin) < 1e-9;
-      const sameMax = Math.abs(prev.max - nextMax) < 1e-9;
-      if (sameMin && sameMax) {
-        return;
-      }
-
-      const nextRange: AxisRange = { min: nextMin, max: nextMax };
-      axisRangesRef.current[axis] = nextRange;
-
-      if (reason === "zoom") {
-        zoomListenersRef.current.forEach((listener) =>
-          listener(axis, nextRange)
-        );
-      } else if (reason === "pan") {
-        panListenersRef.current.forEach((listener) =>
-          listener(axis, nextRange)
-        );
-      }
-
-      requestRender();
-    },
-    [requestRender]
-  );
-
-  const emitCursor = useCallback(
-    (info: CursorInfo | null) => {
-      const prev = lastCursorInfoRef.current;
-      const same =
-        (!info && !prev) ||
-        (info &&
-          prev &&
-          info.canvasX === prev.canvasX &&
-          info.canvasY === prev.canvasY &&
-          info.dataX === prev.dataX &&
-          info.dataY === prev.dataY);
-      if (same) {
-        return;
-      }
-      lastCursorInfoRef.current = info;
-      cursorListenersRef.current.forEach((listener) => listener(info));
-    },
-    []
-  );
+  useEffect(() => {
+    scheduleRender();
+  }, [scheduleRender]);
 
   const getPointerPosition = useCallback(
-    (event: { clientX: number; clientY: number }) => {
+    (input: { clientX: number; clientY: number }) => {
       const canvas = canvasRef.current;
       const projection = projectionRef.current;
-      if (!canvas || !projection) {
-        return null;
-      }
+      if (!canvas || !projection) return null;
       const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      const x = input.clientX - rect.left;
+      const y = input.clientY - rect.top;
       const inside =
-        x >= projection.plotRect.left &&
-        x <= projection.plotRect.left + projection.plotRect.width &&
-        y >= projection.plotRect.top &&
-        y <= projection.plotRect.top + projection.plotRect.height;
+        x >= projection.rect.left &&
+        x <= projection.rect.left + projection.rect.width &&
+        y >= projection.rect.top &&
+        y <= projection.rect.top + projection.rect.height;
       return { x, y, inside };
     },
     []
   );
+
+  const updateCursor = useCallback(
+    (pointer: { x: number; y: number; inside: boolean } | null) => {
+      const projection = projectionRef.current;
+      const cursorConfig = resolveCursorConfig(configRef.current);
+      if (!projection || !pointer || !pointer.inside) {
+        if (emitCursor(null)) {
+          scheduleRender();
+        }
+        return;
+      }
+
+      let pointerInfo: { x: number; y: number; inside: boolean } = {
+        x: pointer.x,
+        y: pointer.y,
+        inside: pointer.inside,
+      };
+      const dataX = projection.invertX(pointerInfo.x);
+      const dataY = projection.invertY(pointerInfo.y);
+      let finalX = dataX;
+      let finalY = dataY;
+      let snappedInfo: { traceId: string; x: number; y: number } | null = null;
+
+      if (cursorConfig.snap) {
+        const nearest = findNearestPoint1D(dataX);
+        if (nearest) {
+          finalX = nearest.x;
+          finalY = nearest.y;
+          pointerInfo = {
+            ...pointerInfo,
+            x: projection.projectX(nearest.x),
+            y: projection.projectY(nearest.y),
+            inside: pointerInfo.inside,
+          };
+          snappedInfo = nearest;
+        }
+      }
+
+      const cursorInfo: CursorInfo = {
+        canvasX: pointerInfo.x,
+        canvasY: pointerInfo.y,
+        dataX: finalX,
+        dataY: finalY,
+        snapped: snappedInfo
+          ? {
+              traceId: snappedInfo.traceId,
+              x: snappedInfo.x,
+              y: snappedInfo.y,
+            }
+          : null,
+      };
+
+      if (emitCursor(cursorInfo)) {
+        scheduleRender();
+      }
+    },
+    [emitCursor, findNearestPoint1D, scheduleRender]
+  );
+
+  const beginInteraction = useCallback(
+    (input: PointerInput) => {
+      const pointer = getPointerPosition(input);
+      const projection = projectionRef.current;
+      const interactions = resolveInteractions(configRef.current);
+      if (!pointer || !projection) return;
+
+      const boxSelectEnabled = interactions.boxSelect !== false;
+      const panEnabled = axisAllows(interactions.pan, "x");
+
+      if (pointer.inside && boxSelectEnabled && input.shiftKey) {
+        pointerStateRef.current = {
+          mode: "box",
+          pointerId: input.pointerId ?? null,
+          lastX: pointer.x,
+          lastY: pointer.y,
+          panStartX: { ...axisRangeRef.current.x },
+          panStartY: { ...axisRangeRef.current.y },
+          boxStartX: pointer.x,
+        };
+        selectionRef.current = { active: true, start: pointer.x, current: pointer.x };
+        scheduleRender();
+        return;
+      }
+
+      if (pointer.inside && panEnabled) {
+        pointerStateRef.current = {
+          mode: "pan",
+          pointerId: input.pointerId ?? null,
+          lastX: pointer.x,
+          lastY: pointer.y,
+          panStartX: { ...axisRangeRef.current.x },
+          panStartY: { ...axisRangeRef.current.y },
+          boxStartX: pointer.x,
+        };
+        return;
+      }
+
+      pointerStateRef.current = createPointerState();
+      selectionRef.current = null;
+    },
+    [getPointerPosition, scheduleRender]
+  );
+
+  const moveInteraction = useCallback(
+    (input: PointerInput) => {
+      const pointer = getPointerPosition(input);
+      const projection = projectionRef.current;
+      const interactions = resolveInteractions(configRef.current);
+      const state = pointerStateRef.current;
+
+      if (pointer && pointer.inside) {
+        updateCursor(pointer);
+      } else if (pointerStateRef.current.mode === "idle") {
+        updateCursor(null);
+      }
+
+      if (!pointer || !projection) return;
+
+      if (state.mode === "box" && selectionRef.current) {
+        selectionRef.current = {
+          active: true,
+          start: state.boxStartX,
+          current: pointer.x,
+        };
+        scheduleRender();
+        return;
+      }
+
+      if (state.mode === "pan") {
+        pointerStateRef.current.lastX = pointer.x;
+        pointerStateRef.current.lastY = pointer.y;
+
+        if (axisAllows(interactions.pan, "x")) {
+          const span = state.panStartX.max - state.panStartX.min || 1;
+          const delta = (pointer.x - state.boxStartX) / projection.rect.width;
+          const shift = delta * span;
+          applyAxisRange(
+            "x",
+            state.panStartX.min - shift,
+            state.panStartX.max - shift,
+            "pan"
+          );
+        }
+        scheduleRender();
+      }
+    },
+    [applyAxisRange, getPointerPosition, scheduleRender, updateCursor]
+  );
+
+  const endInteraction = useCallback(
+    (input: PointerInput) => {
+      const projection = projectionRef.current;
+      const state = pointerStateRef.current;
+
+      if (state.mode === "box" && selectionRef.current && projection) {
+        const { start, current } = selectionRef.current;
+        const left = clamp(Math.min(start, current), projection.rect.left, projection.rect.left + projection.rect.width);
+        const right = clamp(Math.max(start, current), projection.rect.left, projection.rect.left + projection.rect.width);
+        const span = right - left;
+        if (span >= BOX_SELECT_MIN_PIXELS) {
+          const newMin = projection.invertX(left);
+          const newMax = projection.invertX(right);
+          applyAxisRange("x", newMin, newMax, "zoom");
+        }
+      }
+
+      selectionRef.current = null;
+      pointerStateRef.current = createPointerState();
+
+      const pointer = getPointerPosition(input);
+      if (pointer && pointer.inside) {
+        updateCursor(pointer);
+      } else {
+        updateCursor(null);
+      }
+      scheduleRender();
+    },
+    [applyAxisRange, getPointerPosition, scheduleRender, updateCursor]
+  );
+
+  const cancelInteraction = useCallback(() => {
+    selectionRef.current = null;
+    pointerStateRef.current = createPointerState();
+    updateCursor(null);
+    scheduleRender();
+  }, [scheduleRender, updateCursor]);
+
+  const handleWheelInput = useCallback(
+    (input: WheelInput) => {
+      const interactions = resolveInteractions(configRef.current);
+      if (!axisAllows(interactions.zoom, "x") && !axisAllows(interactions.zoom, "y")) {
+        return;
+      }
+
+      const pointer = getPointerPosition(input);
+      const projection = projectionRef.current;
+      if (!projection) return;
+
+      const factor = input.deltaY > 0 ? 1.1 : 0.9;
+
+      if (axisAllows(interactions.zoom, "x")) {
+        const anchor = pointer?.inside ? projection.invertX(pointer.x) : mix(axisRangeRef.current.x.min, axisRangeRef.current.x.max, 0.5);
+        const next = zoomRange(axisRangeRef.current.x, factor, anchor);
+        applyAxisRange("x", next.min, next.max, "zoom");
+      }
+
+      if (axisAllows(interactions.zoom, "y")) {
+        const anchor = pointer?.inside ? projection.invertY(pointer.y) : mix(axisRangeRef.current.y.min, axisRangeRef.current.y.max, 0.5);
+        const next = zoomRange(axisRangeRef.current.y, factor, anchor);
+        applyAxisRange("y", next.min, next.max, "zoom");
+      }
+
+      scheduleRender();
+    },
+    [applyAxisRange, getPointerPosition, scheduleRender]
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      handleWheelInput({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        deltaY: event.deltaY,
+      });
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      event.preventDefault();
+      beginInteraction({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        shiftKey: event.shiftKey,
+        pointerId: event.pointerId,
+      });
+      try {
+        canvas.setPointerCapture(event.pointerId);
+      } catch {
+        // ignored
+      }
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      moveInteraction({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        shiftKey: event.shiftKey,
+        pointerId: event.pointerId,
+      });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      endInteraction({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        shiftKey: event.shiftKey,
+        pointerId: event.pointerId,
+      });
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // ignored
+      }
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // ignored
+      }
+      cancelInteraction();
+    };
+
+    const handlePointerLeave = () => {
+      updateCursor(null);
+    };
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointercancel", handlePointerCancel);
+    canvas.addEventListener("pointerleave", handlePointerLeave);
+
+    return () => {
+      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("pointerdown", handlePointerDown);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("pointercancel", handlePointerCancel);
+      canvas.removeEventListener("pointerleave", handlePointerLeave);
+    };
+  }, [
+    beginInteraction,
+    cancelInteraction,
+    endInteraction,
+    handleWheelInput,
+    moveInteraction,
+    updateCursor,
+  ]);
 
   const addTrace1D = useCallback(
     (traceConfig: Trace1DConfig) => {
@@ -707,10 +1055,35 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         removed: false,
       };
       tracesRef.current.set(id, record);
-      requestRender();
-      return createTraceHandle1D(tracesRef, record, requestRender);
+      scheduleRender();
+      const handle: TraceHandle1D = {
+        update: (data: TraceData1D) => {
+          if (record.removed) {
+            throw new Error(`[plotting] Trace "${id}" has been removed.`);
+          }
+          record.data = data;
+          scheduleRender();
+        },
+        setVisible: (visible: boolean) => {
+          if (record.removed) return;
+          record.visible = visible;
+          scheduleRender();
+        },
+        setConfig: (configUpdate: Partial<Trace1DConfig>) => {
+          if (record.removed) return;
+          record.config = { ...record.config, ...configUpdate };
+          scheduleRender();
+        },
+        remove: () => {
+          if (record.removed) return;
+          record.removed = true;
+          tracesRef.current.delete(id);
+          scheduleRender();
+        },
+      };
+      return handle;
     },
-    [requestRender]
+    [scheduleRender]
   );
 
   const addTrace2D = useCallback(
@@ -724,10 +1097,35 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         removed: false,
       };
       tracesRef.current.set(id, record);
-      requestRender();
-      return createTraceHandle2D(tracesRef, record, requestRender);
+      scheduleRender();
+      const handle: TraceHandle2D = {
+        update: (data: TraceData2D) => {
+          if (record.removed) {
+            throw new Error(`[plotting] Trace "${id}" has been removed.`);
+          }
+          record.data = data;
+          scheduleRender();
+        },
+        setVisible: (visible: boolean) => {
+          if (record.removed) return;
+          record.visible = visible;
+          scheduleRender();
+        },
+        setConfig: (configUpdate: Partial<Trace2DConfig>) => {
+          if (record.removed) return;
+          record.config = { ...record.config, ...configUpdate };
+          scheduleRender();
+        },
+        remove: () => {
+          if (record.removed) return;
+          record.removed = true;
+          tracesRef.current.delete(id);
+          scheduleRender();
+        },
+      };
+      return handle;
     },
-    [requestRender]
+    [scheduleRender]
   );
 
   const clearTraces = useCallback(() => {
@@ -735,25 +1133,72 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       record.removed = true;
     });
     tracesRef.current.clear();
-    requestRender();
-  }, [requestRender]);
+    scheduleRender();
+  }, [scheduleRender]);
 
   const setAxisRange = useCallback(
     (axis: "x" | "y", min: number, max: number) => {
-      applyAxisRange(axis, min, max);
+      applyAxisRange(axis, min, max, "manual");
     },
     [applyAxisRange]
   );
 
   const getAxisRange = useCallback((axis: "x" | "y") => {
-    return axisRangesRef.current[axis];
+    return axisRangeRef.current[axis];
   }, []);
 
   const autoRange = useCallback(
-    (axis: "x" | "y" | "both", padding = 0) => {
-      warnNotImplemented(`autoRange(${axis}, ${padding})`);
+    (axis: "x" | "y" | "both", padding = 0.05) => {
+      if (axis === "both" || axis === "x") {
+        let min = Number.POSITIVE_INFINITY;
+        let max = Number.NEGATIVE_INFINITY;
+        tracesRef.current.forEach((record) => {
+          if (!isTrace1D(record) || !record.data) return;
+          const xs = record.data.x;
+          const length = xs.length;
+          for (let i = 0; i < length; i += 1) {
+            const val = (xs as ArrayLike<number>)[i];
+            if (!Number.isFinite(val)) continue;
+            min = Math.min(min, val);
+            max = Math.max(max, val);
+          }
+        });
+        if (min < max) {
+          const span = max - min;
+          applyAxisRange(
+            "x",
+            min - span * padding,
+            max + span * padding,
+            "manual"
+          );
+        }
+      }
+      if (axis === "both" || axis === "y") {
+        let min = Number.POSITIVE_INFINITY;
+        let max = Number.NEGATIVE_INFINITY;
+        tracesRef.current.forEach((record) => {
+          if (!isTrace1D(record) || !record.data) return;
+          const ys = record.data.y;
+          const length = ys.length;
+          for (let i = 0; i < length; i += 1) {
+            const val = (ys as ArrayLike<number>)[i];
+            if (!Number.isFinite(val)) continue;
+            min = Math.min(min, val);
+            max = Math.max(max, val);
+          }
+        });
+        if (min < max) {
+          const span = max - min;
+          applyAxisRange(
+            "y",
+            min - span * padding,
+            max + span * padding,
+            "manual"
+          );
+        }
+      }
     },
-    []
+    [applyAxisRange]
   );
 
   const onZoom = useCallback(
@@ -786,188 +1231,16 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     []
   );
 
-  const simulateWheel = useCallback(
-    (event: WheelEventLike) => {
-      const projection = projectionRef.current;
-      if (!projection) {
-        return;
-      }
-
-      const interactions = configRef.current.interactions;
-      const zoomConfig = interactions?.zoom ?? false;
-      const zoomX = zoomOptionEnabled(zoomConfig, "x");
-      const zoomY = zoomOptionEnabled(zoomConfig, "y");
-      if (!zoomX && !zoomY) {
-        return;
-      }
-
-      const pointer = getPointerPosition(event);
-      const rangeX = axisRangesRef.current.x;
-      const rangeY = axisRangesRef.current.y;
-      const centerX = rangeX.min + (rangeX.max - rangeX.min) / 2;
-      const centerY = rangeY.min + (rangeY.max - rangeY.min) / 2;
-
-      const anchorX =
-        pointer && pointer.inside ? projection.invertX(pointer.x) : centerX;
-      const anchorY =
-        pointer && pointer.inside ? projection.invertY(pointer.y) : centerY;
-
-      const factor = event.deltaY > 0 ? 1.1 : 0.9;
-
-      if (zoomX) {
-        const next = zoomRange(rangeX, factor, anchorX);
-        applyAxisRange("x", next.min, next.max, "zoom");
-      }
-      if (zoomY) {
-        const next = zoomRange(rangeY, factor, anchorY);
-        applyAxisRange("y", next.min, next.max, "zoom");
-      }
-    },
-    [applyAxisRange, getPointerPosition]
-  );
-
-  const simulatePointerDown = useCallback(
-    (event: PointerEventLike) => {
-      const interactions = configRef.current.interactions;
-      const pointer = getPointerPosition(event);
-      const panConfig = interactions?.pan;
-      const panXEnabled = axisOptionEnabled(panConfig, "x");
-      const panYEnabled = axisOptionEnabled(panConfig, "y");
-      const canPan =
-        pointer?.inside && (panXEnabled || panYEnabled) && !event.shiftKey;
-
-      pointerStateRef.current = {
-        active: true,
-        pointerId: event.pointerId ?? 1,
-        lastX: pointer?.x ?? 0,
-        lastY: pointer?.y ?? 0,
-        isPanning: Boolean(canPan),
-        panX: Boolean(canPan && panXEnabled),
-        panY: Boolean(canPan && panYEnabled),
-      };
-
-      const projection = projectionRef.current;
-      if (!projection) {
-        return;
-      }
-
-      if (cursorOptionEnabled(interactions?.cursor) && pointer) {
-        if (pointer.inside) {
-          emitCursor({
-            canvasX: pointer.x,
-            canvasY: pointer.y,
-            dataX: projection.invertX(pointer.x),
-            dataY: projection.invertY(pointer.y),
-            snapped: null,
-          });
-        } else {
-          emitCursor(null);
-        }
-      }
-    },
-    [emitCursor, getPointerPosition]
-  );
-
-  const simulatePointerMove = useCallback(
-    (event: PointerEventLike) => {
-      const pointer = getPointerPosition(event);
-      const projection = projectionRef.current;
-      const interactions = configRef.current.interactions;
-      const cursorEnabled = cursorOptionEnabled(interactions?.cursor);
-
-      const state = pointerStateRef.current;
-      if (state.active && state.isPanning && pointer && projection) {
-        const rangeX = axisRangesRef.current.x;
-        const rangeY = axisRangesRef.current.y;
-        const spanX = rangeX.max - rangeX.min || 1;
-        const spanY = rangeY.max - rangeY.min || 1;
-
-        if (state.panX && projection.plotRect.width > 0) {
-          const deltaX = pointer.x - state.lastX;
-          const shift = -(deltaX / projection.plotRect.width) * spanX;
-          applyAxisRange(
-            "x",
-            rangeX.min + shift,
-            rangeX.max + shift,
-            "pan"
-          );
-        }
-
-        if (state.panY && projection.plotRect.height > 0) {
-          const deltaY = pointer.y - state.lastY;
-          const shift = (deltaY / projection.plotRect.height) * spanY;
-          applyAxisRange(
-            "y",
-            rangeY.min + shift,
-            rangeY.max + shift,
-            "pan"
-          );
-        }
-
-        state.lastX = pointer.x;
-        state.lastY = pointer.y;
-      }
-
-      if (!cursorEnabled) {
-        return;
-      }
-
-      if (pointer && projection && pointer.inside) {
-        emitCursor({
-          canvasX: pointer.x,
-          canvasY: pointer.y,
-          dataX: projection.invertX(pointer.x),
-          dataY: projection.invertY(pointer.y),
-          snapped: null,
-        });
-      } else if (!pointerStateRef.current.isPanning) {
-        emitCursor(null);
-      }
-    },
-    [applyAxisRange, emitCursor, getPointerPosition]
-  );
-
-  const simulatePointerUp = useCallback(() => {
-    pointerStateRef.current = {
-      active: false,
-      pointerId: null,
-      lastX: 0,
-      lastY: 0,
-      isPanning: false,
-      panX: false,
-      panY: false,
-    };
-  }, []);
-
   const destroy = useCallback(() => {
     clearTraces();
     zoomListenersRef.current.clear();
     panListenersRef.current.clear();
     cursorListenersRef.current.clear();
+    selectionRef.current = null;
+    cursorStateRef.current = null;
+    pointerStateRef.current = createPointerState();
     projectionRef.current = null;
-    pointerStateRef.current = {
-      active: false,
-      pointerId: null,
-      lastX: 0,
-      lastY: 0,
-      isPanning: false,
-      panX: false,
-      panY: false,
-    };
-    emitCursor(null);
-  }, [clearTraces, emitCursor]);
-
-  useEffect(() => {
-    axisRangesRef.current = {
-      x: config.axes.x.range ?? axisRangesRef.current.x ?? DEFAULT_AXIS_RANGE,
-      y: config.axes.y.range ?? axisRangesRef.current.y ?? DEFAULT_AXIS_RANGE,
-    };
-    requestRender();
-  }, [config.axes.x.range, config.axes.y.range, requestRender]);
-
-  useEffect(() => {
-    requestRender();
-  }, [requestRender]);
+  }, [clearTraces]);
 
   const debugApi = useMemo<PlotDebugApi>(() => {
     return {
@@ -979,16 +1252,30 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       },
       getTraceData: (traceId: string) => {
         const record = tracesRef.current.get(traceId);
-        if (!record) {
-          return null;
-        }
-        return record.data;
+        if (!record) return null;
+        return isTrace1D(record) ? record.data : record.data;
       },
+      simulateWheel: (input) => {
+        handleWheelInput(input);
+      },
+      simulatePointerDown: (input) => {
+        beginInteraction(input);
+      },
+      simulatePointerMove: (input) => {
+        moveInteraction(input);
+      },
+      simulatePointerUp: (input) => {
+        endInteraction(input);
+      },
+      flush: () => {
+        render();
+      },
+      getCursorInfo: () => cursorStateRef.current,
     };
-  }, []);
+  }, [beginInteraction, endInteraction, handleWheelInput, moveInteraction]);
 
   return useMemo<PlotInstanceInternal>(() => {
-    const instance: PlotInstanceInternal = {
+    return {
       canvasRef,
       addTrace1D,
       addTrace2D,
@@ -999,15 +1286,10 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       onZoom,
       onPan,
       onCursor,
-      requestRender,
-      simulateWheel,
-      simulatePointerDown,
-      simulatePointerMove,
-      simulatePointerUp,
+      requestRender: scheduleRender,
       destroy,
-      __debug: import.meta.env.MODE !== "production" ? debugApi : undefined,
+      __debug: debugApi,
     };
-    return instance;
   }, [
     addTrace1D,
     addTrace2D,
@@ -1019,11 +1301,7 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     onCursor,
     onPan,
     onZoom,
-    requestRender,
-    simulateWheel,
-    simulatePointerDown,
-    simulatePointerMove,
-    simulatePointerUp,
+    scheduleRender,
     setAxisRange,
   ]);
 }

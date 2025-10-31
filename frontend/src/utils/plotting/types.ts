@@ -48,6 +48,7 @@ export interface PlotConfig {
     lineWidth?: number;
     xLines?: number | "auto";
     yLines?: number | "auto";
+    dashPattern?: number[];
   };
   interactions?: {
     zoom?: boolean | "x" | "y" | "both";
@@ -56,9 +57,6 @@ export interface PlotConfig {
       | {
           style?: CursorStyle;
           snap?: boolean;
-          color?: string;
-          lineWidth?: number;
-          dashPattern?: number[];
         }
       | boolean;
     tooltip?:
@@ -94,6 +92,9 @@ export interface PlotConfig {
   };
   highDPI?: boolean;
   maxRenderRate?: number;
+  cursor?: {
+    render?: (args: CursorRenderArgs) => void;
+  };
 }
 
 export interface TraceData1D {
@@ -177,10 +178,6 @@ export interface PlotInstance {
   ) => () => void;
   onCursor: (callback: (info: CursorInfo | null) => void) => () => void;
   requestRender: () => void;
-  simulateWheel: (event: WheelEventLike) => void;
-  simulatePointerDown: (event: PointerEventLike) => void;
-  simulatePointerMove: (event: PointerEventLike) => void;
-  simulatePointerUp: (event: PointerEventLike) => void;
   destroy: () => void;
 }
 
@@ -188,6 +185,12 @@ export interface PlotDebugApi {
   readonly traceCount: number;
   readonly traceIds: string[];
   getTraceData: (traceId: string) => TraceData1D | TraceData2D | null;
+  simulateWheel?: (event: WheelEventLike) => void;
+  simulatePointerDown?: (event: PointerEventLike) => void;
+  simulatePointerMove?: (event: PointerEventLike) => void;
+  simulatePointerUp?: (event: PointerEventLike) => void;
+  flush?: () => void;
+  getCursorInfo?: () => CursorInfo | null;
 }
 
 export interface WheelEventLike {
@@ -212,3 +215,17 @@ export interface PointerEventLike {
 export type PlotInstanceInternal = PlotInstance & {
   readonly __debug?: PlotDebugApi;
 };
+
+export interface CursorRenderArgs {
+  ctx: CanvasRenderingContext2D;
+  projection: {
+    projectX: (value: number) => number;
+    projectY: (value: number) => number;
+    invertX: (pixel: number) => number;
+    invertY: (pixel: number) => number;
+    rect: { left: number; top: number; width: number; height: number };
+  };
+  cursor: CursorInfo;
+  style: CursorStyle;
+  renderDefault: (args: CursorRenderArgs) => void;
+}
