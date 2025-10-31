@@ -3,6 +3,7 @@ import { Button } from "./components/common/Button";
 import { TaskSidebar } from "./components/tasks/TaskSidebar";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { SpectrumView } from "./components/visualization/SpectrumView";
+import { PlotSandbox } from "./components/visualization/PlotSandbox";
 import { useWindowSize } from "./hooks/useWindowSize";
 import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
@@ -26,6 +27,7 @@ function App() {
   const isMobile = width < 1024;
 
   const colorMap = PLASMA;
+  const showPlotSandbox = import.meta.env.VITE_PLOT_SANDBOX === "true";
 
   // Task state
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -398,6 +400,20 @@ function App() {
                 sampleRate={selectedTask.sampleRate}
                 colorMap={colorMap}
               />
+              {showPlotSandbox && (
+                <div
+                  style={{
+                    marginTop: 24,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <PlotSandbox
+                    width={Math.min(Math.max(width - 160, 360), 960)}
+                    height={260}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div
