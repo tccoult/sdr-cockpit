@@ -2,7 +2,13 @@ import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
-import { CursorStyle, usePlot, type PlotInstance, type TraceHandle2D } from "../../utils/plotting";
+import {
+  CursorStyle,
+  usePlot,
+  type AxisRange,
+  type PlotInstance,
+  type TraceHandle2D,
+} from "../../utils/plotting";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -93,7 +99,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       },
       background: BACKGROUND,
       grid: {
-        show: true,
+        show: false,
         color: GRID_COLOR,
       },
       margins: MARGINS,
@@ -117,6 +123,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
+  const xDomainRef = useRef<AxisRange | null>(null);
+  const yDomainRef = useRef<AxisRange | null>(null);
   const ensurePrimaryTrace = useCallback(() => {
     const entry = traceRef.current;
     if (!entry || !entry.id) return;
@@ -130,6 +138,10 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!yAxis || yAxis.length !== targetLength) {
       yAxis = buildYAxis(targetLength);
       yAxisRef.current = yAxis;
+      yDomainRef.current =
+        yAxis.length >= 1
+          ? { min: yAxis[0], max: yAxis[yAxis.length - 1] }
+          : { min: 0, max: 0 };
     }
     return yAxis;
   }, []);
@@ -206,6 +218,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     waterfallRef.current = null;
     yAxisRef.current = null;
     xAxisRef.current = null;
+    xDomainRef.current = null;
+    yDomainRef.current = null;
     fftMetaRef.current = null;
     const entry = traceRef.current;
     if (!entry) return;
@@ -215,14 +229,18 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       z: new Float32Array(0),
       width: 0,
       height: 0,
+      computeDomains: false,
+      zDomain: { min: minDb, max: maxDb },
     });
     ensurePrimaryTrace();
-  }, [ensurePrimaryTrace, historyLength]);
+  }, [ensurePrimaryTrace, historyLength, maxDb, minDb]);
 
   useEffect(() => {
     waterfallRef.current = null;
     yAxisRef.current = null;
     xAxisRef.current = null;
+    xDomainRef.current = null;
+    yDomainRef.current = null;
     fftMetaRef.current = null;
     const entry = traceRef.current;
     if (!entry) return;
@@ -232,9 +250,11 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       z: new Float32Array(0),
       width: 0,
       height: 0,
+      computeDomains: false,
+      zDomain: { min: minDb, max: maxDb },
     });
     ensurePrimaryTrace();
-  }, [dataKey, ensurePrimaryTrace]);
+  }, [dataKey, ensurePrimaryTrace, maxDb, minDb]);
 
   const addFFTRow = useCallback(
     (fftData: FFTData) => {
@@ -274,6 +294,10 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
           xAxis[i] = startFreq + i * binWidth;
         }
         xAxisRef.current = xAxis;
+        xDomainRef.current =
+          xAxis.length >= 1
+            ? { min: xAxis[0], max: xAxis[xAxis.length - 1] }
+            : { min: fftData.centerFreq, max: fftData.centerFreq };
         fftMetaRef.current = {
           sampleRate: fftData.sampleRate,
           centerFreq: fftData.centerFreq,
@@ -297,11 +321,15 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         z,
         width: rowWidth,
         height: rowCount,
+        computeDomains: false,
+        xDomain: xDomainRef.current ?? undefined,
+        yDomain: yDomainRef.current ?? undefined,
+        zDomain: { min: minDb, max: maxDb },
       });
 
       ensurePrimaryTrace();
     },
-    [ensurePrimaryTrace, ensureYAxis, minDb]
+    [ensurePrimaryTrace, ensureYAxis, maxDb, minDb]
   );
 
   useEffect(() => {

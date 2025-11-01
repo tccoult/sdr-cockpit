@@ -148,6 +148,10 @@ export interface TraceData2D {
   z: number[][] | Float32Array;
   width?: number;
   height?: number;
+  computeDomains?: boolean;
+  xDomain?: AxisRange;
+  yDomain?: AxisRange;
+  zDomain?: AxisRange;
 }
 
 export interface CursorInfo {

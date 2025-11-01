@@ -192,12 +192,13 @@ const toFloat32Array = (source: number[] | ArrayLike<number>): Float32Array =>
 function prepareTraceData2D(data: TraceData2D): PreparedTraceData2D {
   const x = toFloat32Array(data.x as ArrayLike<number>);
   const y = toFloat32Array(data.y as ArrayLike<number>);
+  const computeDomains = data.computeDomains !== false;
 
   let width = 0;
   let height = 0;
   let values: Float32Array;
-  let minZ = Number.POSITIVE_INFINITY;
-  let maxZ = Number.NEGATIVE_INFINITY;
+  let minZ = computeDomains ? Number.POSITIVE_INFINITY : 0;
+  let maxZ = computeDomains ? Number.NEGATIVE_INFINITY : 0;
 
   if (Array.isArray(data.z)) {
     height = data.z.length;
@@ -216,7 +217,7 @@ function prepareTraceData2D(data: TraceData2D): PreparedTraceData2D {
         for (let col = 0; col < width; col += 1) {
           const value = line[col];
           values[row * width + col] = value;
-          if (Number.isFinite(value)) {
+          if (computeDomains && Number.isFinite(value)) {
             if (value < minZ) minZ = value;
             if (value > maxZ) maxZ = value;
           }
@@ -245,11 +246,13 @@ function prepareTraceData2D(data: TraceData2D): PreparedTraceData2D {
       } else {
         values = new Float32Array(data.z);
       }
-      for (let i = 0; i < values.length; i += 1) {
-        const value = values[i];
-        if (Number.isFinite(value)) {
-          if (value < minZ) minZ = value;
-          if (value > maxZ) maxZ = value;
+      if (computeDomains) {
+        for (let i = 0; i < values.length; i += 1) {
+          const value = values[i];
+          if (Number.isFinite(value)) {
+            if (value < minZ) minZ = value;
+            if (value > maxZ) maxZ = value;
+          }
         }
       }
     }
@@ -281,11 +284,29 @@ function prepareTraceData2D(data: TraceData2D): PreparedTraceData2D {
     return { min, max };
   };
 
-  const xDomain = computeDomain(x, 0, width > 0 ? 1 : 0);
-  const yDomain = computeDomain(y, 0, height > 0 ? 1 : 0);
-  const zDomain = Number.isFinite(minZ) && Number.isFinite(maxZ) && minZ !== maxZ
-    ? { min: minZ, max: maxZ }
-    : { min: 0, max: 1 };
+  const fallbackXDomain =
+    x.length >= 2
+      ? { min: x[0], max: x[x.length - 1] }
+      : { min: 0, max: width > 0 ? width - 1 : 0 };
+  const fallbackYDomain =
+    y.length >= 2
+      ? { min: y[0], max: y[y.length - 1] }
+      : { min: 0, max: height > 0 ? height - 1 : 0 };
+
+  const xDomain =
+    data.xDomain ??
+    (computeDomains ? computeDomain(x, 0, width > 0 ? 1 : 0) : fallbackXDomain);
+  const yDomain =
+    data.yDomain ??
+    (computeDomains ? computeDomain(y, 0, height > 0 ? 1 : 0) : fallbackYDomain);
+  const zDomain =
+    data.zDomain ??
+    (computeDomains &&
+    Number.isFinite(minZ) &&
+    Number.isFinite(maxZ) &&
+    minZ !== maxZ
+      ? { min: minZ, max: maxZ }
+      : { min: 0, max: 1 });
 
   if (x.length > 0 && width > 0 && x.length !== width) {
     throw new Error(
