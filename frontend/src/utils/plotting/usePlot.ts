@@ -36,6 +36,24 @@ type TraceRecord2D = {
   removed: boolean;
   colorLUT: Uint8ClampedArray;
   imageData: ImageData | null;
+  rowIndexCache: Uint32Array | null;
+  colIndexCache: Uint32Array | null;
+  rowCacheMeta: {
+    axisMin: number;
+    axisMax: number;
+    domainMin: number;
+    domainMax: number;
+    length: number;
+    dataHeight: number;
+  } | null;
+  colCacheMeta: {
+    axisMin: number;
+    axisMax: number;
+    domainMin: number;
+    domainMax: number;
+    length: number;
+    dataWidth: number;
+  } | null;
 };
 
 type TraceRecord = TraceRecord1D | TraceRecord2D;
@@ -833,6 +851,8 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       if (domainZ.max === domainZ.min) {
         continue;
       }
+      const domainXSpan = domainX.max - domainX.min || 1;
+      const domainYSpan = domainY.max - domainY.min || 1;
 
       let imageData = record.imageData;
       if (!imageData || imageData.width !== deviceWidth || imageData.height !== deviceHeight) {
@@ -841,43 +861,114 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       }
       const pixels = imageData.data;
       const zSpan = domainZ.max - domainZ.min || 1;
+      const invZSpan = zSpan !== 0 ? 1 / zSpan : 1;
       const opacity = Math.max(0, Math.min(1, config.opacity ?? 1));
       const dataWidth = data.width;
       const dataHeight = data.height;
+      const opacityAlpha = Math.round(255 * opacity);
+      const axisYMin = yRange.min;
+      const axisYMax = yRange.max;
+      const axisXMin = xRange.min;
+      const axisXMax = xRange.max;
 
-      for (let py = 0; py < deviceHeight; py += 1) {
-        const tY = deviceHeight > 1 ? py / (deviceHeight - 1) : 0;
-        const axisYValue = yRange.max - tY * ySpan;
-        const normalizedY = (axisYValue - domainY.min) / (domainY.max - domainY.min || 1);
-        const clampedY = Math.max(0, Math.min(1, normalizedY));
-        const row = Math.min(
-          dataHeight - 1,
-          Math.max(0, Math.round((1 - clampedY) * (dataHeight - 1)))
-        );
+      let rowIndexCache = record.rowIndexCache;
+      const rowMeta = record.rowCacheMeta;
+      const needsRowCache =
+        !rowIndexCache ||
+        !rowMeta ||
+        rowIndexCache.length !== deviceHeight ||
+        rowMeta.axisMin !== axisYMin ||
+        rowMeta.axisMax !== axisYMax ||
+        rowMeta.domainMin !== domainY.min ||
+        rowMeta.domainMax !== domainY.max ||
+        rowMeta.dataHeight !== dataHeight;
+      if (needsRowCache) {
+        const nextRowCache = new Uint32Array(deviceHeight);
+        const axisSpan = axisYMax - axisYMin || 1;
+        for (let py = 0; py < deviceHeight; py += 1) {
+          const tY = deviceHeight > 1 ? py / (deviceHeight - 1) : 0;
+          const axisYValue = axisYMax - tY * axisSpan;
+          const normalizedY = (axisYValue - domainY.min) / domainYSpan;
+          const clampedY = Math.max(0, Math.min(1, normalizedY));
+          nextRowCache[py] = Math.min(
+            dataHeight - 1,
+            Math.max(0, Math.round((1 - clampedY) * (dataHeight - 1)))
+          );
+        }
+        record.rowIndexCache = nextRowCache;
+        record.rowCacheMeta = {
+          axisMin: axisYMin,
+          axisMax: axisYMax,
+          domainMin: domainY.min,
+          domainMax: domainY.max,
+          length: deviceHeight,
+          dataHeight,
+        };
+        rowIndexCache = nextRowCache;
+      }
+
+      let colIndexCache = record.colIndexCache;
+      const colMeta = record.colCacheMeta;
+      const needsColCache =
+        !colIndexCache ||
+        !colMeta ||
+        colIndexCache.length !== deviceWidth ||
+        colMeta.axisMin !== axisXMin ||
+        colMeta.axisMax !== axisXMax ||
+        colMeta.domainMin !== domainX.min ||
+        colMeta.domainMax !== domainX.max ||
+        colMeta.dataWidth !== dataWidth;
+      if (needsColCache) {
+        const nextColCache = new Uint32Array(deviceWidth);
+        const axisSpan = axisXMax - axisXMin || 1;
         for (let px = 0; px < deviceWidth; px += 1) {
           const tX = deviceWidth > 1 ? px / (deviceWidth - 1) : 0;
-          const axisXValue = xRange.min + tX * xSpan;
-          const normalizedX = (axisXValue - domainX.min) / (domainX.max - domainX.min || 1);
+          const axisXValue = axisXMin + tX * axisSpan;
+          const normalizedX = (axisXValue - domainX.min) / domainXSpan;
           const clampedX = Math.max(0, Math.min(1, normalizedX));
-          const col = Math.min(
+          nextColCache[px] = Math.min(
             dataWidth - 1,
             Math.max(0, Math.round(clampedX * (dataWidth - 1)))
           );
-          const value = data.z[row * dataWidth + col];
-          const pixelOffset = (py * deviceWidth + px) * 4;
+        }
+        record.colIndexCache = nextColCache;
+        record.colCacheMeta = {
+          axisMin: axisXMin,
+          axisMax: axisXMax,
+          domainMin: domainX.min,
+          domainMax: domainX.max,
+          length: deviceWidth,
+          dataWidth,
+        };
+        colIndexCache = nextColCache;
+      }
+
+      const rowCache = rowIndexCache!;
+      const colCache = colIndexCache!;
+      const dataValues = data.z;
+      for (let py = 0; py < deviceHeight; py += 1) {
+        const row = rowCache[py] * dataWidth;
+        const pixelRowOffset = py * deviceWidth * 4;
+        for (let px = 0; px < deviceWidth; px += 1) {
+          const value = dataValues[row + colCache[px]];
+          const pixelOffset = pixelRowOffset + px * 4;
           if (!Number.isFinite(value)) {
             pixels[pixelOffset + 3] = 0;
             continue;
           }
-          const normalizedValue = Math.max(
-            0,
-            Math.min(1, (value - domainZ.min) / zSpan)
-          );
-          const colorIndex = Math.round(normalizedValue * 255);
-          pixels[pixelOffset + 0] = colorLUT[colorIndex * 4 + 0];
-          pixels[pixelOffset + 1] = colorLUT[colorIndex * 4 + 1];
-          pixels[pixelOffset + 2] = colorLUT[colorIndex * 4 + 2];
-          pixels[pixelOffset + 3] = Math.round(255 * opacity);
+          const normalizedValue = (value - domainZ.min) * invZSpan;
+          const clamped =
+            normalizedValue <= 0
+              ? 0
+              : normalizedValue >= 1
+              ? 1
+              : normalizedValue;
+          const colorIndex = Math.round(clamped * 255);
+          const paletteOffset = colorIndex * 4;
+          pixels[pixelOffset + 0] = colorLUT[paletteOffset + 0];
+          pixels[pixelOffset + 1] = colorLUT[paletteOffset + 1];
+          pixels[pixelOffset + 2] = colorLUT[paletteOffset + 2];
+          pixels[pixelOffset + 3] = opacityAlpha;
         }
       }
       ctx.putImageData(imageData, margins.left * dpr, margins.top * dpr);
@@ -1526,6 +1617,10 @@ const grid = cfg.grid ?? { show: true };
         removed: false,
         colorLUT: resolveColorMap(traceConfig.colorMap),
         imageData: null,
+        rowIndexCache: null,
+        colIndexCache: null,
+        rowCacheMeta: null,
+        colCacheMeta: null,
       };
       tracesRef.current.set(id, record);
       if (primaryTraceIdRef.current === null) {
@@ -1539,6 +1634,10 @@ const grid = cfg.grid ?? { show: true };
           }
           const prepared = prepareTraceData2D(data);
           record.data = prepared;
+          record.rowIndexCache = null;
+          record.colIndexCache = null;
+          record.rowCacheMeta = null;
+          record.colCacheMeta = null;
           if (primaryTraceIdRef.current === id) {
             updateAxesFromPrimary();
           }
