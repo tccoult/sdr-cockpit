@@ -1,4 +1,3 @@
-import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./components/common/Button";
 import {
@@ -10,6 +9,10 @@ import {
   CockpitSpotlightSection,
   CockpitTelemetryRail,
 } from "./components/layout";
+import {
+  ActiveTaskPanel,
+  getTaskStatusLabel,
+} from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useWindowSize } from "./components/app/useWindowSize";
@@ -221,25 +224,7 @@ function App() {
     );
   };
 
-  const taskStatusLabel = selectedTask
-    ? selectedTask.status === "live"
-      ? "Live"
-      : selectedTask.status === "transmitting"
-      ? "Transmitting"
-      : selectedTask.status === "paused"
-      ? "Paused"
-      : "Stopped"
-    : "No Task Selected";
-
-  let statusBadgeClass = "border-slate-500/40 bg-slate-500/10 text-slate-200";
-  let statusDotClass = "bg-slate-300";
-  if (selectedTask?.status === "live" || selectedTask?.status === "transmitting") {
-    statusBadgeClass = "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
-    statusDotClass = "bg-emerald-400 animate-pulse";
-  } else if (selectedTask?.status === "paused") {
-    statusBadgeClass = "border-amber-400/40 bg-amber-400/10 text-amber-200";
-    statusDotClass = "bg-amber-300";
-  }
+  const taskStatusLabel = getTaskStatusLabel(selectedTask);
 
   const totalTasks = tasks.length;
   const operatorTasks = tasks.filter((task) => task.owner === "self").length;
@@ -322,118 +307,14 @@ function App() {
               : ''
           }`}
         >
-          <CockpitSpotlightSection className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Active Task
-                </p>
-                <h2 className="text-xl font-semibold text-white">
-                  {selectedTask ? selectedTask.name : "No task selected"}
-                </h2>
-                <p className="text-sm text-slate-400">
-                  {selectedTask
-                    ? `${formatFrequency(selectedTask.frequency)} · ${selectedTask.type.toUpperCase()} task`
-                    : "Select a task from the roster to drive the cockpit visuals."}
-                </p>
-              </div>
-              <div
-                className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass}`}
-              >
-                <span className={`h-2 w-2 rounded-full ${statusDotClass}`} />
-                {taskStatusLabel}
-              </div>
-            </div>
-
-            {selectedTask && (
-              <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Sample Rate
-                  </p>
-                  <p>{selectedTask.sampleRate.toLocaleString()} sps</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Owner
-                  </p>
-                  <p>{selectedTask.ownerName}</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Uptime
-                  </p>
-                  <p>{Math.max(selectedTask.uptime, 0).toFixed(0)}s</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Recording
-                  </p>
-                  <p>
-                    {selectedTask.recording?.isRecording
-                      ? `Recording · ${selectedTask.recording.duration}s`
-                      : 'Idle'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {selectedTask && (
-                <>
-                  <Button
-                    onClick={() => handlePauseTask(selectedTask.id)}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {selectedTask.status === "paused" ? (
-                      <>
-                        <Play aria-hidden className="mr-2 h-4 w-4" />
-                        Resume
-                      </>
-                    ) : (
-                      <>
-                        <Pause aria-hidden className="mr-2 h-4 w-4" />
-                        Pause
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleStopTask(selectedTask.id)}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    <Square aria-hidden className="mr-2 h-4 w-4" />
-                    Stop
-                  </Button>
-                  {selectedTask.type === "rx" && (
-                    <Button
-                      onClick={() =>
-                        selectedTask.recording?.isRecording
-                          ? handleStopRecording(selectedTask.id)
-                          : handleRecordTask(selectedTask.id)
-                      }
-                      size="sm"
-                      variant={
-                        selectedTask.recording?.isRecording ? "secondary" : "primary"
-                      }
-                    >
-                      {selectedTask.recording?.isRecording ? (
-                        <>
-                          <Square aria-hidden className="mr-2 h-4 w-4" />
-                          Stop Recording
-                        </>
-                      ) : (
-                        <>
-                          <CircleDot aria-hidden className="mr-2 h-4 w-4" />
-                          Record
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+          <CockpitSpotlightSection>
+            <ActiveTaskPanel
+              task={selectedTask}
+              onPauseTask={handlePauseTask}
+              onStopTask={handleStopTask}
+              onRecordTask={handleRecordTask}
+              onStopRecording={handleStopRecording}
+            />
           </CockpitSpotlightSection>
 
           <CockpitRosterSection className="overflow-hidden">
