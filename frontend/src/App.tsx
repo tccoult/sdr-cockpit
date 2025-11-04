@@ -1,3 +1,4 @@
+import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./components/common/Button";
 import {
@@ -385,13 +386,24 @@ function App() {
                     size="sm"
                     variant="secondary"
                   >
-                    {selectedTask.status === "paused" ? "Resume" : "Pause"}
+                    {selectedTask.status === "paused" ? (
+                      <>
+                        <Play aria-hidden className="mr-2 h-4 w-4" />
+                        Resume
+                      </>
+                    ) : (
+                      <>
+                        <Pause aria-hidden className="mr-2 h-4 w-4" />
+                        Pause
+                      </>
+                    )}
                   </Button>
                   <Button
                     onClick={() => handleStopTask(selectedTask.id)}
                     size="sm"
                     variant="secondary"
                   >
+                    <Square aria-hidden className="mr-2 h-4 w-4" />
                     Stop
                   </Button>
                   {selectedTask.type === "rx" && (
@@ -406,9 +418,17 @@ function App() {
                         selectedTask.recording?.isRecording ? "secondary" : "primary"
                       }
                     >
-                      {selectedTask.recording?.isRecording
-                        ? "Stop Recording"
-                        : "Record"}
+                      {selectedTask.recording?.isRecording ? (
+                        <>
+                          <Square aria-hidden className="mr-2 h-4 w-4" />
+                          Stop Recording
+                        </>
+                      ) : (
+                        <>
+                          <CircleDot aria-hidden className="mr-2 h-4 w-4" />
+                          Record
+                        </>
+                      )}
                     </Button>
                   )}
                 </>

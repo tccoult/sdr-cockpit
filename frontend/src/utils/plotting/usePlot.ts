@@ -252,7 +252,6 @@ function formatTick(axisConfig: PlotConfig["axes"]["x"], value: number) {
     return formatter(value);
   } catch (error) {
     if (import.meta.env.MODE !== "production") {
-      // eslint-disable-next-line no-console
       console.warn("[plotting] Tick formatter threw an error:", error);
     }
     return fallbackFormatter(value);
@@ -319,15 +318,11 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
   const cursorListenersRef = useRef(new Set<CursorListener>());
 
   const renderCursorCallbackRef = useRef<CursorRenderArgs["renderDefault"]>(defaultCursorRender);
+  const renderRef = useRef<() => void>(() => {});
   const cursorRenderProp = config.cursor?.render;
   useEffect(() => {
     renderCursorCallbackRef.current = cursorRenderProp ?? defaultCursorRender;
   }, [cursorRenderProp]);
-
-  useEffect(() => {
-    configRef.current = config;
-    scheduleRender();
-  }, [config]);
 
   const scheduleRender = useCallback(() => {
     if (frameRef.current !== null || !canvasRef.current) {
@@ -335,9 +330,14 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
     }
     frameRef.current = window.requestAnimationFrame(() => {
       frameRef.current = null;
-      render();
+      renderRef.current();
     });
   }, []);
+
+  useEffect(() => {
+    configRef.current = config;
+    scheduleRender();
+  }, [config, scheduleRender]);
 
   const emitZoom = useCallback(
     (axis: "x" | "y", range: AxisRange) => {
@@ -682,7 +682,6 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         }
         default: {
           if (import.meta.env.MODE !== "production") {
-            // eslint-disable-next-line no-console
             console.warn(`[plotting] Trace type "${traceConfig.type}" not implemented yet.`);
           }
           break;
@@ -720,6 +719,10 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       renderCursorCallbackRef.current(renderArgs);
     }
   }, []);
+
+  useEffect(() => {
+    renderRef.current = render;
+  }, [render]);
 
   useEffect(() => {
     scheduleRender();
@@ -1275,7 +1278,7 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       },
       getCursorInfo: () => cursorStateRef.current,
     };
-  }, [beginInteraction, endInteraction, handleWheelInput, moveInteraction]);
+  }, [beginInteraction, endInteraction, handleWheelInput, moveInteraction, render]);
 
   return useMemo<PlotInstanceInternal>(() => {
     return {

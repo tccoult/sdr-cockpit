@@ -4,8 +4,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { Task } from '../../types/sdr'
 import { TaskRosterPanel } from './TaskRosterPanel'
 
+type MockTaskCardProps = {
+  task: Task
+  isSelected: boolean
+  onSelect: (taskId: string) => void
+}
+
 vi.mock('./TaskCard', () => ({
-  TaskCard: ({ task, isSelected, onSelect }: any) => (
+  TaskCard: ({ task, isSelected, onSelect }: MockTaskCardProps) => (
     <div
       data-testid="task-card"
       data-task-id={task.id}
