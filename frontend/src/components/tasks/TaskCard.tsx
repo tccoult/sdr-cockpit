@@ -7,38 +7,35 @@ type TaskCardProps = {
   onSelect: (taskId: string) => void
 }
 
-const STATUS_STYLES: Record<
-  Task['status'],
-  { dot: string; badge: string; label: string }
-> = {
+const STATUS_STYLES: Record<Task['status'], { dot: string; badge: string; label: string }> = {
   live: {
-    dot: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.45)]',
+    dot: 'bg-emerald-500 shadow-[0_0_10px_rgba(52,211,153,0.35)] dark:bg-emerald-400',
     badge:
-      'border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 shadow-inner shadow-emerald-500/20',
+      'border border-emerald-300 bg-emerald-100 text-emerald-700 shadow-inner shadow-emerald-200/40 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200 dark:shadow-inner dark:shadow-emerald-500/20',
     label: 'Live',
   },
   transmitting: {
-    dot: 'bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.45)]',
+    dot: 'bg-sky-500 shadow-[0_0_10px_rgba(56,189,248,0.35)] dark:bg-sky-400',
     badge:
-      'border border-sky-400/40 bg-sky-500/10 text-sky-200 shadow-inner shadow-sky-500/20',
+      'border border-sky-300 bg-sky-100 text-sky-700 shadow-inner shadow-sky-200/40 dark:border-sky-400/40 dark:bg-sky-500/10 dark:text-sky-200 dark:shadow-inner dark:shadow-sky-500/20',
     label: 'Transmitting',
   },
   paused: {
-    dot: 'bg-amber-300',
+    dot: 'bg-amber-400',
     badge:
-      'border border-amber-300/40 bg-amber-200/10 text-amber-100 shadow-inner shadow-amber-200/20',
+      'border border-amber-300 bg-amber-100 text-amber-700 shadow-inner shadow-amber-200/40 dark:border-amber-300/40 dark:bg-amber-200/10 dark:text-amber-100 dark:shadow-inner dark:shadow-amber-200/20',
     label: 'Paused',
   },
   stopped: {
     dot: 'bg-slate-500',
     badge:
-      'border border-slate-500/40 bg-slate-600/10 text-slate-200 shadow-inner shadow-slate-900/10',
+      'border border-slate-300 bg-slate-100 text-slate-600 shadow-inner shadow-slate-200/40 dark:border-slate-500/40 dark:bg-slate-600/10 dark:text-slate-200 dark:shadow-inner dark:shadow-slate-900/10',
     label: 'Stopped',
   },
 }
 
 const RECORDING_BADGE =
-  'border border-rose-400/50 bg-rose-500/10 text-rose-100 shadow-inner shadow-rose-500/25'
+  'border border-rose-300 bg-rose-100 text-rose-700 shadow-inner shadow-rose-200/40 dark:border-rose-400/50 dark:bg-rose-500/10 dark:text-rose-100 dark:shadow-inner dark:shadow-rose-500/25'
 
 export function TaskCard({
   task,
@@ -64,11 +61,11 @@ export function TaskCard({
         }
       }}
       className={[
-        'group rounded-xl border px-3 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
-        'bg-slate-900/40 backdrop-blur-sm',
+        'group rounded-xl border px-3 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60',
+        'backdrop-blur-sm bg-white text-slate-900 hover:bg-cockpit-accent/5 dark:bg-slate-900/40 dark:text-slate-100 dark:hover:bg-slate-900/55',
         isSelected
-          ? 'border-white/30 shadow-lg shadow-black/40 ring-1 ring-white/30'
-          : 'border-white/10 hover:border-white/20 hover:bg-slate-900/55',
+          ? 'border-cockpit-accent/60 shadow-md shadow-cockpit-glow/40 ring-1 ring-cockpit-accent/40 dark:border-white/30 dark:shadow-lg dark:shadow-black/40 dark:ring-white/30'
+          : 'border-slate-200 hover:border-cockpit-accent/40 dark:border-white/10 dark:hover:border-white/20',
       ].join(' ')}
     >
       <div className="flex items-center gap-3">
@@ -80,10 +77,10 @@ export function TaskCard({
           ].join(' ')}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-slate-100">
+          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
             {task.name}
           </p>
-          <p className="truncate text-xs text-slate-400">
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
             {formatFrequency(task.frequency)} · {task.type.toUpperCase()}
           </p>
         </div>
@@ -97,14 +94,14 @@ export function TaskCard({
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-400">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1">
-          <span className="font-medium text-slate-500">Owner</span>
-          <span className="text-slate-300">{task.ownerName}</span>
+          <span className="font-medium text-slate-600 dark:text-slate-400">Owner</span>
+          <span className="text-slate-700 dark:text-slate-300">{task.ownerName}</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="font-medium text-slate-500">Uptime</span>
-          <span className="text-slate-300">{formatDuration(task.uptime)}</span>
+          <span className="font-medium text-slate-600 dark:text-slate-400">Uptime</span>
+          <span className="text-slate-700 dark:text-slate-300">{formatDuration(task.uptime)}</span>
         </span>
         {task.recording && (
           <span

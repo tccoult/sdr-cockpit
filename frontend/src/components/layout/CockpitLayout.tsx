@@ -32,7 +32,8 @@ export function CockpitLayout({
   return (
     <div
       className={cn(
-        'min-h-screen w-full bg-cockpit-surface text-slate-100',
+        'min-h-screen w-full bg-slate-100 text-slate-900 dark:bg-cockpit-surface dark:text-slate-100',
+        'lg:h-screen lg:overflow-hidden',
         'font-sans',
         className
       )}
@@ -42,7 +43,7 @@ export function CockpitLayout({
         className={cn(
           'mx-auto flex min-h-screen w-full max-w-[1680px] flex-col gap-6 px-4 py-6',
           'lg:grid lg:grid-rows-[auto_1fr]',
-          'lg:min-h-screen lg:[&>*]:min-h-0',
+          'lg:h-full lg:overflow-hidden lg:[&>*]:min-h-0',
           columnTemplate
         )}
       >
@@ -62,7 +63,7 @@ export const CockpitHeaderZone = forwardRef<HTMLDivElement, DivProps>(
     <header
       ref={ref}
       className={cn(
-        'order-1 rounded-xl border border-white/10 bg-white/5 p-4 shadow-lg shadow-black/30 backdrop-blur',
+        'order-1 rounded-xl border border-slate-200 bg-white/80 p-4 shadow-lg shadow-slate-200/60 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:shadow-black/30',
         'lg:col-span-full',
         className
       )}
@@ -100,6 +101,7 @@ export function CockpitColumn({
     <section
       className={cn(
         'flex min-h-0 flex-col gap-4',
+        'lg:h-full lg:overflow-hidden',
         positionClasses[position],
         className
       )}
@@ -123,7 +125,7 @@ export function CockpitSpotlightSection({
   return (
     <section
       className={cn(
-        'rounded-xl border border-white/10 bg-white/5 p-4 shadow-cockpit-glow backdrop-blur',
+        'flex-none rounded-xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-300/70 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/70 dark:shadow-cockpit-glow',
         className
       )}
       {...props}
@@ -145,7 +147,8 @@ export function CockpitRosterSection({
   return (
     <section
       className={cn(
-        'flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 backdrop-blur',
+        'flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/60',
+        'lg:h-full',
         'min-h-0',
         className
       )}
@@ -168,7 +171,7 @@ export function CockpitMainArea({
   return (
     <main
       className={cn(
-        'flex flex-1 flex-col gap-6 rounded-xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-slate-900/60 p-4 shadow-2xl shadow-black/40',
+        'flex flex-1 flex-col gap-6',
         className
       )}
       {...props}

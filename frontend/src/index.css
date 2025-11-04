@@ -2,23 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/**
- * Global styles for SDR Cockpit
- * Muted dark theme with neutral highlights
- */
+html {
+  height: 100%;
+}
 
 :root {
-  /* Color palette */
-  --bg-primary: #0d1014;
-  --bg-secondary: #151922;
-  --bg-tertiary: #1d2330;
-  --accent-primary: #7c83ff;
-  --accent-secondary: #4adbc8;
-  --text-primary: #f1f3f7;
-  --text-secondary: #a7adbe;
-  --border-color: rgba(147, 165, 207, 0.18);
-
-  /* Typography */
+  color-scheme: light;
+  --bg-body: radial-gradient(circle at 20% 20%, #f6f8ff 0%, #e2e8f0 50%, #d7dee9 100%);
+  --text-color: #0f172a;
+  --scroll-track: #e2e8f0;
+  --scroll-thumb: #cbd5f5;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -29,6 +22,14 @@
   -webkit-text-size-adjust: 100%;
 }
 
+.dark {
+  color-scheme: dark;
+  --bg-body: radial-gradient(circle at 20% 20%, #131826 0%, #080b10 50%, #05070b 100%);
+  --text-color: #f1f5f9;
+  --scroll-track: #1f2937;
+  --scroll-thumb: #334155;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -37,14 +38,16 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 20% 20%, #131826 0%, #080b10 50%, #05070b 100%);
+  background: var(--bg-body);
   min-height: 100vh;
-  color: var(--text-primary);
+  height: 100%;
+  color: var(--text-color);
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  height: 100%;
 }
 
 /* Scrollbar styling */
@@ -54,11 +57,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: var(--scroll-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+  background: var(--scroll-thumb);
   border-radius: 4px;
 }
 
@@ -72,33 +75,6 @@ input[type='text'],
 select {
   font-family: inherit;
   font-size: 14px;
-}
-
-:where(button) {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: var(--accent-primary);
-  color: var(--bg-primary);
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-:where(button:hover) {
-  background: color-mix(in srgb, var(--accent-primary) 85%, white 15%);
-  transform: translateY(-1px);
-}
-
-:where(button:active) {
-  transform: translateY(0);
-}
-
-/* Focus styles */
-*:focus-visible {
-  outline: 2px solid var(--accent-secondary);
-  outline-offset: 2px;
 }
 
 /* === GLOBAL ANIMATIONS === */

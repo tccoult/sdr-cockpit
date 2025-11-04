@@ -1,4 +1,3 @@
-import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./components/common/Button";
 import {
@@ -10,9 +9,12 @@ import {
   CockpitSpotlightSection,
   CockpitTelemetryRail,
 } from "./components/layout";
+import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
+import { getTaskStatusLabel } from "./components/tasks/ActiveTaskPanel/taskStatus";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useWindowSize } from "./components/app/useWindowSize";
+import { ThemeToggle } from "./components/app/ThemeToggle";
 import { SpectrumView } from "./components/visualization/SpectrumView";
 import { PlotSandbox } from "./components/visualization/PlotSandbox";
 import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
@@ -73,7 +75,7 @@ function App() {
   }, []);
 
   // Get selected task
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId);
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   // Create/update FFT generator for selected task
   useEffect(() => {
@@ -221,25 +223,7 @@ function App() {
     );
   };
 
-  const taskStatusLabel = selectedTask
-    ? selectedTask.status === "live"
-      ? "Live"
-      : selectedTask.status === "transmitting"
-      ? "Transmitting"
-      : selectedTask.status === "paused"
-      ? "Paused"
-      : "Stopped"
-    : "No Task Selected";
-
-  let statusBadgeClass = "border-slate-500/40 bg-slate-500/10 text-slate-200";
-  let statusDotClass = "bg-slate-300";
-  if (selectedTask?.status === "live" || selectedTask?.status === "transmitting") {
-    statusBadgeClass = "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
-    statusDotClass = "bg-emerald-400 animate-pulse";
-  } else if (selectedTask?.status === "paused") {
-    statusBadgeClass = "border-amber-400/40 bg-amber-400/10 text-amber-200";
-    statusDotClass = "bg-amber-300";
-  }
+  const taskStatusLabel = getTaskStatusLabel(selectedTask);
 
   const totalTasks = tasks.length;
   const operatorTasks = tasks.filter((task) => task.owner === "self").length;
@@ -262,53 +246,56 @@ function App() {
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen((prev) => !prev)}
-                className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-md border border-white/10 bg-white/5 transition hover:bg-white/10 lg:hidden"
+                className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 lg:hidden dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 aria-label="Toggle task column"
               >
                 <span className="sr-only">Toggle task column</span>
-                <span className="h-0.5 w-6 rounded-full bg-white" />
-                <span className="h-0.5 w-6 rounded-full bg-white" />
-                <span className="h-0.5 w-6 rounded-full bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-slate-600 dark:bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-slate-600 dark:bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-slate-600 dark:bg-white" />
               </button>
 
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-white">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
                   SDR Cockpit
                 </h1>
                 {selectedTask && (
-                  <p className="mt-1 text-sm text-slate-300">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
                     {selectedTask.name} · {formatFrequency(selectedTask.frequency)}
                   </p>
                 )}
               </div>
             </div>
 
-            <CockpitTelemetryRail className="text-sm">
-              <div className="rounded-lg border border-white/10 bg-black/30 p-3 shadow-inner shadow-black/20">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Frame Rate
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">
-                  {fps}
-                  <span className="ml-1 text-xs font-normal text-slate-400">FPS</span>
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3 shadow-inner shadow-black/20">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Tasks Online
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">{totalTasks}</p>
-                <p className="text-xs text-slate-400">{operatorTasks} by operator</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3 shadow-inner shadow-black/20">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Active Status
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">
-                  {taskStatusLabel}
-                </p>
-              </div>
-            </CockpitTelemetryRail>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+              <ThemeToggle />
+              <CockpitTelemetryRail className="text-sm">
+                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/30 dark:shadow-inner dark:shadow-black/20">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Frame Rate
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    {fps}
+                    <span className="ml-1 text-xs font-normal text-slate-500 dark:text-slate-400">FPS</span>
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/20 dark:shadow-inner dark:shadow-black/20">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Tasks Online
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{totalTasks}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{operatorTasks} by operator</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/20 dark:shadow-inner dark:shadow-black/20">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Active Status
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    {taskStatusLabel}
+                  </p>
+                </div>
+              </CockpitTelemetryRail>
+            </div>
           </div>
         </CockpitHeaderZone>
 
@@ -317,123 +304,19 @@ function App() {
           className={`lg:w-[320px] ${
             isMobile
               ? isSidebarOpen
-                ? 'z-50 rounded-2xl border border-white/10 bg-[rgba(10,10,15,0.95)] p-3 shadow-2xl'
+                ? 'z-50 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-300/60 dark:border-white/10 dark:bg-[rgba(10,10,15,0.95)] dark:shadow-2xl dark:shadow-black/60'
                 : 'hidden'
               : ''
           }`}
         >
-          <CockpitSpotlightSection className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Active Task
-                </p>
-                <h2 className="text-xl font-semibold text-white">
-                  {selectedTask ? selectedTask.name : "No task selected"}
-                </h2>
-                <p className="text-sm text-slate-400">
-                  {selectedTask
-                    ? `${formatFrequency(selectedTask.frequency)} · ${selectedTask.type.toUpperCase()} task`
-                    : "Select a task from the roster to drive the cockpit visuals."}
-                </p>
-              </div>
-              <div
-                className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass}`}
-              >
-                <span className={`h-2 w-2 rounded-full ${statusDotClass}`} />
-                {taskStatusLabel}
-              </div>
-            </div>
-
-            {selectedTask && (
-              <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Sample Rate
-                  </p>
-                  <p>{selectedTask.sampleRate.toLocaleString()} sps</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Owner
-                  </p>
-                  <p>{selectedTask.ownerName}</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Uptime
-                  </p>
-                  <p>{Math.max(selectedTask.uptime, 0).toFixed(0)}s</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-slate-400">
-                    Recording
-                  </p>
-                  <p>
-                    {selectedTask.recording?.isRecording
-                      ? `Recording · ${selectedTask.recording.duration}s`
-                      : 'Idle'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {selectedTask && (
-                <>
-                  <Button
-                    onClick={() => handlePauseTask(selectedTask.id)}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {selectedTask.status === "paused" ? (
-                      <>
-                        <Play aria-hidden className="mr-2 h-4 w-4" />
-                        Resume
-                      </>
-                    ) : (
-                      <>
-                        <Pause aria-hidden className="mr-2 h-4 w-4" />
-                        Pause
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleStopTask(selectedTask.id)}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    <Square aria-hidden className="mr-2 h-4 w-4" />
-                    Stop
-                  </Button>
-                  {selectedTask.type === "rx" && (
-                    <Button
-                      onClick={() =>
-                        selectedTask.recording?.isRecording
-                          ? handleStopRecording(selectedTask.id)
-                          : handleRecordTask(selectedTask.id)
-                      }
-                      size="sm"
-                      variant={
-                        selectedTask.recording?.isRecording ? "secondary" : "primary"
-                      }
-                    >
-                      {selectedTask.recording?.isRecording ? (
-                        <>
-                          <Square aria-hidden className="mr-2 h-4 w-4" />
-                          Stop Recording
-                        </>
-                      ) : (
-                        <>
-                          <CircleDot aria-hidden className="mr-2 h-4 w-4" />
-                          Record
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+          <CockpitSpotlightSection>
+            <ActiveTaskPanel
+              task={selectedTask}
+              onPauseTask={handlePauseTask}
+              onStopTask={handleStopTask}
+              onRecordTask={handleRecordTask}
+              onStopRecording={handleStopRecording}
+            />
           </CockpitSpotlightSection>
 
           <CockpitRosterSection className="overflow-hidden">
@@ -451,32 +334,37 @@ function App() {
           <CockpitMainArea className="backdrop-blur">
             <div className="flex flex-1 flex-col">
               {selectedTask ? (
-                <div
-                  className="w-full flex-1"
-                  style={{ minHeight: viewerHeight, animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}
-                >
-                  <SpectrumView
-                    taskId={selectedTask.id}
-                    centerFreq={selectedTask.frequency}
-                    sampleRate={selectedTask.sampleRate}
-                    colorMap={colorMap}
-                    availableHeight={viewerHeight}
-                  />
+                <>
+                  <div
+                    className="w-full flex-1"
+                    style={{
+                      minHeight: viewerHeight,
+                      animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  >
+                    <SpectrumView
+                      taskId={selectedTask.id}
+                      centerFreq={selectedTask.frequency}
+                      sampleRate={selectedTask.sampleRate}
+                      colorMap={colorMap}
+                      availableHeight={viewerHeight}
+                    />
+                  </div>
                   {showPlotSandbox && (
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-6 flex flex-none justify-center">
                       <PlotSandbox
                         width={Math.min(Math.max(width - 160, 360), 960)}
                         height={260}
                       />
                     </div>
                   )}
-                </div>
+                </>
               ) : (
-                <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-300">
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
                   <div className="text-6xl">📡</div>
                   <div>
-                    <p className="text-xl font-semibold text-white">No Task Selected</p>
-                    <p className="mt-2 text-sm text-slate-400">
+                    <p className="text-xl font-semibold text-slate-900 dark:text-white">No Task Selected</p>
+                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       Select a task from the roster to view spectrum activity.
                     </p>
                   </div>
