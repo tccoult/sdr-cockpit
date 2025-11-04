@@ -8,6 +8,7 @@ type TaskCardProps = {
   onSelect: (taskId: string) => void
   onPause?: (taskId: string) => void
   onStop?: (taskId: string) => void
+  onSettings?: (taskId: string) => void
   onRecord?: (taskId: string) => void
   onStopRecording?: (taskId: string) => void
 }
@@ -54,6 +55,7 @@ export function TaskCard({
   onSelect,
   onPause,
   onStop,
+  onSettings,
   onRecord,
   onStopRecording,
 }: TaskCardProps) {
@@ -157,6 +159,15 @@ export function TaskCard({
           >
             Stop
           </button>
+          {onSettings && (
+            <button
+              type="button"
+              className={CONTROL_BUTTON_CLASSES}
+              onClick={(event) => handleAction(event, onSettings)}
+            >
+              Settings
+            </button>
+          )}
           {task.type === 'rx' && (
             <button
               type="button"
