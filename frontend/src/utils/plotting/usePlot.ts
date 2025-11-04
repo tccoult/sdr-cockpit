@@ -512,7 +512,9 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
       ctx.save();
       ctx.strokeStyle = grid.color ?? DEFAULT_GRID_COLOR;
       ctx.lineWidth = grid.lineWidth ?? 1;
-      ctx.setLineDash([4, 4]);
+      if (typeof ctx.setLineDash === "function") {
+        ctx.setLineDash([4, 4]);
+      }
 
       const xTicks = niceTicks(xRange.min, xRange.max, 8);
       const yTicks = niceTicks(yRange.min, yRange.max, 8);
@@ -710,7 +712,9 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         ctx.fillStyle = BOX_SELECT_FILL;
         ctx.strokeStyle = BOX_SELECT_STROKE;
         ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
+        if (typeof ctx.setLineDash === "function") {
+          ctx.setLineDash([3, 3]);
+        }
         ctx.fillRect(left, margins.top, right - left, plotHeight);
         ctx.strokeRect(left, margins.top, right - left, plotHeight);
         ctx.restore();
