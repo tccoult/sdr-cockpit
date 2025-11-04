@@ -147,8 +147,7 @@ export function CockpitRosterSection({
   return (
     <section
       className={cn(
-        'flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/60',
-        'lg:h-full',
+        'flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/60',
         'min-h-0',
         className
       )}
@@ -171,7 +170,8 @@ export function CockpitMainArea({
   return (
     <main
       className={cn(
-        'flex flex-1 flex-col gap-6',
+        'flex flex-1 flex-col gap-6 overflow-hidden',
+        'min-h-0',
         className
       )}
       {...props}

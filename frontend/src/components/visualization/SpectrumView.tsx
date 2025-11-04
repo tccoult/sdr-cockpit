@@ -3,7 +3,7 @@
  * Provides synchronized zoom, pan, and controls
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
@@ -17,7 +17,6 @@ interface SpectrumViewProps {
   centerFreq: number; // Center frequency in Hz
   sampleRate: number; // Sample rate in Hz
   colorMap: ColorMap; // Selected color map
-  availableHeight?: number;
 }
 
 export const SpectrumView = memo(function SpectrumView({
@@ -25,59 +24,18 @@ export const SpectrumView = memo(function SpectrumView({
   centerFreq,
   sampleRate,
   colorMap,
-  availableHeight,
 }: SpectrumViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(1200); // Default width
+  const fftContainerRef = useRef<HTMLDivElement>(null);
+  const waterfallContainerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
+  const [fftHeight, setFftHeight] = useState(220);
+  const [waterfallHeight, setWaterfallHeight] = useState(320);
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
-
-  const layout = useMemo(() => {
-    const MIN_VIEW_HEIGHT = 620;
-    const CONTROLS_RESERVE = 160;
-    const MIN_FFT_HEIGHT = 220;
-    const MIN_WATERFALL_HEIGHT = 320;
-
-    const fallbackViewHeight =
-      (typeof window !== "undefined"
-        ? window.innerHeight - 260
-        : MIN_VIEW_HEIGHT) || MIN_VIEW_HEIGHT;
-
-    const containerHeight = Math.max(
-      availableHeight ?? fallbackViewHeight,
-      MIN_VIEW_HEIGHT
-    );
-
-    const plotAreaHeight = Math.max(
-      containerHeight - CONTROLS_RESERVE,
-      MIN_FFT_HEIGHT + MIN_WATERFALL_HEIGHT
-    );
-
-    let fftHeight = Math.max(Math.round(plotAreaHeight * 0.35), MIN_FFT_HEIGHT);
-    let waterfallHeight = plotAreaHeight - fftHeight;
-
-    if (waterfallHeight < MIN_WATERFALL_HEIGHT) {
-      waterfallHeight = MIN_WATERFALL_HEIGHT;
-      fftHeight = Math.max(plotAreaHeight - waterfallHeight, MIN_FFT_HEIGHT);
-    }
-
-    if (fftHeight < MIN_FFT_HEIGHT) {
-      fftHeight = MIN_FFT_HEIGHT;
-      waterfallHeight = Math.max(
-        plotAreaHeight - fftHeight,
-        MIN_WATERFALL_HEIGHT
-      );
-    }
-
-    return {
-      containerHeight,
-      fftHeight,
-      waterfallHeight,
-    };
-  }, [availableHeight]);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
@@ -135,16 +93,23 @@ export const SpectrumView = memo(function SpectrumView({
     setFrequencyRange(newRange);
   }, []);
 
+  // Measure container width and plot container heights
   useEffect(() => {
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      setContainerWidth(entry.contentRect.width);
+    const observer = new ResizeObserver(() => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+      if (fftContainerRef.current) {
+        setFftHeight(fftContainerRef.current.clientHeight);
+      }
+      if (waterfallContainerRef.current) {
+        setWaterfallHeight(waterfallContainerRef.current.clientHeight);
+      }
     });
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
+    if (containerRef.current) observer.observe(containerRef.current);
+    if (fftContainerRef.current) observer.observe(fftContainerRef.current);
+    if (waterfallContainerRef.current) observer.observe(waterfallContainerRef.current);
 
     return () => observer.disconnect();
   }, []);
@@ -152,7 +117,7 @@ export const SpectrumView = memo(function SpectrumView({
   const plotWidth = Math.max(containerWidth - 32, 0); // 32 for padding (16*2)
 
   const containerClasses = [
-    "flex flex-col gap-4 rounded-xl border p-4 md:p-6",
+    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-300/80",
@@ -168,9 +133,8 @@ export const SpectrumView = memo(function SpectrumView({
     <div
       ref={containerRef}
       className={containerClasses}
-      style={{ minHeight: layout.containerHeight }}
     >
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex-none flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
           <div className="text-sm text-slate-500 dark:text-slate-300">
@@ -208,10 +172,13 @@ export const SpectrumView = memo(function SpectrumView({
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
+      <div
+        ref={fftContainerRef}
+        className="flex-[35] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40"
+      >
         <FFTDisplay
           width={plotWidth}
-          height={layout.fftHeight}
+          height={Math.max(fftHeight - 24, 180)}
           minDb={minDb}
           maxDb={maxDb}
           frequencyRange={frequencyRange}
@@ -220,10 +187,13 @@ export const SpectrumView = memo(function SpectrumView({
         />
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
+      <div
+        ref={waterfallContainerRef}
+        className="flex-[65] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40"
+      >
         <WaterfallDisplay
           width={plotWidth}
-          height={layout.waterfallHeight}
+          height={Math.max(waterfallHeight - 24, 240)}
           colorMap={colorMap}
           minDb={minDb}
           maxDb={maxDb}
@@ -235,7 +205,7 @@ export const SpectrumView = memo(function SpectrumView({
 
       <div
         className={[
-          "mt-4 rounded-lg border p-3 text-xs",
+          "flex-none rounded-lg border p-3 text-xs",
           isDark
             ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
             : "border-cyan-500/30 bg-cyan-50 text-cyan-800",

@@ -35,7 +35,7 @@ import {
 } from "./utils/mockTaskGenerator";
 
 function App() {
-  const { width, height: windowHeight } = useWindowSize(); // Get dynamic size
+  const { width } = useWindowSize(); // Get dynamic size
   const isMobile = width < 1024;
 
   const colorMap = PLASMA;
@@ -57,7 +57,6 @@ function App() {
   const generatorsRef = useRef<Map<string, MockFFTGenerator>>(new Map());
   const intervalRef = useRef<number | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Initialize with demo tasks
   useEffect(() => {
@@ -122,25 +121,6 @@ function App() {
       }
     };
   }, [selectedTask, isWizardOpen]);
-
-  useEffect(() => {
-    if (!headerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const nextHeight = entry.contentRect.height;
-      setHeaderHeight((prev) =>
-        Math.abs(prev - nextHeight) < 1 ? prev : nextHeight
-      );
-    });
-    observer.observe(headerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const viewerHeight = Math.max(
-    windowHeight - headerHeight - 32,
-    720
-  );
 
   // Update task uptimes and recordings
   useEffect(() => {
@@ -332,34 +312,24 @@ function App() {
 
         <CockpitColumn position="center" className="flex-1">
           <CockpitMainArea className="backdrop-blur">
-            <div className="flex flex-1 flex-col">
-              {selectedTask ? (
-                <>
-                  <div
-                    className="w-full flex-1"
-                    style={{
-                      minHeight: viewerHeight,
-                      animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                    }}
-                  >
-                    <SpectrumView
-                      taskId={selectedTask.id}
-                      centerFreq={selectedTask.frequency}
-                      sampleRate={selectedTask.sampleRate}
-                      colorMap={colorMap}
-                      availableHeight={viewerHeight}
+            {selectedTask ? (
+              <>
+                <SpectrumView
+                  taskId={selectedTask.id}
+                  centerFreq={selectedTask.frequency}
+                  sampleRate={selectedTask.sampleRate}
+                  colorMap={colorMap}
+                />
+                {showPlotSandbox && (
+                  <div className="mt-6 flex flex-none justify-center">
+                    <PlotSandbox
+                      width={Math.min(Math.max(width - 160, 360), 960)}
+                      height={260}
                     />
                   </div>
-                  {showPlotSandbox && (
-                    <div className="mt-6 flex flex-none justify-center">
-                      <PlotSandbox
-                        width={Math.min(Math.max(width - 160, 360), 960)}
-                        height={260}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
+                )}
+              </>
+            ) : (
                 <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
                   <div className="text-6xl">📡</div>
                   <div>
@@ -376,8 +346,7 @@ function App() {
                     + Create New Task
                   </Button>
                 </div>
-              )}
-            </div>
+            )}
           </CockpitMainArea>
         </CockpitColumn>
       </CockpitLayout>
