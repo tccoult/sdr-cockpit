@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./components/common/Button";
-import { TaskSidebar } from "./components/tasks/TaskSidebar";
+import {
+  CockpitColumn,
+  CockpitHeaderZone,
+  CockpitLayout,
+  CockpitMainArea,
+  CockpitRosterSection,
+  CockpitSpotlightSection,
+  CockpitTelemetryRail,
+} from "./components/layout";
+import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useWindowSize } from "./components/app/useWindowSize";
 import { SpectrumView } from "./components/visualization/SpectrumView";
@@ -211,271 +220,267 @@ function App() {
     );
   };
 
+  const taskStatusLabel = selectedTask
+    ? selectedTask.status === "live"
+      ? "Live"
+      : selectedTask.status === "transmitting"
+      ? "Transmitting"
+      : selectedTask.status === "paused"
+      ? "Paused"
+      : "Stopped"
+    : "No Task Selected";
+
+  let statusBadgeClass = "border-slate-500/40 bg-slate-500/10 text-slate-200";
+  let statusDotClass = "bg-slate-300";
+  if (selectedTask?.status === "live" || selectedTask?.status === "transmitting") {
+    statusBadgeClass = "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+    statusDotClass = "bg-emerald-400 animate-pulse";
+  } else if (selectedTask?.status === "paused") {
+    statusBadgeClass = "border-amber-400/40 bg-amber-400/10 text-amber-200";
+    statusDotClass = "bg-amber-300";
+  }
+
+  const totalTasks = tasks.length;
+  const operatorTasks = tasks.filter((task) => task.owner === "self").length;
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        background: "#0a0a0f",
-        color: "white",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        position: "relative",
-      }}
-    >
-      {/* Mobile overlay */}
-      {isSidebarOpen && isMobile && (
-        <div
-          onClick={() => setIsSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            zIndex: 999,
-            display: "block",
-          }}
-        />
-      )}
+    <>
+      <CockpitLayout>
+        {isSidebarOpen && isMobile && (
+          <button
+            type="button"
+            aria-label="Close task column"
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          />
+        )}
 
-      {/* Task Sidebar */}
-      <div
-        style={{
-          position: isMobile ? "fixed" : "relative",
-          left: isMobile ? (isSidebarOpen ? 0 : -280) : 0,
-          top: 0,
-          height: "100vh",
-          zIndex: 1000,
-          transition: "left 0.3s ease",
-        }}
-      >
-        <TaskSidebar
-          tasks={tasks}
-          selectedTaskId={selectedTaskId}
-          isDiscovering={isDiscovering}
-          onSelectTask={handleSelectTask}
-          onCreateTask={() => setIsWizardOpen(true)}
-          onPauseTask={handlePauseTask}
-          onStopTask={handleStopTask}
-          onRecordTask={handleRecordTask}
-          onStopRecording={handleStopRecording}
-        />
-      </div>
+        <CockpitHeaderZone ref={headerRef}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen((prev) => !prev)}
+                className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-md border border-white/10 bg-white/5 transition hover:bg-white/10 lg:hidden"
+                aria-label="Toggle task column"
+              >
+                <span className="sr-only">Toggle task column</span>
+                <span className="h-0.5 w-6 rounded-full bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-white" />
+              </button>
 
-      {/* Main content area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <div
-          ref={headerRef}
-          style={{
-            padding: "16px 24px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "rgba(10, 10, 15, 0.8)",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {/* Hamburger menu for mobile */}
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              style={{
-                display: isMobile ? "flex" : "none",
-                flexDirection: "column",
-                gap: 4,
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: 8,
-              }}
-              aria-label="Toggle sidebar"
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 2,
-                  background: "white",
-                  borderRadius: 2,
-                }}
-              />
-              <div
-                style={{
-                  width: 24,
-                  height: 2,
-                  background: "white",
-                  borderRadius: 2,
-                }}
-              />
-              <div
-                style={{
-                  width: 24,
-                  height: 2,
-                  background: "white",
-                  borderRadius: 2,
-                }}
-              />
-            </button>
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-white">
+                  SDR Cockpit
+                </h1>
+                {selectedTask && (
+                  <p className="mt-1 text-sm text-slate-300">
+                    {selectedTask.name} · {formatFrequency(selectedTask.frequency)}
+                  </p>
+                )}
+              </div>
+            </div>
 
-            <div>
-              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>
-                SDR Cockpit
-              </h1>
-              {selectedTask && (
-                <p
-                  style={{
-                    margin: "4px 0 0 0",
-                    color: "rgba(255, 255, 255, 0.6)",
-                    fontSize: 13,
-                  }}
-                >
-                  {selectedTask.name} -{" "}
-                  {formatFrequency(selectedTask.frequency)}
+            <CockpitTelemetryRail className="text-sm">
+              <div className="rounded-lg border border-white/10 bg-black/30 p-3 shadow-inner shadow-black/20">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Frame Rate
                 </p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {fps}
+                  <span className="ml-1 text-xs font-normal text-slate-400">FPS</span>
+                </p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 p-3 shadow-inner shadow-black/20">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Tasks Online
+                </p>
+                <p className="mt-1 text-lg font-semibold text-white">{totalTasks}</p>
+                <p className="text-xs text-slate-400">{operatorTasks} by operator</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 p-3 shadow-inner shadow-black/20">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Active Status
+                </p>
+                <p className="mt-1 text-lg font-semibold text-white">
+                  {taskStatusLabel}
+                </p>
+              </div>
+            </CockpitTelemetryRail>
+          </div>
+        </CockpitHeaderZone>
+
+        <CockpitColumn
+          position="left"
+          className={`lg:w-[320px] ${
+            isMobile
+              ? isSidebarOpen
+                ? 'z-50 rounded-2xl border border-white/10 bg-[rgba(10,10,15,0.95)] p-3 shadow-2xl'
+                : 'hidden'
+              : ''
+          }`}
+        >
+          <CockpitSpotlightSection className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Active Task
+                </p>
+                <h2 className="text-xl font-semibold text-white">
+                  {selectedTask ? selectedTask.name : "No task selected"}
+                </h2>
+                <p className="text-sm text-slate-400">
+                  {selectedTask
+                    ? `${formatFrequency(selectedTask.frequency)} · ${selectedTask.type.toUpperCase()} task`
+                    : "Select a task from the roster to drive the cockpit visuals."}
+                </p>
+              </div>
+              <div
+                className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass}`}
+              >
+                <span className={`h-2 w-2 rounded-full ${statusDotClass}`} />
+                {taskStatusLabel}
+              </div>
+            </div>
+
+            {selectedTask && (
+              <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-slate-400">
+                    Sample Rate
+                  </p>
+                  <p>{selectedTask.sampleRate.toLocaleString()} sps</p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-slate-400">
+                    Owner
+                  </p>
+                  <p>{selectedTask.ownerName}</p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-slate-400">
+                    Uptime
+                  </p>
+                  <p>{Math.max(selectedTask.uptime, 0).toFixed(0)}s</p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-slate-400">
+                    Recording
+                  </p>
+                  <p>
+                    {selectedTask.recording?.isRecording
+                      ? `Recording · ${selectedTask.recording.duration}s`
+                      : 'Idle'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {selectedTask && (
+                <>
+                  <Button
+                    onClick={() => handlePauseTask(selectedTask.id)}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    {selectedTask.status === "paused" ? "Resume" : "Pause"}
+                  </Button>
+                  <Button
+                    onClick={() => handleStopTask(selectedTask.id)}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    Stop
+                  </Button>
+                  {selectedTask.type === "rx" && (
+                    <Button
+                      onClick={() =>
+                        selectedTask.recording?.isRecording
+                          ? handleStopRecording(selectedTask.id)
+                          : handleRecordTask(selectedTask.id)
+                      }
+                      size="sm"
+                      variant={
+                        selectedTask.recording?.isRecording ? "secondary" : "primary"
+                      }
+                    >
+                      {selectedTask.recording?.isRecording
+                        ? "Stop Recording"
+                        : "Record"}
+                    </Button>
+                  )}
+                </>
               )}
             </div>
-          </div>
+          </CockpitSpotlightSection>
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                borderRadius: 6,
-                padding: "8px 16px",
-                fontSize: 14,
-              }}
-            >
-              <strong>{fps}</strong> FPS
-            </div>
+          <CockpitRosterSection className="overflow-hidden">
+            <TaskRosterPanel
+              tasks={tasks}
+              selectedTaskId={selectedTaskId}
+              isDiscovering={isDiscovering}
+              onSelectTask={handleSelectTask}
+              onCreateTask={() => setIsWizardOpen(true)}
+            />
+          </CockpitRosterSection>
+        </CockpitColumn>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                background:
-                  selectedTask?.status === "live" ||
-                  selectedTask?.status === "transmitting"
-                    ? "rgba(76, 175, 80, 0.1)"
-                    : "rgba(158, 158, 158, 0.1)",
-                border:
-                  selectedTask?.status === "live" ||
-                  selectedTask?.status === "transmitting"
-                    ? "1px solid rgba(76, 175, 80, 0.3)"
-                    : "1px solid rgba(158, 158, 158, 0.3)",
-                borderRadius: 6,
-                fontSize: 14,
-              }}
-            >
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background:
-                    selectedTask?.status === "live" ||
-                    selectedTask?.status === "transmitting"
-                      ? "#4caf50"
-                      : "#9e9e9e",
-                  animation:
-                    selectedTask?.status === "live" ||
-                    selectedTask?.status === "transmitting"
-                      ? "pulse 2s infinite"
-                      : "none",
-                }}
-              />
-              <span>
-                {selectedTask?.status === "live" && "Live"}
-                {selectedTask?.status === "transmitting" && "Transmitting"}
-                {selectedTask?.status === "paused" && "Paused"}
-                {!selectedTask && "No Task Selected"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Spectrum display area */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            padding: "0 20px 20px",
-            overflow: "auto",
-            minHeight: viewerHeight,
-          }}
-        >
-          {selectedTask ? (
-            <div
-              style={{
-                width: "100%",
-                minHeight: viewerHeight,
-                animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              <SpectrumView
-                taskId={selectedTask.id}
-                centerFreq={selectedTask.frequency}
-                sampleRate={selectedTask.sampleRate}
-                colorMap={colorMap}
-                availableHeight={viewerHeight}
-              />
-              {showPlotSandbox && (
+        <CockpitColumn position="center" className="flex-1">
+          <CockpitMainArea className="backdrop-blur">
+            <div className="flex flex-1 flex-col">
+              {selectedTask ? (
                 <div
-                  style={{
-                    marginTop: 24,
-                    display: "flex",
-                    justifyContent: "center",
-                  }}
+                  className="w-full flex-1"
+                  style={{ minHeight: viewerHeight, animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}
                 >
-                  <PlotSandbox
-                    width={Math.min(Math.max(width - 160, 360), 960)}
-                    height={260}
+                  <SpectrumView
+                    taskId={selectedTask.id}
+                    centerFreq={selectedTask.frequency}
+                    sampleRate={selectedTask.sampleRate}
+                    colorMap={colorMap}
+                    availableHeight={viewerHeight}
                   />
+                  {showPlotSandbox && (
+                    <div className="mt-6 flex justify-center">
+                      <PlotSandbox
+                        width={Math.min(Math.max(width - 160, 360), 960)}
+                        height={260}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-300">
+                  <div className="text-6xl">📡</div>
+                  <div>
+                    <p className="text-xl font-semibold text-white">No Task Selected</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Select a task from the roster to view spectrum activity.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsWizardOpen(true)}
+                    variant="secondary"
+                    size="lg"
+                  >
+                    + Create New Task
+                  </Button>
                 </div>
               )}
             </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                color: "rgba(255, 255, 255, 0.6)",
-                padding: 60,
-              }}
-            >
-              <div style={{ fontSize: 64, marginBottom: 20 }}>📡</div>
-              <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
-                No Task Selected
-              </div>
-              <div style={{ fontSize: 14, marginBottom: 30, opacity: 0.8 }}>
-                Select a task from the sidebar to view spectrum
-              </div>
-              <Button
-                onClick={() => setIsWizardOpen(true)}
-                variant="secondary"
-                size="lg"
-              >
-                + Create New Task
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+          </CockpitMainArea>
+        </CockpitColumn>
+      </CockpitLayout>
 
-      {/* Task Wizard Modal */}
       <TaskWizard
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
         onCreateRxTask={handleCreateRxTask}
         onCreateTxTask={handleCreateTxTask}
       />
-    </div>
+    </>
   );
 }
 
