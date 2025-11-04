@@ -7,9 +7,9 @@ export default {
     extend: {
       colors: {
         cockpit: {
-          surface: '#0a0a0f',
-          panel: 'rgba(17, 17, 26, 0.85)',
-          accent: '#3db4ff',
+          surface: '#080b12',
+          panel: 'rgba(16, 20, 32, 0.85)',
+          accent: '#7c83ff',
         },
       },
       fontFamily: {

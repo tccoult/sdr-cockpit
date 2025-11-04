@@ -14,7 +14,6 @@ export interface TaskRosterPanelProps {
   onCreateTask: () => void
   onPauseTask?: (taskId: string) => void
   onStopTask?: (taskId: string) => void
-  onSettingsTask?: (taskId: string) => void
   onRecordTask?: (taskId: string) => void
   onStopRecording?: (taskId: string) => void
 }
@@ -29,7 +28,6 @@ export function TaskRosterPanel({
   onCreateTask,
   onPauseTask,
   onStopTask,
-  onSettingsTask,
   onRecordTask,
   onStopRecording,
 }: TaskRosterPanelProps) {
@@ -51,7 +49,7 @@ export function TaskRosterPanel({
   )
 
   return (
-    <div className="flex h-full flex-col text-slate-100">
+    <div className="flex h-full flex-col bg-slate-950/30 text-slate-100">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
           Tasks
@@ -75,10 +73,10 @@ export function TaskRosterPanel({
               type="button"
               onClick={() => setFilter(option)}
               className={[
-                'flex-1 rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition',
+                'flex-1 rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition',
                 isActive
-                  ? 'border-white/30 bg-white/20 text-white shadow-sm shadow-black/30'
-                  : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10',
+                  ? 'border-white/40 bg-cockpit-accent/20 text-white shadow-sm shadow-black/40'
+                  : 'border-white/10 bg-slate-900/40 text-slate-300 hover:border-white/20 hover:text-slate-100',
               ].join(' ')}
             >
               {option}
@@ -121,7 +119,6 @@ export function TaskRosterPanel({
                 onSelect={onSelectTask}
                 onPause={onPauseTask}
                 onStop={onStopTask}
-                onSettings={onSettingsTask}
                 onRecord={onRecordTask}
                 onStopRecording={onStopRecording}
               />
