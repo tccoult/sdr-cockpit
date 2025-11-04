@@ -1,20 +1,20 @@
-import { Task } from '../../../types/sdr'
+import { Task } from "../../../types/sdr";
 
 export function getTaskStatusLabel(task?: Task | null): string {
   if (!task) {
-    return 'No Task Selected'
+    return "N/A";
   }
 
   switch (task.status) {
-    case 'live':
-      return 'Live'
-    case 'transmitting':
-      return 'Transmitting'
-    case 'paused':
-      return 'Paused'
-    case 'stopped':
-      return 'Stopped'
+    case "live":
+      return "Live";
+    case "transmitting":
+      return "Transmitting";
+    case "paused":
+      return "Paused";
+    case "stopped":
+      return "Stopped";
     default:
-      return 'Unknown'
+      return "Unknown";
   }
 }
