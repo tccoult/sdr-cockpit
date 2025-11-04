@@ -432,18 +432,29 @@ export function usePlot(config: PlotConfig): PlotInstanceInternal {
         ? window.devicePixelRatio || 1
         : 1;
 
-    const rect = canvas.getBoundingClientRect();
-    let cssWidth = rect.width || canvas.clientWidth;
-    let cssHeight = rect.height || canvas.clientHeight;
-    if (!cssWidth) {
+    const rect =
+      typeof canvas.getBoundingClientRect === "function"
+        ? canvas.getBoundingClientRect()
+        : undefined;
+    const clientWidth =
+      typeof canvas.clientWidth === "number" ? canvas.clientWidth : undefined;
+    const clientHeight =
+      typeof canvas.clientHeight === "number" ? canvas.clientHeight : undefined;
+    let cssWidth = rect?.width ?? clientWidth ?? 0;
+    let cssHeight = rect?.height ?? clientHeight ?? 0;
+    if (!cssWidth || Number.isNaN(cssWidth)) {
       const fallback = Number(canvas.getAttribute("width")) || FALLBACK_CANVAS_WIDTH;
       cssWidth = fallback;
-      canvas.style.width = `${fallback}px`;
+      if (canvas.style) {
+        canvas.style.width = `${fallback}px`;
+      }
     }
-    if (!cssHeight) {
+    if (!cssHeight || Number.isNaN(cssHeight)) {
       const fallback = Number(canvas.getAttribute("height")) || FALLBACK_CANVAS_HEIGHT;
       cssHeight = fallback;
-      canvas.style.height = `${fallback}px`;
+      if (canvas.style) {
+        canvas.style.height = `${fallback}px`;
+      }
     }
 
     const pixelWidth = Math.max(1, Math.round(cssWidth * dpr));
