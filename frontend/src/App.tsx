@@ -14,6 +14,7 @@ import { getTaskStatusLabel } from "./components/tasks/ActiveTaskPanel/taskStatu
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useWindowSize } from "./components/app/useWindowSize";
+import { ThemeToggle } from "./components/app/ThemeToggle";
 import { SpectrumView } from "./components/visualization/SpectrumView";
 import { PlotSandbox } from "./components/visualization/PlotSandbox";
 import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
@@ -136,10 +137,21 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
-  const viewerHeight = Math.max(
-    windowHeight - headerHeight - 32,
-    720
-  );
+  const layoutChrome = 72; // header/grid spacing + layout padding
+  const measuredContentHeight =
+    windowHeight > 0 ? windowHeight - headerHeight - layoutChrome : undefined;
+  const contentHeight =
+    measuredContentHeight !== undefined && measuredContentHeight > 0
+      ? measuredContentHeight
+      : undefined;
+  const sandboxSpacing = showPlotSandbox ? 284 : 0; // plot sandbox height (260) + margin (24)
+  const spectrumHeight =
+    contentHeight !== undefined
+      ? contentHeight - sandboxSpacing > 0
+        ? contentHeight - sandboxSpacing
+        : undefined
+      : undefined;
+
 
   // Update task uptimes and recordings
   useEffect(() => {
@@ -245,53 +257,56 @@ function App() {
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen((prev) => !prev)}
-                className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-md border border-white/10 bg-white/5 transition hover:bg-white/10 lg:hidden"
+                className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 lg:hidden dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 aria-label="Toggle task column"
               >
                 <span className="sr-only">Toggle task column</span>
-                <span className="h-0.5 w-6 rounded-full bg-white" />
-                <span className="h-0.5 w-6 rounded-full bg-white" />
-                <span className="h-0.5 w-6 rounded-full bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-slate-600 dark:bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-slate-600 dark:bg-white" />
+                <span className="h-0.5 w-6 rounded-full bg-slate-600 dark:bg-white" />
               </button>
 
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-white">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
                   SDR Cockpit
                 </h1>
                 {selectedTask && (
-                  <p className="mt-1 text-sm text-slate-300">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
                     {selectedTask.name} · {formatFrequency(selectedTask.frequency)}
                   </p>
                 )}
               </div>
             </div>
 
-            <CockpitTelemetryRail className="text-sm">
-              <div className="rounded-lg border border-white/10 bg-black/30 p-3 shadow-inner shadow-black/20">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Frame Rate
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">
-                  {fps}
-                  <span className="ml-1 text-xs font-normal text-slate-400">FPS</span>
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3 shadow-inner shadow-black/20">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Tasks Online
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">{totalTasks}</p>
-                <p className="text-xs text-slate-400">{operatorTasks} by operator</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 p-3 shadow-inner shadow-black/20">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Active Status
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">
-                  {taskStatusLabel}
-                </p>
-              </div>
-            </CockpitTelemetryRail>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+              <ThemeToggle />
+              <CockpitTelemetryRail className="text-sm">
+                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/30 dark:shadow-inner dark:shadow-black/20">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Frame Rate
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    {fps}
+                    <span className="ml-1 text-xs font-normal text-slate-500 dark:text-slate-400">FPS</span>
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/20 dark:shadow-inner dark:shadow-black/20">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Tasks Online
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{totalTasks}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{operatorTasks} by operator</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/20 dark:shadow-inner dark:shadow-black/20">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Active Status
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    {taskStatusLabel}
+                  </p>
+                </div>
+              </CockpitTelemetryRail>
+            </div>
           </div>
         </CockpitHeaderZone>
 
@@ -300,10 +315,15 @@ function App() {
           className={`lg:w-[320px] ${
             isMobile
               ? isSidebarOpen
-                ? 'z-50 rounded-2xl border border-white/10 bg-[rgba(10,10,15,0.95)] p-3 shadow-2xl'
+                ? 'z-50 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-300/60 dark:border-white/10 dark:bg-[rgba(10,10,15,0.95)] dark:shadow-2xl dark:shadow-black/60'
                 : 'hidden'
               : ''
           }`}
+          style={
+            !isMobile && typeof contentHeight === 'number'
+              ? { height: contentHeight }
+              : undefined
+          }
         >
           <CockpitSpotlightSection>
             <ActiveTaskPanel
@@ -326,36 +346,51 @@ function App() {
           </CockpitRosterSection>
         </CockpitColumn>
 
-        <CockpitColumn position="center" className="flex-1">
-          <CockpitMainArea className="backdrop-blur">
-            <div className="flex flex-1 flex-col">
+        <CockpitColumn
+          position="center"
+          className="flex-1 min-h-0"
+          style={
+            !isMobile && typeof contentHeight === 'number'
+              ? { height: contentHeight }
+              : undefined
+          }
+        >
+          <CockpitMainArea className="backdrop-blur min-h-0">
+            <div className="flex flex-1 flex-col min-h-0">
               {selectedTask ? (
-                <div
-                  className="w-full flex-1"
-                  style={{ minHeight: viewerHeight, animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}
-                >
-                  <SpectrumView
-                    taskId={selectedTask.id}
-                    centerFreq={selectedTask.frequency}
-                    sampleRate={selectedTask.sampleRate}
-                    colorMap={colorMap}
-                    availableHeight={viewerHeight}
-                  />
+                <>
+                  <div
+                    className="flex flex-1 h-full min-h-0 w-full"
+                    style={{
+                      ...(typeof spectrumHeight === 'number'
+                        ? { height: spectrumHeight }
+                        : {}),
+                      animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  >
+                    <SpectrumView
+                      taskId={selectedTask.id}
+                      centerFreq={selectedTask.frequency}
+                      sampleRate={selectedTask.sampleRate}
+                      colorMap={colorMap}
+                      availableHeight={typeof spectrumHeight === 'number' ? spectrumHeight : undefined}
+                    />
+                  </div>
                   {showPlotSandbox && (
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-6 flex flex-none justify-center">
                       <PlotSandbox
                         width={Math.min(Math.max(width - 160, 360), 960)}
                         height={260}
                       />
                     </div>
                   )}
-                </div>
+                </>
               ) : (
-                <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-300">
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
                   <div className="text-6xl">📡</div>
                   <div>
-                    <p className="text-xl font-semibold text-white">No Task Selected</p>
-                    <p className="mt-2 text-sm text-slate-400">
+                    <p className="text-xl font-semibold text-slate-900 dark:text-white">No Task Selected</p>
+                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       Select a task from the roster to view spectrum activity.
                     </p>
                   </div>

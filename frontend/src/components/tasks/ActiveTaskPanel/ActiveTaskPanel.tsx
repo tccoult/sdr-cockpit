@@ -24,21 +24,24 @@ export function ActiveTaskPanel({
   const { badgeClass, dotClass } = (() => {
     if (task?.status === "live" || task?.status === "transmitting") {
       return {
-        badgeClass: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-        dotClass: "bg-emerald-400 animate-pulse",
+        badgeClass:
+          "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-200",
+        dotClass: "bg-emerald-500 dark:bg-emerald-400 animate-pulse",
       };
     }
 
     if (task?.status === "paused") {
       return {
-        badgeClass: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+        badgeClass:
+          "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200",
         dotClass: "bg-amber-300",
       };
     }
 
     return {
-      badgeClass: "border-slate-500/40 bg-slate-500/10 text-slate-200",
-      dotClass: "bg-slate-300",
+      badgeClass:
+        "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200",
+      dotClass: "bg-slate-500 dark:bg-slate-300",
     };
   })();
 
@@ -46,13 +49,13 @@ export function ActiveTaskPanel({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">
+          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Active Task
           </p>
-          <h2 className="text-xl font-semibold text-white">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             {task ? task.name : "No task selected"}
           </h2>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {task
               ? `${formatFrequency(
                   task.frequency
@@ -69,27 +72,27 @@ export function ActiveTaskPanel({
       </div>
 
       {task && (
-        <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
+        <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-300">
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Sample Rate
             </p>
             <p>{task.sampleRate.toLocaleString()} sps</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Owner
             </p>
             <p>{task.ownerName}</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Uptime
             </p>
             <p>{Math.max(task.uptime, 0).toFixed(0)}s</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Recording
             </p>
             <p>
