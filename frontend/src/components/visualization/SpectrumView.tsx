@@ -17,7 +17,6 @@ interface SpectrumViewProps {
   centerFreq: number; // Center frequency in Hz
   sampleRate: number; // Sample rate in Hz
   colorMap: ColorMap; // Selected color map
-  availableHeight?: number;
 }
 
 export const SpectrumView = memo(function SpectrumView({
@@ -25,31 +24,20 @@ export const SpectrumView = memo(function SpectrumView({
   centerFreq,
   sampleRate,
   colorMap,
-  availableHeight,
 }: SpectrumViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(1200); // Default width
+  const [containerHeight, setContainerHeight] = useState(620); // Default height
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
 
   const layout = useMemo(() => {
-    const MIN_VIEW_HEIGHT = 620;
     const CONTROLS_RESERVE = 160;
-    const MIN_FFT_HEIGHT = 220;
-    const MIN_WATERFALL_HEIGHT = 320;
-
-    const fallbackViewHeight =
-      (typeof window !== "undefined"
-        ? window.innerHeight - 260
-        : MIN_VIEW_HEIGHT) || MIN_VIEW_HEIGHT;
-
-    const containerHeight = Math.max(
-      availableHeight ?? fallbackViewHeight,
-      MIN_VIEW_HEIGHT
-    );
+    const MIN_FFT_HEIGHT = 180;
+    const MIN_WATERFALL_HEIGHT = 240;
 
     const plotAreaHeight = Math.max(
       containerHeight - CONTROLS_RESERVE,
@@ -73,11 +61,10 @@ export const SpectrumView = memo(function SpectrumView({
     }
 
     return {
-      containerHeight,
       fftHeight,
       waterfallHeight,
     };
-  }, [availableHeight]);
+  }, [containerHeight]);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
@@ -140,6 +127,7 @@ export const SpectrumView = memo(function SpectrumView({
       const entry = entries[0];
       if (!entry) return;
       setContainerWidth(entry.contentRect.width);
+      setContainerHeight(entry.contentRect.height);
     });
 
     if (containerRef.current) {
@@ -152,7 +140,7 @@ export const SpectrumView = memo(function SpectrumView({
   const plotWidth = Math.max(containerWidth - 32, 0); // 32 for padding (16*2)
 
   const containerClasses = [
-    "flex flex-col gap-4 rounded-xl border p-4 md:p-6",
+    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-300/80",
@@ -168,7 +156,6 @@ export const SpectrumView = memo(function SpectrumView({
     <div
       ref={containerRef}
       className={containerClasses}
-      style={{ minHeight: layout.containerHeight }}
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
