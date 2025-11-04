@@ -312,27 +312,24 @@ function App() {
 
         <CockpitColumn position="center" className="flex-1">
           <CockpitMainArea className="backdrop-blur">
-            <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-              {selectedTask ? (
-                <>
-                  <div className="w-full flex-1 min-h-0">
-                    <SpectrumView
-                      taskId={selectedTask.id}
-                      centerFreq={selectedTask.frequency}
-                      sampleRate={selectedTask.sampleRate}
-                      colorMap={colorMap}
+            {selectedTask ? (
+              <>
+                <SpectrumView
+                  taskId={selectedTask.id}
+                  centerFreq={selectedTask.frequency}
+                  sampleRate={selectedTask.sampleRate}
+                  colorMap={colorMap}
+                />
+                {showPlotSandbox && (
+                  <div className="mt-6 flex flex-none justify-center">
+                    <PlotSandbox
+                      width={Math.min(Math.max(width - 160, 360), 960)}
+                      height={260}
                     />
                   </div>
-                  {showPlotSandbox && (
-                    <div className="mt-6 flex flex-none justify-center">
-                      <PlotSandbox
-                        width={Math.min(Math.max(width - 160, 360), 960)}
-                        height={260}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
+                )}
+              </>
+            ) : (
                 <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
                   <div className="text-6xl">📡</div>
                   <div>
@@ -349,8 +346,7 @@ function App() {
                     + Create New Task
                   </Button>
                 </div>
-              )}
-            </div>
+            )}
           </CockpitMainArea>
         </CockpitColumn>
       </CockpitLayout>

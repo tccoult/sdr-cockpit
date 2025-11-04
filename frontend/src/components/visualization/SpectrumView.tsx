@@ -3,7 +3,7 @@
  * Provides synchronized zoom, pan, and controls
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
@@ -29,42 +29,13 @@ export const SpectrumView = memo(function SpectrumView({
   const isDark = theme === "dark";
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(1200); // Default width
-  const [containerHeight, setContainerHeight] = useState(620); // Default height
+  const fftContainerRef = useRef<HTMLDivElement>(null);
+  const waterfallContainerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
+  const [fftHeight, setFftHeight] = useState(220);
+  const [waterfallHeight, setWaterfallHeight] = useState(320);
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
-
-  const layout = useMemo(() => {
-    const CONTROLS_RESERVE = 160;
-    const MIN_FFT_HEIGHT = 180;
-    const MIN_WATERFALL_HEIGHT = 240;
-
-    const plotAreaHeight = Math.max(
-      containerHeight - CONTROLS_RESERVE,
-      MIN_FFT_HEIGHT + MIN_WATERFALL_HEIGHT
-    );
-
-    let fftHeight = Math.max(Math.round(plotAreaHeight * 0.35), MIN_FFT_HEIGHT);
-    let waterfallHeight = plotAreaHeight - fftHeight;
-
-    if (waterfallHeight < MIN_WATERFALL_HEIGHT) {
-      waterfallHeight = MIN_WATERFALL_HEIGHT;
-      fftHeight = Math.max(plotAreaHeight - waterfallHeight, MIN_FFT_HEIGHT);
-    }
-
-    if (fftHeight < MIN_FFT_HEIGHT) {
-      fftHeight = MIN_FFT_HEIGHT;
-      waterfallHeight = Math.max(
-        plotAreaHeight - fftHeight,
-        MIN_WATERFALL_HEIGHT
-      );
-    }
-
-    return {
-      fftHeight,
-      waterfallHeight,
-    };
-  }, [containerHeight]);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
@@ -122,26 +93,23 @@ export const SpectrumView = memo(function SpectrumView({
     setFrequencyRange(newRange);
   }, []);
 
+  // Measure container width and plot container heights
   useEffect(() => {
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-
-      const newWidth = entry.contentRect.width;
-      const newHeight = entry.contentRect.height;
-
-      // Only update if there's a meaningful change to prevent feedback loops
-      setContainerWidth((prev) =>
-        Math.abs(prev - newWidth) > 1 ? newWidth : prev
-      );
-      setContainerHeight((prev) =>
-        Math.abs(prev - newHeight) > 1 ? newHeight : prev
-      );
+    const observer = new ResizeObserver(() => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+      if (fftContainerRef.current) {
+        setFftHeight(fftContainerRef.current.clientHeight);
+      }
+      if (waterfallContainerRef.current) {
+        setWaterfallHeight(waterfallContainerRef.current.clientHeight);
+      }
     });
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
+    if (containerRef.current) observer.observe(containerRef.current);
+    if (fftContainerRef.current) observer.observe(fftContainerRef.current);
+    if (waterfallContainerRef.current) observer.observe(waterfallContainerRef.current);
 
     return () => observer.disconnect();
   }, []);
@@ -149,7 +117,7 @@ export const SpectrumView = memo(function SpectrumView({
   const plotWidth = Math.max(containerWidth - 32, 0); // 32 for padding (16*2)
 
   const containerClasses = [
-    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0 max-h-full overflow-hidden",
+    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-300/80",
@@ -166,84 +134,86 @@ export const SpectrumView = memo(function SpectrumView({
       ref={containerRef}
       className={containerClasses}
     >
-      <div className="flex-none">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
-            <div className="text-sm text-slate-500 dark:text-slate-300">
-              Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
-              {formatFrequency(sampleRate)}
-            </div>
+      <div className="flex-none flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
+          <div className="text-sm text-slate-500 dark:text-slate-300">
+            Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
+            {formatFrequency(sampleRate)}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <div className="flex items-center gap-2">
+            <label htmlFor="min-db">Min dB:</label>
+            <input
+              id="min-db"
+              type="number"
+              value={minDb}
+              onChange={(event) => setMinDb(Number(event.target.value))}
+              className={controlInputClasses}
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-            <div className="flex items-center gap-2">
-              <label htmlFor="min-db">Min dB:</label>
-              <input
-                id="min-db"
-                type="number"
-                value={minDb}
-                onChange={(event) => setMinDb(Number(event.target.value))}
-                className={controlInputClasses}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label htmlFor="max-db">Max dB:</label>
-              <input
-                id="max-db"
-                type="number"
-                value={maxDb}
-                onChange={(event) => setMaxDb(Number(event.target.value))}
-                className={controlInputClasses}
-              />
-            </div>
-
-            <Button size="sm" variant="subtle" onClick={autoRange}>
-              Auto Range
-            </Button>
+          <div className="flex items-center gap-2">
+            <label htmlFor="max-db">Max dB:</label>
+            <input
+              id="max-db"
+              type="number"
+              value={maxDb}
+              onChange={(event) => setMaxDb(Number(event.target.value))}
+              className={controlInputClasses}
+            />
           </div>
+
+          <Button size="sm" variant="subtle" onClick={autoRange}>
+            Auto Range
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 min-h-0 overflow-y-auto">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
-          <FFTDisplay
-            width={plotWidth}
-            height={layout.fftHeight}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={taskId}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-          />
-        </div>
+      <div
+        ref={fftContainerRef}
+        className="flex-[35] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40"
+      >
+        <FFTDisplay
+          width={plotWidth}
+          height={Math.max(fftHeight - 24, 180)}
+          minDb={minDb}
+          maxDb={maxDb}
+          frequencyRange={frequencyRange}
+          dataKey={taskId}
+          onFrequencyRangeChange={handleFrequencyRangeChange}
+        />
+      </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
-          <WaterfallDisplay
-            width={plotWidth}
-            height={layout.waterfallHeight}
-            colorMap={colorMap}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={taskId}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-          />
-        </div>
+      <div
+        ref={waterfallContainerRef}
+        className="flex-[65] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40"
+      >
+        <WaterfallDisplay
+          width={plotWidth}
+          height={Math.max(waterfallHeight - 24, 240)}
+          colorMap={colorMap}
+          minDb={minDb}
+          maxDb={maxDb}
+          frequencyRange={frequencyRange}
+          dataKey={taskId}
+          onFrequencyRangeChange={handleFrequencyRangeChange}
+        />
+      </div>
 
-        <div
-          className={[
-            "rounded-lg border p-3 text-xs flex-none",
-            isDark
-              ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
-              : "border-cyan-500/30 bg-cyan-50 text-cyan-800",
-          ].join(" ")}
-        >
-          <strong className="font-semibold">Controls:</strong> Mouse wheel to zoom ·
-          Click and drag to pan ·{" "}
-          <strong className="font-semibold">Shift+Drag</strong> on FFT to zoom to range
-        </div>
+      <div
+        className={[
+          "flex-none rounded-lg border p-3 text-xs",
+          isDark
+            ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
+            : "border-cyan-500/30 bg-cyan-50 text-cyan-800",
+        ].join(" ")}
+      >
+        <strong className="font-semibold">Controls:</strong> Mouse wheel to zoom ·
+        Click and drag to pan ·{" "}
+        <strong className="font-semibold">Shift+Drag</strong> on FFT to zoom to range
       </div>
     </div>
   );
