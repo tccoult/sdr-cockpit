@@ -133,7 +133,6 @@ describe("usePlot", () => {
     const plot = result.current as PlotInstanceInternal;
     expect(plot.__debug?.traceCount).toBe(0);
 
-    let traceId: string | undefined;
     let handle!: TraceHandle1D;
     act(() => {
       handle = plot.addTrace1D({
@@ -143,7 +142,7 @@ describe("usePlot", () => {
     });
 
     expect(plot.__debug?.traceCount).toBe(1);
-    traceId = plot.__debug?.traceIds[0];
+    const traceId = plot.__debug?.traceIds[0];
     expect(traceId).toBeDefined();
 
     act(() => {

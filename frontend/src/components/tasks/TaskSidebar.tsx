@@ -16,11 +16,6 @@ interface TaskSidebarProps {
   isDiscovering: boolean;
   onSelectTask: (taskId: string) => void;
   onCreateTask: () => void;
-  onPauseTask?: (taskId: string) => void;
-  onStopTask?: (taskId: string) => void;
-  onSettingsTask?: (taskId: string) => void;
-  onRecordTask?: (taskId: string) => void;
-  onStopRecording?: (taskId: string) => void;
 }
 
 export function TaskSidebar({
@@ -29,11 +24,6 @@ export function TaskSidebar({
   isDiscovering,
   onSelectTask,
   onCreateTask,
-  onPauseTask,
-  onStopTask,
-  onSettingsTask,
-  onRecordTask,
-  onStopRecording,
 }: TaskSidebarProps) {
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -207,11 +197,6 @@ export function TaskSidebar({
               task={task}
               isSelected={task.id === selectedTaskId}
               onSelect={onSelectTask}
-              onPause={onPauseTask}
-              onStop={onStopTask}
-              onSettings={onSettingsTask}
-              onRecord={onRecordTask}
-              onStopRecording={onStopRecording}
             />
           ))
         )}
