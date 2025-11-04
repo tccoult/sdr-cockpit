@@ -137,21 +137,10 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
-  const layoutChrome = 72; // header/grid spacing + layout padding
-  const measuredContentHeight =
-    windowHeight > 0 ? windowHeight - headerHeight - layoutChrome : undefined;
-  const contentHeight =
-    measuredContentHeight !== undefined && measuredContentHeight > 0
-      ? measuredContentHeight
-      : undefined;
-  const sandboxSpacing = showPlotSandbox ? 284 : 0; // plot sandbox height (260) + margin (24)
-  const spectrumHeight =
-    contentHeight !== undefined
-      ? contentHeight - sandboxSpacing > 0
-        ? contentHeight - sandboxSpacing
-        : undefined
-      : undefined;
-
+  const viewerHeight = Math.max(
+    windowHeight - headerHeight - 32,
+    720
+  );
 
   // Update task uptimes and recordings
   useEffect(() => {
@@ -319,11 +308,6 @@ function App() {
                 : 'hidden'
               : ''
           }`}
-          style={
-            !isMobile && typeof contentHeight === 'number'
-              ? { height: contentHeight }
-              : undefined
-          }
         >
           <CockpitSpotlightSection>
             <ActiveTaskPanel
@@ -346,25 +330,15 @@ function App() {
           </CockpitRosterSection>
         </CockpitColumn>
 
-        <CockpitColumn
-          position="center"
-          className="flex-1 min-h-0"
-          style={
-            !isMobile && typeof contentHeight === 'number'
-              ? { height: contentHeight }
-              : undefined
-          }
-        >
-          <CockpitMainArea className="backdrop-blur min-h-0">
-            <div className="flex flex-1 flex-col min-h-0">
+        <CockpitColumn position="center" className="flex-1">
+          <CockpitMainArea className="backdrop-blur">
+            <div className="flex flex-1 flex-col">
               {selectedTask ? (
                 <>
                   <div
-                    className="flex flex-1 h-full min-h-0 w-full"
+                    className="w-full flex-1"
                     style={{
-                      ...(typeof spectrumHeight === 'number'
-                        ? { height: spectrumHeight }
-                        : {}),
+                      minHeight: viewerHeight,
                       animation: "slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
@@ -373,7 +347,7 @@ function App() {
                       centerFreq={selectedTask.frequency}
                       sampleRate={selectedTask.sampleRate}
                       colorMap={colorMap}
-                      availableHeight={typeof spectrumHeight === 'number' ? spectrumHeight : undefined}
+                      availableHeight={viewerHeight}
                     />
                   </div>
                   {showPlotSandbox && (

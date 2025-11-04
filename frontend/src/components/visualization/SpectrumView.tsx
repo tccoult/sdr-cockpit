@@ -30,61 +30,65 @@ export const SpectrumView = memo(function SpectrumView({
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  // Display settings
-  const plotAreaRef = useRef<HTMLDivElement>(null);
-  const [plotSize, setPlotSize] = useState({ width: 0, height: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200); // Default width
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
+
   const layout = useMemo(() => {
-    const MIN_FFT_HEIGHT = 180;
-    const MIN_WATERFALL_HEIGHT = 240;
-    const MIN_TOTAL = MIN_FFT_HEIGHT + MIN_WATERFALL_HEIGHT;
+    const MIN_VIEW_HEIGHT = 620;
+    const CONTROLS_RESERVE = 160;
+    const MIN_FFT_HEIGHT = 220;
+    const MIN_WATERFALL_HEIGHT = 320;
 
-    const available = plotSize.height;
-    if (available <= 0) {
-      return {
-        fftHeight: MIN_FFT_HEIGHT,
-        waterfallHeight: MIN_WATERFALL_HEIGHT,
-      };
+    const fallbackViewHeight =
+      (typeof window !== "undefined"
+        ? window.innerHeight - 260
+        : MIN_VIEW_HEIGHT) || MIN_VIEW_HEIGHT;
+
+    const containerHeight = Math.max(
+      availableHeight ?? fallbackViewHeight,
+      MIN_VIEW_HEIGHT
+    );
+
+    const plotAreaHeight = Math.max(
+      containerHeight - CONTROLS_RESERVE,
+      MIN_FFT_HEIGHT + MIN_WATERFALL_HEIGHT
+    );
+
+    let fftHeight = Math.max(Math.round(plotAreaHeight * 0.35), MIN_FFT_HEIGHT);
+    let waterfallHeight = plotAreaHeight - fftHeight;
+
+    if (waterfallHeight < MIN_WATERFALL_HEIGHT) {
+      waterfallHeight = MIN_WATERFALL_HEIGHT;
+      fftHeight = Math.max(plotAreaHeight - waterfallHeight, MIN_FFT_HEIGHT);
     }
 
-    if (available >= MIN_TOTAL) {
-      let fftHeight = Math.max(Math.round(available * 0.35), MIN_FFT_HEIGHT);
-      let waterfallHeight = Math.max(available - fftHeight, MIN_WATERFALL_HEIGHT);
-
-      if (waterfallHeight < MIN_WATERFALL_HEIGHT) {
-        waterfallHeight = MIN_WATERFALL_HEIGHT;
-        fftHeight = Math.max(available - waterfallHeight, MIN_FFT_HEIGHT);
-      }
-
-      if (fftHeight < MIN_FFT_HEIGHT) {
-        fftHeight = MIN_FFT_HEIGHT;
-        waterfallHeight = Math.max(available - fftHeight, MIN_WATERFALL_HEIGHT);
-      }
-
-      return { fftHeight, waterfallHeight };
+    if (fftHeight < MIN_FFT_HEIGHT) {
+      fftHeight = MIN_FFT_HEIGHT;
+      waterfallHeight = Math.max(
+        plotAreaHeight - fftHeight,
+        MIN_WATERFALL_HEIGHT
+      );
     }
 
-    const fftShare = MIN_FFT_HEIGHT / MIN_TOTAL;
-    const fftHeight = Math.max(Math.round(available * fftShare), 0);
-    const waterfallHeight = Math.max(available - fftHeight, 0);
+    return {
+      containerHeight,
+      fftHeight,
+      waterfallHeight,
+    };
+  }, [availableHeight]);
 
-    return { fftHeight, waterfallHeight };
-  }, [plotSize.height]);
-
-  // Frequency range state (shared between FFT and waterfall)
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
     endFreq: centerFreq + sampleRate / 2,
   });
 
-  // Store current FFT data for auto-ranging
   const currentFFTRef = useRef<FFTData | null>(null);
   useEffect(() => {
     currentFFTRef.current = null;
   }, [taskId]);
 
-  // Listen to FFT data events to track current data
   useEffect(() => {
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
@@ -95,22 +99,18 @@ export const SpectrumView = memo(function SpectrumView({
     return () => window.removeEventListener("fft-data", handleFFTData);
   }, []);
 
-  // Auto range function
   const autoRange = useCallback(() => {
-    // Reset frequency range to full spectrum
     setFrequencyRange({
       startFreq: centerFreq - sampleRate / 2,
       endFreq: centerFreq + sampleRate / 2,
     });
 
-    // Auto range Y-axis based on current FFT data
     const fftData = currentFFTRef.current;
     if (fftData && fftData.bins.length > 0) {
       let min = Infinity;
       let max = -Infinity;
 
-      // Find min/max power values in FFT data
-      for (let i = 0; i < fftData.bins.length; i++) {
+      for (let i = 0; i < fftData.bins.length; i += 1) {
         const value = fftData.bins[i];
         if (isFinite(value)) {
           min = Math.min(min, value);
@@ -118,7 +118,6 @@ export const SpectrumView = memo(function SpectrumView({
         }
       }
 
-      // Add padding (10% on each side)
       if (isFinite(min) && isFinite(max) && max > min) {
         const range = max - min;
         const padding = range * 0.1;
@@ -128,48 +127,29 @@ export const SpectrumView = memo(function SpectrumView({
     }
   }, [centerFreq, sampleRate]);
 
-  // Auto range when task switches (centerFreq or sampleRate changes)
   useEffect(() => {
     autoRange();
   }, [centerFreq, sampleRate, autoRange]);
 
-  // Handle frequency range changes (from zoom/pan)
   const handleFrequencyRangeChange = useCallback((newRange: FrequencyRange) => {
     setFrequencyRange(newRange);
   }, []);
 
-  // Get container dimensions (responsive)
-
   useEffect(() => {
-    const node = plotAreaRef.current;
-    if (!node) {
-      return;
-    }
-
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-
-      const { width, height } = entry.contentRect;
-      setPlotSize((prev) => {
-        const nextWidth = Math.max(width, 0);
-        const nextHeight = Math.max(height, 0);
-        if (
-          Math.abs(prev.width - nextWidth) < 1 &&
-          Math.abs(prev.height - nextHeight) < 1
-        ) {
-          return prev;
-        }
-        return { width: nextWidth, height: nextHeight };
-      });
+      setContainerWidth(entry.contentRect.width);
     });
 
-    observer.observe(node);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
     return () => observer.disconnect();
   }, []);
 
-  const CARD_PADDING_X = 24; // px padding inside plot cards (p-3)
-  const plotWidth = Math.max(plotSize.width - CARD_PADDING_X, 0);
+  const plotWidth = Math.max(containerWidth - 32, 0); // 32 for padding (16*2)
 
   const containerClasses = [
     "flex flex-col gap-4 rounded-xl border p-4 md:p-6",
@@ -186,86 +166,76 @@ export const SpectrumView = memo(function SpectrumView({
 
   return (
     <div
-      className={`${containerClasses} flex h-full min-h-0 flex-col`}
-      style={
-        typeof availableHeight === "number" && availableHeight > 0
-          ? { height: availableHeight }
-          : undefined
-      }
+      ref={containerRef}
+      className={containerClasses}
+      style={{ minHeight: layout.containerHeight }}
     >
-      <div className="flex-none space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
-            <div className="text-sm text-slate-500 dark:text-slate-300">
-              Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
-              {formatFrequency(sampleRate)}
-            </div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
+          <div className="text-sm text-slate-500 dark:text-slate-300">
+            Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
+            {formatFrequency(sampleRate)}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <div className="flex items-center gap-2">
+            <label htmlFor="min-db">Min dB:</label>
+            <input
+              id="min-db"
+              type="number"
+              value={minDb}
+              onChange={(event) => setMinDb(Number(event.target.value))}
+              className={controlInputClasses}
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-            <div className="flex items-center gap-2">
-              <label htmlFor="min-db">Min dB:</label>
-              <input
-                id="min-db"
-                type="number"
-                value={minDb}
-                onChange={(event) => setMinDb(Number(event.target.value))}
-                className={controlInputClasses}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label htmlFor="max-db">Max dB:</label>
-              <input
-                id="max-db"
-                type="number"
-                value={maxDb}
-                onChange={(event) => setMaxDb(Number(event.target.value))}
-                className={controlInputClasses}
-              />
-            </div>
-
-            <Button size="sm" variant="subtle" onClick={autoRange}>
-              Auto Range
-            </Button>
+          <div className="flex items-center gap-2">
+            <label htmlFor="max-db">Max dB:</label>
+            <input
+              id="max-db"
+              type="number"
+              value={maxDb}
+              onChange={(event) => setMaxDb(Number(event.target.value))}
+              className={controlInputClasses}
+            />
           </div>
+
+          <Button size="sm" variant="subtle" onClick={autoRange}>
+            Auto Range
+          </Button>
         </div>
       </div>
 
-      <div
-        ref={plotAreaRef}
-        className="flex flex-1 min-h-0 flex-col gap-4"
-      >
-        <div className="flex-none rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
-          <FFTDisplay
-            width={plotWidth}
-            height={layout.fftHeight}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={taskId}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-          />
-        </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
+        <FFTDisplay
+          width={plotWidth}
+          height={layout.fftHeight}
+          minDb={minDb}
+          maxDb={maxDb}
+          frequencyRange={frequencyRange}
+          dataKey={taskId}
+          onFrequencyRangeChange={handleFrequencyRangeChange}
+        />
+      </div>
 
-        <div className="flex-none rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
-          <WaterfallDisplay
-            width={plotWidth}
-            height={layout.waterfallHeight}
-            colorMap={colorMap}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={taskId}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-          />
-        </div>
+      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
+        <WaterfallDisplay
+          width={plotWidth}
+          height={layout.waterfallHeight}
+          colorMap={colorMap}
+          minDb={minDb}
+          maxDb={maxDb}
+          frequencyRange={frequencyRange}
+          dataKey={taskId}
+          onFrequencyRangeChange={handleFrequencyRangeChange}
+        />
       </div>
 
       <div
         className={[
-          "mt-4 flex-none rounded-lg border p-3 text-xs",
+          "mt-4 rounded-lg border p-3 text-xs",
           isDark
             ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
             : "border-cyan-500/30 bg-cyan-50 text-cyan-800",

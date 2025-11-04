@@ -41,9 +41,9 @@ export function CockpitLayout({
     >
       <div
         className={cn(
-          'mx-auto flex w-full max-w-[1680px] flex-col gap-6 px-4 py-6',
-          'lg:grid lg:grid-rows-[auto_minmax(0,1fr)]',
-          'lg:h-full lg:[&>*]:min-h-0 lg:overflow-hidden',
+          'mx-auto flex min-h-screen w-full max-w-[1680px] flex-col gap-6 px-4 py-6',
+          'lg:grid lg:grid-rows-[auto_1fr]',
+          'lg:h-full lg:overflow-hidden lg:[&>*]:min-h-0',
           columnTemplate
         )}
       >
@@ -100,7 +100,8 @@ export function CockpitColumn({
   return (
     <section
       className={cn(
-        'flex min-h-0 flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-hidden',
+        'flex min-h-0 flex-col gap-4',
+        'lg:h-full lg:overflow-hidden',
         positionClasses[position],
         className
       )}
@@ -170,7 +171,7 @@ export function CockpitMainArea({
   return (
     <main
       className={cn(
-        'flex flex-1 flex-col gap-6 min-h-0 lg:overflow-hidden',
+        'flex flex-1 flex-col gap-6',
         className
       )}
       {...props}
