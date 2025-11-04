@@ -170,7 +170,7 @@ export function CockpitMainArea({
   return (
     <main
       className={cn(
-        'flex flex-1 flex-col gap-6 overflow-y-auto',
+        'flex flex-1 flex-col gap-6 overflow-hidden',
         'min-h-0',
         className
       )}

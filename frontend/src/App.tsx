@@ -312,10 +312,10 @@ function App() {
 
         <CockpitColumn position="center" className="flex-1">
           <CockpitMainArea className="backdrop-blur">
-            <div className="flex flex-1 flex-col min-h-0">
+            <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
               {selectedTask ? (
                 <>
-                  <div className="w-full flex-1">
+                  <div className="w-full flex-1 min-h-0">
                     <SpectrumView
                       taskId={selectedTask.id}
                       centerFreq={selectedTask.frequency}

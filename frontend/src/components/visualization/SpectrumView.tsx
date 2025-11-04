@@ -126,8 +126,17 @@ export const SpectrumView = memo(function SpectrumView({
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-      setContainerWidth(entry.contentRect.width);
-      setContainerHeight(entry.contentRect.height);
+
+      const newWidth = entry.contentRect.width;
+      const newHeight = entry.contentRect.height;
+
+      // Only update if there's a meaningful change to prevent feedback loops
+      setContainerWidth((prev) =>
+        Math.abs(prev - newWidth) > 1 ? newWidth : prev
+      );
+      setContainerHeight((prev) =>
+        Math.abs(prev - newHeight) > 1 ? newHeight : prev
+      );
     });
 
     if (containerRef.current) {
@@ -140,7 +149,7 @@ export const SpectrumView = memo(function SpectrumView({
   const plotWidth = Math.max(containerWidth - 32, 0); // 32 for padding (16*2)
 
   const containerClasses = [
-    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0",
+    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0 max-h-full overflow-hidden",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-300/80",
@@ -157,80 +166,84 @@ export const SpectrumView = memo(function SpectrumView({
       ref={containerRef}
       className={containerClasses}
     >
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
-          <div className="text-sm text-slate-500 dark:text-slate-300">
-            Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
-            {formatFrequency(sampleRate)}
+      <div className="flex-none">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
+            <div className="text-sm text-slate-500 dark:text-slate-300">
+              Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
+              {formatFrequency(sampleRate)}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-2">
+              <label htmlFor="min-db">Min dB:</label>
+              <input
+                id="min-db"
+                type="number"
+                value={minDb}
+                onChange={(event) => setMinDb(Number(event.target.value))}
+                className={controlInputClasses}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="max-db">Max dB:</label>
+              <input
+                id="max-db"
+                type="number"
+                value={maxDb}
+                onChange={(event) => setMaxDb(Number(event.target.value))}
+                className={controlInputClasses}
+              />
+            </div>
+
+            <Button size="sm" variant="subtle" onClick={autoRange}>
+              Auto Range
+            </Button>
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-          <div className="flex items-center gap-2">
-            <label htmlFor="min-db">Min dB:</label>
-            <input
-              id="min-db"
-              type="number"
-              value={minDb}
-              onChange={(event) => setMinDb(Number(event.target.value))}
-              className={controlInputClasses}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label htmlFor="max-db">Max dB:</label>
-            <input
-              id="max-db"
-              type="number"
-              value={maxDb}
-              onChange={(event) => setMaxDb(Number(event.target.value))}
-              className={controlInputClasses}
-            />
-          </div>
-
-          <Button size="sm" variant="subtle" onClick={autoRange}>
-            Auto Range
-          </Button>
+      <div className="flex flex-1 flex-col gap-4 min-h-0 overflow-y-auto">
+        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
+          <FFTDisplay
+            width={plotWidth}
+            height={layout.fftHeight}
+            minDb={minDb}
+            maxDb={maxDb}
+            frequencyRange={frequencyRange}
+            dataKey={taskId}
+            onFrequencyRangeChange={handleFrequencyRangeChange}
+          />
         </div>
-      </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
-        <FFTDisplay
-          width={plotWidth}
-          height={layout.fftHeight}
-          minDb={minDb}
-          maxDb={maxDb}
-          frequencyRange={frequencyRange}
-          dataKey={taskId}
-          onFrequencyRangeChange={handleFrequencyRangeChange}
-        />
-      </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
+          <WaterfallDisplay
+            width={plotWidth}
+            height={layout.waterfallHeight}
+            colorMap={colorMap}
+            minDb={minDb}
+            maxDb={maxDb}
+            frequencyRange={frequencyRange}
+            dataKey={taskId}
+            onFrequencyRangeChange={handleFrequencyRangeChange}
+          />
+        </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40">
-        <WaterfallDisplay
-          width={plotWidth}
-          height={layout.waterfallHeight}
-          colorMap={colorMap}
-          minDb={minDb}
-          maxDb={maxDb}
-          frequencyRange={frequencyRange}
-          dataKey={taskId}
-          onFrequencyRangeChange={handleFrequencyRangeChange}
-        />
-      </div>
-
-      <div
-        className={[
-          "mt-4 rounded-lg border p-3 text-xs",
-          isDark
-            ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
-            : "border-cyan-500/30 bg-cyan-50 text-cyan-800",
-        ].join(" ")}
-      >
-        <strong className="font-semibold">Controls:</strong> Mouse wheel to zoom ·
-        Click and drag to pan ·{" "}
-        <strong className="font-semibold">Shift+Drag</strong> on FFT to zoom to range
+        <div
+          className={[
+            "rounded-lg border p-3 text-xs flex-none",
+            isDark
+              ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
+              : "border-cyan-500/30 bg-cyan-50 text-cyan-800",
+          ].join(" ")}
+        >
+          <strong className="font-semibold">Controls:</strong> Mouse wheel to zoom ·
+          Click and drag to pan ·{" "}
+          <strong className="font-semibold">Shift+Drag</strong> on FFT to zoom to range
+        </div>
       </div>
     </div>
   );
