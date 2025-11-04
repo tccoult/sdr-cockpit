@@ -2,25 +2,7 @@ import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { Task } from "../../../types/sdr";
 import { formatFrequency } from "../../../utils/formatters";
 import { Button } from "../../common/Button";
-
-export function getTaskStatusLabel(task: Task | null): string {
-  if (!task) {
-    return "N/A";
-  }
-
-  switch (task.status) {
-    case "live":
-      return "Live";
-    case "transmitting":
-      return "Transmitting";
-    case "paused":
-      return "Paused";
-    case "stopped":
-      return "Stopped";
-    default:
-      return "Unknown";
-  }
-}
+import { getTaskStatusLabel } from "./taskStatus";
 
 interface ActiveTaskPanelProps {
   task: Task | null;

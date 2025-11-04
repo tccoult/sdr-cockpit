@@ -1,20 +1,23 @@
-/**
- * TaskWizard component - modal for creating new tasks
- */
+import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
+import { Button } from '../common/Button'
+import { Input } from '../common/Input'
+import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr'
 
-import { useState } from 'react';
-import { Button } from '../common/Button';
-import { Input } from '../common/Input';
-import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr';
-
-type TaskMode = 'select' | 'rx' | 'tx';
+type TaskMode = 'select' | 'rx' | 'tx'
 
 interface TaskWizardProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreateRxTask: (params: CreateRxTaskParams) => void;
-  onCreateTxTask: (params: CreateTxTaskParams) => void;
+  isOpen: boolean
+  onClose: () => void
+  onCreateRxTask: (params: CreateRxTaskParams) => void
+  onCreateTxTask: (params: CreateTxTaskParams) => void
 }
+
+const labelClass =
+  'mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400'
+const selectClass =
+  'h-11 w-full rounded-lg border border-white/15 bg-white/10 px-3 text-sm text-slate-100 transition focus:border-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40'
+const checkboxClass =
+  'h-4 w-4 rounded border-white/30 bg-slate-900/70 accent-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40'
 
 export function TaskWizard({
   isOpen,
@@ -22,34 +25,48 @@ export function TaskWizard({
   onCreateRxTask,
   onCreateTxTask,
 }: TaskWizardProps) {
-  const [mode, setMode] = useState<TaskMode>('select');
+  const [mode, setMode] = useState<TaskMode>('select')
 
   // RX form state
-  const [rxName, setRxName] = useState('');
-  const [rxFrequency, setRxFrequency] = useState('915.0');
-  const [rxFreqUnit, setRxFreqUnit] = useState<'Hz' | 'kHz' | 'MHz' | 'GHz'>('MHz');
-  const [rxSampleRate, setRxSampleRate] = useState('2.4');
-  const [rxBandwidth, setRxBandwidth] = useState('2.0');
-  const [rxFftSize, setRxFftSize] = useState('2048');
+  const [rxName, setRxName] = useState('')
+  const [rxFrequency, setRxFrequency] = useState('915.0')
+  const [rxFreqUnit, setRxFreqUnit] = useState<'Hz' | 'kHz' | 'MHz' | 'GHz'>(
+    'MHz'
+  )
+  const [rxSampleRate, setRxSampleRate] = useState('2.4')
+  const [rxBandwidth, setRxBandwidth] = useState('2.0')
+  const [rxFftSize, setRxFftSize] = useState('2048')
 
   // TX form state
-  const [txName, setTxName] = useState('');
-  const [txFile, setTxFile] = useState<File | null>(null);
-  const [txFrequency, setTxFrequency] = useState('');
-  const [txUseOriginalFreq, setTxUseOriginalFreq] = useState(true);
-  const [txLoop, setTxLoop] = useState(false);
+  const [txName, setTxName] = useState('')
+  const [txFile, setTxFile] = useState<File | null>(null)
+  const [txFrequency, setTxFrequency] = useState('')
+  const [txUseOriginalFreq, setTxUseOriginalFreq] = useState(true)
+  const [txLoop, setTxLoop] = useState(false)
 
-  if (!isOpen) return null;
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  if (!isOpen) return null
+
+  const resetState = () => {
+    setMode('select')
+    setRxName('')
+    setRxFrequency('915.0')
+    setRxFreqUnit('MHz')
+    setRxSampleRate('2.4')
+    setRxBandwidth('2.0')
+    setRxFftSize('2048')
+    setTxName('')
+    setTxFile(null)
+    setTxFrequency('')
+    setTxUseOriginalFreq(true)
+    setTxLoop(false)
+  }
 
   const handleClose = () => {
-    // Reset form
-    setMode('select');
-    setRxName('');
-    setRxFrequency('915.0');
-    setTxName('');
-    setTxFile(null);
-    onClose();
-  };
+    resetState()
+    onClose()
+  }
 
   const handleCreateRx = () => {
     const freqMultiplier = {
@@ -57,7 +74,7 @@ export function TaskWizard({
       kHz: 1e3,
       MHz: 1e6,
       GHz: 1e9,
-    }[rxFreqUnit];
+    }[rxFreqUnit]
 
     onCreateRxTask({
       name: rxName || 'Untitled RX Task',
@@ -65,181 +82,124 @@ export function TaskWizard({
       sampleRate: parseFloat(rxSampleRate) * 1e6, // MSPS
       bandwidth: parseFloat(rxBandwidth) * 1e6, // MHz
       fftSize: parseInt(rxFftSize),
-    });
-    handleClose();
-  };
+    })
+    handleClose()
+  }
 
   const handleCreateTx = () => {
-    if (!txFile) return;
+    if (!txFile) return
 
     onCreateTxTask({
       name: txName || txFile.name,
       file: txFile,
       frequency: txUseOriginalFreq ? undefined : parseFloat(txFrequency) * 1e6,
       loop: txLoop,
-    });
-    handleClose();
-  };
+    })
+    handleClose()
+  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
     if (file) {
-      setTxFile(file);
+      setTxFile(file)
       if (!txName) {
-        setTxName(file.name.replace('.sigmf', ''));
+        setTxName(file.name.replace('.sigmf', ''))
       }
     }
-  };
+  }
+
+  const handleFilePicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFilePickerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleFilePicker()
+    }
+  }
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        animation: 'fadeIn 0.2s ease',
-      }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={handleClose}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'rgba(20, 20, 30, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: 12,
-          padding: 24,
-          maxWidth: 500,
-          width: '90%',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-          animation: 'slideUp 0.3s ease',
-        }}
+        className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-950/90 p-6 shadow-2xl shadow-black/60"
+        onClick={(event) => event.stopPropagation()}
       >
         {mode === 'select' && (
-          <>
-            <h2 style={{ margin: '0 0 20px 0', color: 'white', fontSize: 22 }}>
-              Create New Task
-            </h2>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-white">Create New Task</h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="grid gap-4">
               <button
+                type="button"
                 onClick={() => setMode('rx')}
-                style={{
-                  padding: 20,
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: 8,
-                  color: 'white',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                }}
+                className="rounded-xl border border-white/10 bg-white/5 p-5 text-left transition hover:border-white/20 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
-                <div style={{ fontSize: 18, marginBottom: 6 }}>📡 Receive Signal</div>
-                <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.7)' }}>
-                  Monitor and analyze RF signals
-                </div>
+                <div className="text-xl font-semibold text-white">📡 Receive Signal</div>
+                <p className="mt-2 text-sm text-slate-300">
+                  Monitor and analyze RF signals in real time.
+                </p>
               </button>
 
               <button
+                type="button"
                 onClick={() => setMode('tx')}
-                style={{
-                  padding: 20,
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: 8,
-                  color: 'white',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                }}
+                className="rounded-xl border border-white/10 bg-white/5 p-5 text-left transition hover:border-white/20 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
-                <div style={{ fontSize: 18, marginBottom: 6 }}>📤 Transmit File</div>
-                <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.7)' }}>
-                  Playback a SigMF recording
-                </div>
+                <div className="text-xl font-semibold text-white">📤 Transmit File</div>
+                <p className="mt-2 text-sm text-slate-300">
+                  Playback an existing SigMF recording over the air.
+                </p>
               </button>
             </div>
 
-            <Button
-              onClick={handleClose}
-              variant="subtle"
-              fullWidth
-              style={{ marginTop: 20 }}
-            >
+            <Button variant="subtle" fullWidth onClick={handleClose}>
               Cancel
             </Button>
-          </>
+          </div>
         )}
 
         {mode === 'rx' && (
-          <>
-            <h2 style={{ margin: '0 0 20px 0', color: 'white', fontSize: 22 }}>
-              Create Receive Task
-            </h2>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-white">Create Receive Task</h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="space-y-5">
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+                <label htmlFor="rx-name" className={labelClass}>
                   Task Name
                 </label>
                 <Input
+                  id="rx-name"
                   type="text"
                   value={rxName}
-                  onChange={(e) => setRxName(e.target.value)}
+                  onChange={(event) => setRxName(event.target.value)}
                   placeholder="ISM Band Monitor"
                   fullWidth
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+                <label htmlFor="rx-frequency" className={labelClass}>
                   Frequency
                 </label>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-3">
                   <Input
+                    id="rx-frequency"
                     type="number"
                     value={rxFrequency}
-                    onChange={(e) => setRxFrequency(e.target.value)}
+                    onChange={(event) => setRxFrequency(event.target.value)}
                     step="0.001"
-                    style={{ flex: 1 }}
+                    fullWidth
                   />
                   <select
                     value={rxFreqUnit}
-                    onChange={(e) => setRxFreqUnit(e.target.value as 'Hz' | 'kHz' | 'MHz' | 'GHz')}
-                    style={{
-                      padding: '10px 12px',
-                      background: 'rgba(30, 30, 40, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 6,
-                      color: 'white',
-                      fontSize: 14,
-                    }}
+                    onChange={(event) =>
+                      setRxFreqUnit(event.target.value as typeof rxFreqUnit)
+                    }
+                    className={selectClass}
                   >
                     <option value="Hz">Hz</option>
                     <option value="kHz">kHz</option>
@@ -249,28 +209,30 @@ export function TaskWizard({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label htmlFor="rx-sample-rate" className={labelClass}>
                     Sample Rate (MSPS)
                   </label>
                   <Input
+                    id="rx-sample-rate"
                     type="number"
                     value={rxSampleRate}
-                    onChange={(e) => setRxSampleRate(e.target.value)}
+                    onChange={(event) => setRxSampleRate(event.target.value)}
                     step="0.1"
                     fullWidth
                   />
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+                <div>
+                  <label htmlFor="rx-bandwidth" className={labelClass}>
                     Bandwidth (MHz)
                   </label>
                   <Input
+                    id="rx-bandwidth"
                     type="number"
                     value={rxBandwidth}
-                    onChange={(e) => setRxBandwidth(e.target.value)}
+                    onChange={(event) => setRxBandwidth(event.target.value)}
                     step="0.1"
                     fullWidth
                   />
@@ -278,21 +240,14 @@ export function TaskWizard({
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+                <label htmlFor="rx-fft-size" className={labelClass}>
                   FFT Size
                 </label>
                 <select
+                  id="rx-fft-size"
                   value={rxFftSize}
-                  onChange={(e) => setRxFftSize(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'rgba(30, 30, 40, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'white',
-                    fontSize: 14,
-                  }}
+                  onChange={(event) => setRxFftSize(event.target.value)}
+                  className={selectClass}
                 >
                   <option value="1024">1024</option>
                   <option value="2048">2048</option>
@@ -301,125 +256,92 @@ export function TaskWizard({
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                <button
-                  onClick={() => setMode('select')}
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                  }}
-                >
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <Button variant="subtle" onClick={() => setMode('select')}>
                   Back
-                </button>
-                <button
-                  onClick={handleCreateRx}
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: 6,
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
+                </Button>
+                <Button variant="primary" onClick={handleCreateRx}>
                   Create Task
-                </button>
+                </Button>
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {mode === 'tx' && (
-          <>
-            <h2 style={{ margin: '0 0 20px 0', color: 'white', fontSize: 22 }}>
-              Transmit SigMF File
-            </h2>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-white">Transmit SigMF File</h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="space-y-5">
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+                <label htmlFor="tx-name" className={labelClass}>
                   Task Name
                 </label>
                 <Input
+                  id="tx-name"
                   type="text"
                   value={txName}
-                  onChange={(e) => setTxName(e.target.value)}
+                  onChange={(event) => setTxName(event.target.value)}
                   placeholder="TX Playback"
                   fullWidth
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
-                  SigMF File
-                </label>
+                <label className={labelClass}>SigMF File</label>
                 <div
-                  style={{
-                    border: '2px dashed rgba(255, 255, 255, 0.2)',
-                    borderRadius: 8,
-                    padding: 24,
-                    textAlign: 'center',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => document.getElementById('file-input')?.click()}
+                  tabIndex={0}
+                  role="button"
+                  className="rounded-xl border-2 border-dashed border-white/20 bg-white/5 p-6 text-center text-slate-300 transition hover:border-white/30 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  onClick={handleFilePicker}
+                  onKeyDown={handleFilePickerKeyDown}
                 >
                   <input
-                    id="file-input"
+                    ref={fileInputRef}
                     type="file"
                     accept=".sigmf"
                     onChange={handleFileChange}
-                    style={{ display: 'none' }}
+                    className="hidden"
                   />
                   {txFile ? (
                     <div>
-                      <div style={{ fontSize: 16, marginBottom: 6 }}>✓ {txFile.name}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>
+                      <p className="text-lg font-semibold text-white">✓ {txFile.name}</p>
+                      <p className="mt-1 text-sm text-slate-400">
                         {(txFile.size / 1024 / 1024).toFixed(2)} MB
-                      </div>
+                      </p>
                     </div>
                   ) : (
-                    <div style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                      <div style={{ fontSize: 16, marginBottom: 6 }}>Drop file or click to browse</div>
-                      <div style={{ fontSize: 12 }}>SigMF files only</div>
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        Drop file or click to browse
+                      </p>
+                      <p className="mt-1 text-sm text-slate-400">SigMF files only</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={txUseOriginalFreq}
-                      onChange={(e) => setTxUseOriginalFreq(e.target.checked)}
-                      style={{ width: 16, height: 16 }}
-                    />
-                    <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
-                      Use original frequency
-                    </span>
-                  </label>
-                </div>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={txUseOriginalFreq}
+                    onChange={(event) => setTxUseOriginalFreq(event.target.checked)}
+                    className={checkboxClass}
+                  />
+                  Use original frequency metadata
+                </label>
 
                 {!txUseOriginalFreq && (
                   <div>
-                    <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+                    <label htmlFor="tx-frequency" className={labelClass}>
                       Override Frequency (MHz)
                     </label>
                     <Input
+                      id="tx-frequency"
                       type="number"
                       value={txFrequency}
-                      onChange={(e) => setTxFrequency(e.target.value)}
+                      onChange={(event) => setTxFrequency(event.target.value)}
                       step="0.001"
                       placeholder="433.920"
                       fullWidth
@@ -428,58 +350,32 @@ export function TaskWizard({
                 )}
               </div>
 
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={txLoop}
-                    onChange={(e) => setTxLoop(e.target.checked)}
-                    style={{ width: 16, height: 16 }}
-                  />
-                  <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
-                    Loop playback
-                  </span>
-                </label>
-              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={txLoop}
+                  onChange={(event) => setTxLoop(event.target.checked)}
+                  className={checkboxClass}
+                />
+                Loop playback
+              </label>
 
-              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                <button
-                  onClick={() => setMode('select')}
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                  }}
-                >
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <Button variant="subtle" onClick={() => setMode('select')}>
                   Back
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={handleCreateTx}
                   disabled={!txFile}
-                  style={{
-                    flex: 1,
-                    padding: 12,
-                    background: txFile ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                    border: txFile ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: 6,
-                    color: txFile ? 'white' : 'rgba(255, 255, 255, 0.4)',
-                    cursor: txFile ? 'pointer' : 'not-allowed',
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
                 >
                   Start TX
-                </button>
+                </Button>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
-  );
+  )
 }

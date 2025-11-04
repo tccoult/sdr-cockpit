@@ -9,10 +9,8 @@ import {
   CockpitSpotlightSection,
   CockpitTelemetryRail,
 } from "./components/layout";
-import {
-  ActiveTaskPanel,
-  getTaskStatusLabel,
-} from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
+import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
+import { getTaskStatusLabel } from "./components/tasks/ActiveTaskPanel/taskStatus";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useWindowSize } from "./components/app/useWindowSize";
@@ -76,7 +74,7 @@ function App() {
   }, []);
 
   // Get selected task
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId);
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   // Create/update FFT generator for selected task
   useEffect(() => {
