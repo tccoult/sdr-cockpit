@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TaskType(str, Enum):
@@ -31,29 +31,29 @@ class TaskOwner(str, Enum):
 class RecordingInfo(BaseModel):
     """Recording information"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     filename: str
     duration: float = Field(description="Recording duration in seconds")
     file_size: int = Field(description="File size in bytes", alias="fileSize")
     is_recording: bool = Field(alias="isRecording")
 
-    class Config:
-        populate_by_name = True
-
 
 class PlaybackInfo(BaseModel):
     """TX playback information"""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     filename: str
     progress: float = Field(ge=0.0, le=1.0, description="Playback progress 0-1")
     is_looping: bool = Field(alias="isLooping")
     duration: float = Field(description="Total duration in seconds")
 
-    class Config:
-        populate_by_name = True
-
 
 class Task(BaseModel):
     """SDR Task"""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     name: str
@@ -71,12 +71,11 @@ class Task(BaseModel):
     created_at: int = Field(description="Unix timestamp in ms", alias="createdAt")
     fps: Optional[float] = Field(None, description="Current frame rate")
 
-    class Config:
-        populate_by_name = True
-
 
 class CreateRxTaskParams(BaseModel):
     """Parameters for creating an RX task"""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     name: str
     frequency: float
@@ -84,20 +83,16 @@ class CreateRxTaskParams(BaseModel):
     bandwidth: float
     fft_size: int = Field(alias="fftSize")
 
-    class Config:
-        populate_by_name = True
-
 
 class CreateTxTaskParams(BaseModel):
     """Parameters for creating a TX task"""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     name: str
     filename: str
     frequency: Optional[float] = None
     loop: bool
-
-    class Config:
-        populate_by_name = True
 
 
 class UpdateTaskParams(BaseModel):

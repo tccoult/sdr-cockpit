@@ -20,8 +20,8 @@ echo "→ Type checking..."
 npm run type-check
 
 echo ""
-echo "→ Running tests..."
-npm test
+echo "→ Running tests (offline mode)..."
+VITE_API_MODE=offline npm test
 
 echo ""
 echo "→ Building..."
