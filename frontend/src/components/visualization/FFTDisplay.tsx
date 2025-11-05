@@ -116,7 +116,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plotColors]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     const unsubscribeZoom = plot.onZoom((axis, range) => {
       if (axis !== "x" || !onFrequencyRangeChange) return;
       onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
@@ -125,7 +125,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, onFrequencyRangeChange]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     const unsubscribePan = plot.onPan((axis, range) => {
       if (axis !== "x" || !onFrequencyRangeChange) return;
       onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
@@ -134,7 +134,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, onFrequencyRangeChange]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     const unsubscribeCursor = plot.onCursor((cursor) => {
       setCursorInfo(cursor);
     });
@@ -142,7 +142,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     const line = plot.addLine({
       color: plotColors.traceColor,
       lineWidth: 2,
@@ -155,7 +155,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, plotColors.traceColor]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     plot.setXRange({
       min: frequencyRange.startFreq,
       max: frequencyRange.endFreq,
@@ -163,7 +163,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, frequencyRange.endFreq, frequencyRange.startFreq]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     plot.setYRange({ min: minDb, max: maxDb });
   }, [plot, minDb, maxDb]);
 
@@ -178,7 +178,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, dataKey]);
 
   useEffect(() => {
-    if (!plot) return;
+    if (!plot || plot.isDestroyed()) return;
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
       const incomingFFT = customEvent.detail;

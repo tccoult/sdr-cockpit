@@ -133,6 +133,8 @@ export interface PlotHandle {
   onCursor(callback: (cursor: CursorState | null) => void): () => void;
   /** Returns the latest cursor information, if any. */
   getCursor(): CursorState | null;
+  /** Indicates whether the plot has already been destroyed. */
+  isDestroyed(): boolean;
   /** Tears down the plot and releases all resources. */
   destroy(): void;
 }

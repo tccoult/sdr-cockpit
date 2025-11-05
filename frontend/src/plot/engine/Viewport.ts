@@ -1,10 +1,11 @@
 import type { AxisRange, Viewport, ViewportOptions } from "../types";
+import { createDomRect } from "./domRect";
 
 const DEFAULT_RANGE: AxisRange = { min: 0, max: 1 };
 const MIN_SPAN = 1e-12;
 
 export function createViewport(options: ViewportOptions): Viewport {
-  let rect: DOMRectReadOnly = new DOMRectReadOnly(0, 0, 1, 1);
+  let rect: DOMRectReadOnly = createDomRect(0, 0, 1, 1);
   let xRange = normalizeRange(options.initialXRange ?? DEFAULT_RANGE);
   let yRange = normalizeRange(options.initialYRange ?? DEFAULT_RANGE);
 
@@ -59,7 +60,7 @@ export function createViewport(options: ViewportOptions): Viewport {
         rectLike.width > 0 ? rectLike.width : canvas.width / Math.max(1, dpr);
       const cssHeight =
         rectLike.height > 0 ? rectLike.height : canvas.height / Math.max(1, dpr);
-      rect = new DOMRectReadOnly(0, 0, cssWidth, cssHeight);
+      rect = createDomRect(0, 0, cssWidth, cssHeight);
       updateScale();
     },
     setXRange(range: AxisRange) {

@@ -36,6 +36,7 @@ import {
 } from "../types";
 import { createViewport } from "./Viewport";
 import { RafScheduler } from "./Scheduler";
+import { createDomRect } from "./domRect";
 
 export type PlotInternalOptions = PlotCreationOptions;
 
@@ -167,7 +168,7 @@ class PlotEngine implements PlotHandle {
   private cursorLayer: CursorLayer;
   private axesRegistered = false;
   private cursorState: CursorState | null = null;
-  private canvasRect: DOMRectReadOnly = new DOMRectReadOnly(0, 0, 1, 1);
+  private canvasRect: DOMRectReadOnly = createDomRect(0, 0, 1, 1);
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
@@ -614,6 +615,10 @@ class PlotEngine implements PlotHandle {
 
   getCursor(): CursorState | null {
     return this.cursorState;
+  }
+
+  isDestroyed(): boolean {
+    return this.destroyed;
   }
 
   destroy(): void {
