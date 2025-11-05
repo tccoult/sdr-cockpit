@@ -55,8 +55,8 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
                 fft_data = generator.generate_fft()
                 await websocket.send_json(fft_data)
 
-                # Target ~30 FPS
-                await asyncio.sleep(1.0 / 30)
+                # Target ~60 FPS
+                await asyncio.sleep(1.0 / 60)
             else:
                 # If paused, just wait a bit
                 await asyncio.sleep(0.1)

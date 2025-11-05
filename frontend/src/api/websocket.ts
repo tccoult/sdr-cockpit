@@ -142,11 +142,11 @@ class OfflineDataStream {
   private start(): void {
     this.callbacks.onStatusChange('connected');
 
-    // Generate and send FFT data at ~30 FPS
+    // Generate and send FFT data at ~60 FPS
     this.intervalId = window.setInterval(() => {
       const fftData = this.generator.generateFFT();
       this.callbacks.onData(fftData);
-    }, 1000 / 30);
+    }, 1000 / 60);
   }
 
   disconnect(): void {
