@@ -8,6 +8,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap, buildColorLUT, dbToColorIndex } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
+import type { Theme } from "../app/theme-context";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -18,6 +19,7 @@ interface WaterfallDisplayProps {
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
   dataKey?: string;
+  theme: Theme;
 }
 
 const shiftImageDown = (
@@ -45,7 +47,27 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   frequencyRange,
   onFrequencyRangeChange,
   dataKey,
+  theme,
 }: WaterfallDisplayProps) {
+  const isDark = theme === "dark";
+
+  const waterfallColors = useMemo(() => {
+    if (isDark) {
+      return {
+        background: "rgba(10, 10, 15, 0.95)",
+        scaleBackground: "rgba(0, 0, 0, 0.7)",
+        scaleText: "white",
+        emptyRowRgb: { r: 0, g: 0, b: 0 },
+      };
+    }
+    return {
+      background: "rgba(245, 245, 250, 0.95)",
+      scaleBackground: "rgba(255, 255, 255, 0.7)",
+      scaleText: "#1e293b",
+      emptyRowRgb: { r: 245, g: 245, b: 250 },
+    };
+  }, [isDark]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallDataRef = useRef<ImageData | null>(null);
   const colorLUTRef = useRef<Uint8ClampedArray | null>(null);
@@ -84,15 +106,16 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     // Create image buffer for plot area only
     waterfallDataRef.current = ctx.createImageData(plotWidthInt, plotHeightInt);
 
-    // Initialize to black
+    // Initialize to theme-appropriate background
     const data = waterfallDataRef.current.data;
+    const { r, g, b } = waterfallColors.emptyRowRgb;
     for (let i = 0; i < data.length; i += 4) {
-      data[i] = 0; // R
-      data[i + 1] = 0; // G
-      data[i + 2] = 0; // B
+      data[i] = r; // R
+      data[i + 1] = g; // G
+      data[i + 2] = b; // B
       data[i + 3] = 255; // A
     }
-  }, [plotWidthInt, plotHeightInt, dataKey]);
+  }, [plotWidthInt, plotHeightInt, dataKey, waterfallColors.emptyRowRgb]);
 
   // Build color lookup table when colormap changes
   useEffect(() => {
@@ -107,12 +130,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!ctx) return;
 
     // Clear canvas
-    ctx.fillStyle = "rgba(10, 10, 15, 0.95)";
+    ctx.fillStyle = waterfallColors.background;
     ctx.fillRect(0, 0, width, height);
 
     // Draw waterfall data in plot area
     ctx.putImageData(waterfallDataRef.current, margin.left, margin.top);
-  }, [width, height, margin.left, margin.top]);
+  }, [width, height, margin.left, margin.top, waterfallColors.background]);
 
   const requestRender = useCallback(() => {
     if (animationFrameRef.current !== null) return; // Already scheduled
@@ -130,10 +153,11 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const buffer = waterfallDataRef.current;
     if (buffer) {
       const data = buffer.data;
+      const { r, g, b } = waterfallColors.emptyRowRgb;
       for (let i = 0; i < data.length; i += 4) {
-        data[i] = 0;
-        data[i + 1] = 0;
-        data[i + 2] = 0;
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
         data[i + 3] = 255;
       }
     }
@@ -145,7 +169,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       }
     }
     requestRender();
-  }, [dataKey, requestRender]);
+  }, [dataKey, requestRender, waterfallColors.emptyRowRgb]);
 
   const addFFTRow = useCallback(
     (fftData: FFTData) => {
@@ -317,8 +341,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
           left: margin.left,
           right: margin.right,
           height: 20,
-          background: "rgba(0, 0, 0, 0.7)",
-          color: "white",
+          background: waterfallColors.scaleBackground,
+          color: waterfallColors.scaleText,
           fontSize: 12,
           display: "flex",
           justifyContent: "space-between",

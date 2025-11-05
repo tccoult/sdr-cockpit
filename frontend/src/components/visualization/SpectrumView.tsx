@@ -184,6 +184,7 @@ export const SpectrumView = memo(function SpectrumView({
           frequencyRange={frequencyRange}
           dataKey={taskId}
           onFrequencyRangeChange={handleFrequencyRangeChange}
+          theme={theme}
         />
       </div>
 
@@ -200,6 +201,7 @@ export const SpectrumView = memo(function SpectrumView({
           frequencyRange={frequencyRange}
           dataKey={taskId}
           onFrequencyRangeChange={handleFrequencyRangeChange}
+          theme={theme}
         />
       </div>
 

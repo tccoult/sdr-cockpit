@@ -8,6 +8,7 @@ import {
   type CursorInfo,
   type TraceHandle1D,
 } from "../../utils/plotting";
+import type { Theme } from "../app/theme-context";
 
 interface FFTDisplayProps {
   width: number;
@@ -17,6 +18,7 @@ interface FFTDisplayProps {
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
   dataKey?: string;
+  theme: Theme;
 }
 
 const SMOOTHING_FACTOR = 0.95;
@@ -30,7 +32,33 @@ export const FFTDisplay = memo(function FFTDisplay({
   frequencyRange,
   onFrequencyRangeChange,
   dataKey,
+  theme,
 }: FFTDisplayProps) {
+  const isDark = theme === "dark";
+
+  const plotColors = useMemo(() => {
+    if (isDark) {
+      return {
+        background: "rgba(10, 10, 15, 0.85)",
+        gridColor: "rgba(255, 255, 255, 0.1)",
+        textColor: "#ffffff",
+        traceColor: "#FF00FF",
+        tooltipBackground: "rgba(20, 20, 30, 0.95)",
+        tooltipBorder: "rgba(255, 255, 255, 0.2)",
+        tooltipText: "#ffffff",
+      };
+    }
+    return {
+      background: "rgba(245, 245, 250, 0.95)",
+      gridColor: "rgba(0, 0, 0, 0.1)",
+      textColor: "#1e293b",
+      traceColor: "#8b5cf6",
+      tooltipBackground: "rgba(255, 255, 255, 0.95)",
+      tooltipBorder: "rgba(0, 0, 0, 0.2)",
+      tooltipText: "#1e293b",
+    };
+  }, [isDark]);
+
   const plotConfig = useMemo(
     () => ({
       axes: {
@@ -54,14 +82,15 @@ export const FFTDisplay = memo(function FFTDisplay({
           snap: true,
         },
       },
-      background: "rgba(10, 10, 15, 0.85)",
+      background: plotColors.background,
+      textColor: plotColors.textColor,
       grid: {
         show: true,
-        color: "rgba(255, 255, 255, 0.1)",
+        color: plotColors.gridColor,
       },
       margins: { top: 20, right: 30, bottom: 40, left: 60 },
     }),
-    [frequencyRange, minDb, maxDb]
+    [frequencyRange, minDb, maxDb, plotColors]
   );
 
   const plot = usePlot(plotConfig);
@@ -104,7 +133,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   useEffect(() => {
     const trace = plot.addTrace1D({
       type: Trace1DType.Line,
-      color: "#FF00FF",
+      color: plotColors.traceColor,
       lineWidth: 2,
     });
     traceRef.current = trace;
@@ -112,7 +141,7 @@ export const FFTDisplay = memo(function FFTDisplay({
       trace.remove();
       traceRef.current = null;
     };
-  }, [plot]);
+  }, [plot, plotColors.traceColor]);
 
   useEffect(() => {
     smoothingRef.current = null;
@@ -228,7 +257,7 @@ export const FFTDisplay = memo(function FFTDisplay({
         position: "relative",
         width,
         height,
-        background: "rgba(10, 10, 15, 0.85)",
+        background: plotColors.background,
         borderRadius: 4,
         overflow: "hidden",
       }}
@@ -249,11 +278,11 @@ export const FFTDisplay = memo(function FFTDisplay({
             position: "absolute",
             left: Math.min(Math.max(cursorInfo.canvasX + 16, 8), width - 150),
             top: Math.min(Math.max(cursorInfo.canvasY - 40, 8), height - 60),
-            background: "rgba(20, 20, 30, 0.95)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
+            background: plotColors.tooltipBackground,
+            border: `1px solid ${plotColors.tooltipBorder}`,
             borderRadius: 4,
             padding: "6px 10px",
-            color: "#ffffff",
+            color: plotColors.tooltipText,
             fontSize: 12,
             pointerEvents: "none",
             whiteSpace: "nowrap",
