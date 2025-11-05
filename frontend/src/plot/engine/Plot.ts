@@ -302,6 +302,7 @@ class PlotEngine implements PlotHandle {
     this.viewport = createViewport({
       initialXRange: options.xRange,
       initialYRange: options.yRange,
+      margins: options.margins,
     });
 
     this.axisConfig = {

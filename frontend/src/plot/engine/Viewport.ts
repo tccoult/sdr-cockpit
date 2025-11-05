@@ -4,6 +4,21 @@ import { createDomRect } from "./domRect";
 const DEFAULT_RANGE: AxisRange = { min: 0, max: 1 };
 const MIN_SPAN = 1e-12;
 
+/**
+ * Default margins for axes and labels (in CSS pixels).
+ * These can be overridden via ViewportOptions.
+ */
+export const DEFAULT_PLOT_MARGINS = {
+  // Left: tick labels (~50px) + tick size (6px) + tick padding (6px) + label padding (18px) + axis label (14px) + buffer (16px) = ~110px
+  left: 110,
+  // Right: small padding for aesthetics
+  right: 15,
+  // Top: small padding for aesthetics
+  top: 15,
+  // Bottom: tick size (6px) + tick label height (14px) + padding (6px) + label padding (18px) + label height (14px) + extra (10px) = ~68px
+  bottom: 70,
+} as const;
+
 export function createViewport(options: ViewportOptions): Viewport {
   let rect: DOMRectReadOnly = createDomRect(0, 0, 1, 1);
   let xRange = normalizeRange(options.initialXRange ?? DEFAULT_RANGE);
@@ -60,7 +75,15 @@ export function createViewport(options: ViewportOptions): Viewport {
         rectLike.width > 0 ? rectLike.width : canvas.width / Math.max(1, dpr);
       const cssHeight =
         rectLike.height > 0 ? rectLike.height : canvas.height / Math.max(1, dpr);
-      rect = createDomRect(0, 0, cssWidth, cssHeight);
+
+      // Apply margins for axes and labels (can be overridden via options)
+      const margins = options.margins ?? DEFAULT_PLOT_MARGINS;
+      const plotLeft = margins.left;
+      const plotTop = margins.top;
+      const plotWidth = Math.max(1, cssWidth - margins.left - margins.right);
+      const plotHeight = Math.max(1, cssHeight - margins.top - margins.bottom);
+
+      rect = createDomRect(plotLeft, plotTop, plotWidth, plotHeight);
       updateScale();
     },
     setXRange(range: AxisRange) {

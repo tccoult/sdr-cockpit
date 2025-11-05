@@ -156,33 +156,40 @@ function drawAxis(
     ctx.fillStyle = config.theme.textColor;
     const label = config.options.label;
     const padding = config.theme.labelPaddingPx;
+    const tickLabelPadding = config.theme.tickLabelPaddingPx;
     if (side === "left") {
+      // Position the axis label further left to account for tick label width
+      // Estimate ~50px for tick labels like "-100.0"
+      const estimatedTickLabelWidth = 50;
       ctx.translate(
-        rect.left - (tickSize + padding) * 2,
+        rect.left - (tickSize + tickLabelPadding) - estimatedTickLabelWidth - padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(-Math.PI / 2);
       ctx.textAlign = "center";
+      ctx.textBaseline = "top";
       ctx.fillText(label, 0, 0);
     } else if (side === "right") {
       ctx.translate(
-        rect.right + (tickSize + padding) * 2,
+        rect.right + (tickSize + tickLabelPadding) + padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(Math.PI / 2);
       ctx.textAlign = "center";
+      ctx.textBaseline = "top";
       ctx.fillText(label, 0, 0);
     } else if (side === "top") {
       ctx.textBaseline = "bottom";
       ctx.textAlign = "center";
-      ctx.fillText(label, rect.left + rect.width / 2, rect.top - padding);
+      ctx.fillText(label, rect.left + rect.width / 2, rect.top - (tickSize + tickLabelPadding) - padding);
     } else {
       ctx.textBaseline = "top";
       ctx.textAlign = "center";
+      // Position below tick labels: tickSize + space for tick label text + padding
       ctx.fillText(
         label,
         rect.left + rect.width / 2,
-        rect.bottom + padding
+        rect.bottom + tickSize + tickLabelPadding + padding
       );
     }
     ctx.restore();

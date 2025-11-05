@@ -84,7 +84,7 @@ export const FFTDisplay = memo(function FFTDisplay({
         y: {
           label: "Power (dB)",
           formatter: (value: number) => `${value.toFixed(1)}`,
-          ticksTarget: 6,
+          ticksTarget: 4,
         },
       },
     }),
@@ -264,8 +264,6 @@ export const FFTDisplay = memo(function FFTDisplay({
     >
       <canvas
         ref={handleCanvasAttach}
-        width={width}
-        height={height}
         style={{ display: "block", width: "100%", height: "100%" }}
       />
       {cursorInfo && (

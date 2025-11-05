@@ -146,10 +146,19 @@ export interface Scheduler {
   destroy(): void;
 }
 
+/** Plot margins in CSS pixels. */
+export interface PlotMargins {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 /** Initial axis ranges supplied to the viewport. */
 export interface ViewportOptions {
   readonly initialXRange?: AxisRange;
   readonly initialYRange?: AxisRange;
+  readonly margins?: PlotMargins;
 }
 
 /** Projects between world coordinates and device pixels. */
@@ -274,6 +283,8 @@ export interface PlotCreationOptions {
   interactions?: PlotInteractionsOptions;
   axes?: PlotAxesConfig;
   cursorFormatter?: CursorReadoutFormatter;
+  /** Margins for axes and labels. If not specified, uses DEFAULT_PLOT_MARGINS. */
+  margins?: PlotMargins;
 }
 
 export interface PlotInteractionsOptions {
