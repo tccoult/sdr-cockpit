@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "./components/common/Button";
 import {
   CockpitColumn,
@@ -15,193 +15,48 @@ import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useWindowSize } from "./components/app/useWindowSize";
 import { ThemeToggle } from "./components/app/ThemeToggle";
+import { ApiModeIndicator } from "./components/app/ApiModeIndicator";
 import { SpectrumView } from "./components/visualization/SpectrumView";
 import { PlotSandbox } from "./components/visualization/PlotSandbox";
-import { CreateRxTaskParams, CreateTxTaskParams, Task } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
 import { formatFrequency } from "./utils/formatters";
-import { MockFFTGenerator, dispatchFFTData } from "./utils/mockDataGenerator";
-
-import {
-  createMockRxTask,
-  createMockTxTask,
-  generateDemoTasks,
-  startRecording,
-  stopRecording,
-  toggleTaskPause,
-  updateRecording,
-  updateTaskUptime,
-  updateTxProgress,
-} from "./utils/mockTaskGenerator";
+import { useTasks, useDataStream } from "./hooks";
 
 function App() {
-  const { width } = useWindowSize(); // Get dynamic size
+  const { width } = useWindowSize();
   const isMobile = width < 1024;
 
   const colorMap = PLASMA;
   const showPlotSandbox = import.meta.env.VITE_PLOT_SANDBOX === "true";
 
-  // Task state
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [isDiscovering, setIsDiscovering] = useState(true);
+  // UI state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // FPS tracking
-  const [fps, setFps] = useState(0);
-  const frameCountRef = useRef(0);
-  const lastFpsUpdateRef = useRef(Date.now());
-
-  // Mock data generators (one per task)
-  const generatorsRef = useRef<Map<string, MockFFTGenerator>>(new Map());
-  const intervalRef = useRef<number | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize with demo tasks
-  useEffect(() => {
-    // Simulate discovery delay
-    setTimeout(() => {
-      const demoTasks = generateDemoTasks();
-      setTasks(demoTasks);
-      setIsDiscovering(false);
+  // Task management hook
+  const {
+    tasks,
+    selectedTask,
+    selectedTaskId,
+    isDiscovering,
+    selectTask,
+    createRxTask,
+    createTxTask,
+    pauseTask,
+    stopTask,
+    startRecording,
+    stopRecording,
+  } = useTasks();
 
-      // Auto-select first task
-      if (demoTasks.length > 0) {
-        setSelectedTaskId(demoTasks[0].id);
-      }
-    }, 1500);
-  }, []);
-
-  // Get selected task
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
-
-  // Create/update FFT generator for selected task
-  useEffect(() => {
-    if (!selectedTask) return;
-
-    if (!generatorsRef.current.has(selectedTask.id)) {
-      // Use frequency as seed to make each task's data visually distinct
-      const generator = new MockFFTGenerator(
-        selectedTask.frequency,
-        selectedTask.sampleRate,
-        selectedTask.fftSize || 2048,
-        selectedTask.frequency // Use frequency as seed for unique signals per task
-      );
-      generatorsRef.current.set(selectedTask.id, generator);
-    }
-  }, [selectedTask]);
-
-  // FFT data generation loop
-  useEffect(() => {
-    intervalRef.current = window.setInterval(() => {
-      // Pause FFT generation when wizard is open for better performance
-      if (!selectedTask || selectedTask.status === "paused" || isWizardOpen)
-        return;
-
-      const generator = generatorsRef.current.get(selectedTask.id);
-      if (generator) {
-        const fftData = generator.generateFFT();
-        dispatchFFTData(fftData);
-
-        // Update FPS counter
-        frameCountRef.current++;
-        const now = Date.now();
-        if (now - lastFpsUpdateRef.current >= 1000) {
-          setFps(frameCountRef.current);
-          frameCountRef.current = 0;
-          lastFpsUpdateRef.current = now;
-        }
-      }
-    }, 1000 / 60); // 30 FPS
-
-    return () => {
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [selectedTask, isWizardOpen]);
-
-  // Update task uptimes and recordings
-  useEffect(() => {
-    const updateInterval = setInterval(() => {
-      setTasks((prevTasks) =>
-        prevTasks.map((task) => {
-          let updatedTask = updateTaskUptime(task);
-
-          // Update TX progress
-          if (task.type === "tx" && task.status === "transmitting") {
-            updatedTask = updateTxProgress(updatedTask, 1); // 1 second
-          }
-
-          // Update recording
-          if (task.recording?.isRecording) {
-            updatedTask = updateRecording(updatedTask, 1); // 1 second
-          }
-
-          return updatedTask;
-        })
-      );
-    }, 1000);
-
-    return () => clearInterval(updateInterval);
-  }, []);
-
-  // Task handlers
-  const handleSelectTask = (taskId: string) => {
-    setSelectedTaskId(taskId);
-  };
-
-  const handleCreateRxTask = (params: CreateRxTaskParams) => {
-    const newTask = createMockRxTask(params);
-    setTasks((prev) => [...prev, newTask]);
-    setSelectedTaskId(newTask.id);
-  };
-
-  const handleCreateTxTask = (params: CreateTxTaskParams) => {
-    const newTask = createMockTxTask({
-      name: params.name,
-      frequency: params.frequency || 433.92e6,
-      loop: params.loop,
-      filename: params.file.name,
-    });
-    setTasks((prev) => [...prev, newTask]);
-    setSelectedTaskId(newTask.id);
-  };
-
-  const handlePauseTask = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? toggleTaskPause(task) : task))
-    );
-  };
-
-  const handleStopTask = (taskId: string) => {
-    // Remove task
-    setTasks((prev) => prev.filter((task) => task.id !== taskId));
-
-    // Remove generator
-    generatorsRef.current.delete(taskId);
-
-    // If this was the selected task, select another
-    if (taskId === selectedTaskId) {
-      const remainingTasks = tasks.filter((t) => t.id !== taskId);
-      setSelectedTaskId(
-        remainingTasks.length > 0 ? remainingTasks[0].id : null
-      );
-    }
-  };
-
-  const handleRecordTask = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? startRecording(task) : task))
-    );
-  };
-
-  const handleStopRecording = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? stopRecording(task) : task))
-    );
-  };
+  // Data streaming hook
+  const { fps, streamStatus, streamError } = useDataStream({
+    taskId: selectedTaskId,
+    centerFreq: selectedTask?.frequency,
+    sampleRate: selectedTask?.sampleRate,
+    fftSize: selectedTask?.fftSize,
+    enabled: !isWizardOpen, // Pause streaming when wizard is open
+  });
 
   const taskStatusLabel = getTaskStatusLabel(selectedTask);
 
@@ -250,6 +105,7 @@ function App() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
               <ThemeToggle />
               <CockpitTelemetryRail className="text-sm">
+                <ApiModeIndicator />
                 <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/30 dark:shadow-inner dark:shadow-black/20">
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Frame Rate
@@ -292,10 +148,10 @@ function App() {
           <CockpitSpotlightSection>
             <ActiveTaskPanel
               task={selectedTask}
-              onPauseTask={handlePauseTask}
-              onStopTask={handleStopTask}
-              onRecordTask={handleRecordTask}
-              onStopRecording={handleStopRecording}
+              onPauseTask={pauseTask}
+              onStopTask={stopTask}
+              onRecordTask={startRecording}
+              onStopRecording={stopRecording}
             />
           </CockpitSpotlightSection>
 
@@ -304,7 +160,7 @@ function App() {
               tasks={tasks}
               selectedTaskId={selectedTaskId}
               isDiscovering={isDiscovering}
-              onSelectTask={handleSelectTask}
+              onSelectTask={selectTask}
               onCreateTask={() => setIsWizardOpen(true)}
             />
           </CockpitRosterSection>
@@ -319,6 +175,8 @@ function App() {
                   centerFreq={selectedTask.frequency}
                   sampleRate={selectedTask.sampleRate}
                   colorMap={colorMap}
+                  dataError={streamError || undefined}
+                  isConnecting={streamStatus === 'connecting'}
                 />
                 {showPlotSandbox && (
                   <div className="mt-6 flex flex-none justify-center">
@@ -354,8 +212,8 @@ function App() {
       <TaskWizard
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
-        onCreateRxTask={handleCreateRxTask}
-        onCreateTxTask={handleCreateTxTask}
+        onCreateRxTask={createRxTask}
+        onCreateTxTask={createTxTask}
       />
     </>
   );
