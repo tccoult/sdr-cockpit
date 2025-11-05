@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createAnnotationLayer } from "../../layers/AnnotationLayer";
-import { defaultTheme } from "../../theme/theme";
+import { defaultTheme } from "../../theme";
 
 const viewportStub = {
   projectX: (value: number) => value,

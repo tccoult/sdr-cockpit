@@ -8,7 +8,7 @@ import { createCursorLayer } from "../layers/CursorLayer";
 import type { CursorLayer } from "../layers/CursorLayer";
 import { createHeatmapLayer } from "../layers/HeatmapLayer";
 import { createLineLayer } from "../layers/LineLayer";
-import { defaultTheme, toAxisTheme } from "../theme/theme";
+import { defaultTheme, toAxisTheme } from "../theme";
 import {
   type AnnotationLayerHandle,
   type AnnotationLayerOptions,

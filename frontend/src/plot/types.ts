@@ -1,8 +1,18 @@
+/**
+ * Represents the numeric span of an axis in world coordinates.
+ */
 export interface AxisRange {
+  /**
+   * Inclusive lower bound.
+   */
   min: number;
+  /**
+   * Inclusive upper bound.
+   */
   max: number;
 }
 
+/** Rendering phases honoured by the engine. */
 export type LayerPhase =
   | "background"
   | "grid"
@@ -11,18 +21,27 @@ export type LayerPhase =
   | "cursor"
   | "debug";
 
+/** Dimensions of the canvas in CSS pixels and current DPR. */
 export interface PlotDimensions {
+  /** Canvas width in CSS pixels. */
   width: number;
+  /** Canvas height in CSS pixels. */
   height: number;
+  /** Device pixel ratio currently applied to the backing store. */
   devicePixelRatio: number;
 }
 
+/** Context object received by layers on each draw pass. */
 export interface LayerRenderContext {
+  /** Viewport projection utilities. */
   readonly viewport: Viewport;
+  /** Current canvas dimensions. */
   readonly dimensions: PlotDimensions;
+  /** High-resolution timestamp used for animation. */
   readonly now: number;
 }
 
+/** Information about the active cursor position. */
 export interface CursorState {
   canvasX: number;
   canvasY: number;
@@ -31,6 +50,7 @@ export interface CursorState {
   values?: string[];
 }
 
+/** Contract implemented by every drawable layer registered with the plot. */
 export interface Layer {
   readonly id: string;
   visible: boolean;
@@ -45,6 +65,7 @@ export interface Layer {
   ): string[] | null;
 }
 
+/** Styling options shared between all layers. */
 export interface PlotTheme {
   readonly background: string;
   readonly gridColor: string;
@@ -59,8 +80,10 @@ export interface PlotTheme {
   readonly cursorHighlightColor?: string;
 }
 
+/** Supported cursor appearances. */
 export type CursorStyle = "none" | "crosshair" | "vertical" | "horizontal";
 
+/** Configuration for a single axis. */
 export interface PlotAxisOptions {
   label?: string;
   formatter?: (value: number) => string;
@@ -69,11 +92,13 @@ export interface PlotAxisOptions {
   unit?: string;
 }
 
+/** Collection of axis configuration for the plot. */
 export interface PlotAxesConfig {
   x?: PlotAxisOptions;
   y?: PlotAxisOptions;
 }
 
+/** Formats a cursor readout before it is exposed to consumers. */
 export interface CursorReadoutFormatter {
   (
     cursor: CursorState,
@@ -82,33 +107,50 @@ export interface CursorReadoutFormatter {
   ): string[];
 }
 
+/** Public imperative API returned by {@link createPlot}. */
 export interface PlotHandle {
+  /** Adds and registers a new line layer. */
   addLine(config: LineLayerOptions): LineLayerHandle;
+  /** Adds and registers a heatmap layer. */
   addHeatmap(config: HeatmapLayerOptions): HeatmapLayerHandle;
+  /** Adds and registers an annotation layer. */
   addAnnotation(config: AnnotationLayerOptions): AnnotationLayerHandle;
+  /** Removes a layer by the identifier assigned at creation. */
   removeLayer(id: string): void;
+  /** Overrides the X-axis domain. */
   setXRange(range: AxisRange): void;
+  /** Overrides the Y-axis domain. */
   setYRange(range: AxisRange): void;
+  /** Requests that all layers recompute their extents and fit the viewport. */
   fit(): void;
+  /** Schedules a new animation frame if one is not already pending. */
   requestDraw(): void;
+  /** Subscribes to pan events emitted by user interactions. */
   onPan(callback: (axis: "x" | "y", range: AxisRange) => void): () => void;
+  /** Subscribes to zoom events emitted by user interactions. */
   onZoom(callback: (axis: "x" | "y", range: AxisRange) => void): () => void;
+  /** Subscribes to cursor updates. */
   onCursor(callback: (cursor: CursorState | null) => void): () => void;
+  /** Returns the latest cursor information, if any. */
   getCursor(): CursorState | null;
+  /** Tears down the plot and releases all resources. */
   destroy(): void;
 }
 
+/** Schedules coalesced draw calls, usually backed by requestAnimationFrame. */
 export interface Scheduler {
   request(task: () => void): void;
   cancel(task: () => void): void;
   destroy(): void;
 }
 
+/** Initial axis ranges supplied to the viewport. */
 export interface ViewportOptions {
   readonly initialXRange?: AxisRange;
   readonly initialYRange?: AxisRange;
 }
 
+/** Projects between world coordinates and device pixels. */
 export interface Viewport {
   readonly projectX: (value: number) => number;
   readonly projectY: (value: number) => number;
@@ -131,8 +173,10 @@ export interface LayerCreateContext {
   readonly notifyLayerOrderChange: () => void;
 }
 
+/** Rendering modes supported by the line layer. */
 export type LineRenderMode = "line" | "points";
 
+/** Options used when creating a line layer. */
 export interface LineLayerOptions {
   id?: string;
   color?: string;
@@ -149,6 +193,7 @@ export interface LineLayerOptions {
   };
 }
 
+/** Options used when creating a heatmap layer. */
 export interface HeatmapLayerOptions {
   id?: string;
   width: number;
@@ -158,6 +203,7 @@ export interface HeatmapLayerOptions {
   opacity?: number;
 }
 
+/** Options used when creating an annotation layer. */
 export interface AnnotationLayerOptions {
   id?: string;
   annotations?: AnnotationDefinition[];
@@ -214,6 +260,7 @@ export interface AnnotationLayerHandle extends LayerHandle {
   deleteAnnotation(id: string): void;
 }
 
+/** Global configuration object accepted by {@link createPlot}. */
 export interface PlotCreationOptions {
   dpr?: number;
   background?: string;

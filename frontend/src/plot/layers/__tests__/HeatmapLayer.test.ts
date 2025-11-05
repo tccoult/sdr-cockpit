@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHeatmapLayer } from "../../layers/HeatmapLayer";
-import { defaultTheme } from "../../theme/theme";
+import { defaultTheme } from "../../theme";
 import type {
   LayerCreateContext,
   LayerRenderContext,

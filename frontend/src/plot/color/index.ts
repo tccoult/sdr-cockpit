@@ -1,0 +1,1 @@
+export { resolveColormap } from "./colormap";

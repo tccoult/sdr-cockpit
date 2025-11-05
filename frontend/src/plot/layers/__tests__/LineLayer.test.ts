@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createLineLayer } from "../../layers/LineLayer";
-import { defaultTheme } from "../../theme/theme";
+import { defaultTheme } from "../../theme";
 import type { LayerCreateContext, LayerRenderContext, Viewport } from "../../types";
 
 const dimensions = {
