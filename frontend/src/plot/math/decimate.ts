@@ -1,71 +1,84 @@
 import type { AxisRange } from "../types";
 
-export interface DecimatedPoint {
-  x: number;
-  y: number;
-  index: number;
+export interface DecimationIndices {
+  readonly indices: Uint32Array;
+  count: number;
 }
 
-export interface DecimationResult {
-  readonly x: Float32Array;
-  readonly y: Float32Array;
+export interface DecimationScratch {
+  first: Int32Array;
+  last: Int32Array;
+  min: Int32Array;
+  max: Int32Array;
+  minValue: Float32Array;
+  maxValue: Float32Array;
+  out: Uint32Array;
+}
+
+export function createDecimationScratch(initialCapacity = 0): DecimationScratch {
+  const safeCapacity = Math.max(0, Math.floor(initialCapacity));
+  return {
+    first: new Int32Array(safeCapacity),
+    last: new Int32Array(safeCapacity),
+    min: new Int32Array(safeCapacity),
+    max: new Int32Array(safeCapacity),
+    minValue: new Float32Array(safeCapacity),
+    maxValue: new Float32Array(safeCapacity),
+    out: new Uint32Array(Math.max(4, safeCapacity * 4)),
+  };
 }
 
 /**
- * Min/Max bucket decimator. Produces at most ~4 samples per pixel column while
- * preserving the order of points within each bucket so the rendered line
- * remains continuous.
+ * Min/Max bucket decimator that returns indices into the original series so
+ * callers can reuse existing Float32Array buffers.
  */
-export function minMaxDecimate(
+export function minMaxDecimateIndices(
   x: Float32Array,
   y: Float32Array,
   range: AxisRange,
-  pixelWidth: number
-): DecimationResult {
+  pixelWidth: number,
+  scratch: DecimationScratch
+): DecimationIndices {
   const length = Math.min(x.length, y.length);
-  if (length === 0 || pixelWidth <= 0 || !Number.isFinite(pixelWidth)) {
+  if (
+    length === 0 ||
+    pixelWidth <= 0 ||
+    !Number.isFinite(pixelWidth) ||
+    range.max <= range.min
+  ) {
     return {
-      x: new Float32Array(0),
-      y: new Float32Array(0),
+      indices: scratch.out,
+      count: 0,
     };
   }
 
-  const span = range.max - range.min || 1;
-  const bucketCount = Math.min(
-    Math.max(1, Math.floor(pixelWidth)),
-    length
-  );
+  const span = range.max - range.min;
+  const bucketCount = Math.min(Math.max(1, Math.floor(pixelWidth)), length);
+  ensureScratchCapacity(scratch, bucketCount);
 
   if (bucketCount <= 1 || length <= bucketCount * 2) {
-    const filteredX: number[] = [];
-    const filteredY: number[] = [];
+    let outCount = 0;
     for (let i = 0; i < length; i += 1) {
       const xVal = x[i];
       const yVal = y[i];
-      if (!Number.isFinite(xVal) || xVal < range.min || xVal > range.max) {
-        continue;
-      }
-      if (!Number.isFinite(yVal)) continue;
-      filteredX.push(xVal);
-      filteredY.push(yVal);
+      if (!Number.isFinite(xVal) || !Number.isFinite(yVal)) continue;
+      if (xVal < range.min || xVal > range.max) continue;
+      scratch.out[outCount] = i;
+      outCount += 1;
     }
     return {
-      x: Float32Array.from(filteredX),
-      y: Float32Array.from(filteredY),
+      indices: scratch.out,
+      count: outCount,
     };
   }
 
-  const firstIndex = new Int32Array(bucketCount).fill(-1);
-  const lastIndex = new Int32Array(bucketCount).fill(-1);
-  const minIndex = new Int32Array(bucketCount).fill(-1);
-  const maxIndex = new Int32Array(bucketCount).fill(-1);
-  const minValue = new Float32Array(bucketCount).fill(Number.POSITIVE_INFINITY);
-  const maxValue = new Float32Array(bucketCount).fill(Number.NEGATIVE_INFINITY);
+  const { first, last, min, max, minValue, maxValue } = scratch;
 
   for (let i = 0; i < length; i += 1) {
     const xVal = x[i];
-    if (!Number.isFinite(xVal)) continue;
-    if (xVal < range.min || xVal > range.max) continue;
+    if (!Number.isFinite(xVal) || xVal < range.min || xVal > range.max) {
+      continue;
+    }
     const bucket = Math.max(
       0,
       Math.min(
@@ -73,61 +86,105 @@ export function minMaxDecimate(
         Math.floor(((xVal - range.min) / span) * bucketCount)
       )
     );
-    if (firstIndex[bucket] === -1) {
-      firstIndex[bucket] = i;
+    if (first[bucket] === -1) {
+      first[bucket] = i;
     }
-    lastIndex[bucket] = i;
+    last[bucket] = i;
 
     const yVal = y[i];
-    if (!Number.isFinite(yVal)) continue;
+    if (!Number.isFinite(yVal)) {
+      continue;
+    }
     if (yVal < minValue[bucket]) {
       minValue[bucket] = yVal;
-      minIndex[bucket] = i;
+      min[bucket] = i;
     }
     if (yVal > maxValue[bucket]) {
       maxValue[bucket] = yVal;
-      maxIndex[bucket] = i;
+      max[bucket] = i;
     }
   }
 
-  const outX: number[] = [];
-  const outY: number[] = [];
-
-  const appendIndex = (idx: number) => {
-    if (idx < 0 || idx >= length) return;
-    const lastPos = outX.length - 1;
-    if (lastPos >= 0 && outX[lastPos] === x[idx] && outY[lastPos] === y[idx]) {
-      return;
-    }
-    outX.push(x[idx]);
-    outY.push(y[idx]);
-  };
-
+  let outCount = 0;
   for (let bucket = 0; bucket < bucketCount; bucket += 1) {
-    if (firstIndex[bucket] === -1) continue;
-    const indices: number[] = [];
-    const first = firstIndex[bucket];
-    const last = lastIndex[bucket];
-    const minIdx = minIndex[bucket];
-    const maxIdx = maxIndex[bucket];
-
-    indices.push(first);
-    if (minIdx !== -1 && minIdx !== first) indices.push(minIdx);
-    if (maxIdx !== -1 && maxIdx !== first && maxIdx !== minIdx) {
-      indices.push(maxIdx);
+    const firstIdx = first[bucket];
+    if (firstIdx === -1) {
+      continue;
     }
-    if (last !== -1 && last !== first && last !== minIdx && last !== maxIdx) {
-      indices.push(last);
+    const lastIdx = last[bucket];
+    const minIdx = min[bucket];
+    const maxIdx = max[bucket];
+
+    const bag: number[] = [];
+    if (firstIdx !== -1 && Number.isFinite(y[firstIdx])) {
+      bag.push(firstIdx);
+    }
+    if (minIdx !== -1 && minIdx !== firstIdx) {
+      bag.push(minIdx);
+    }
+    if (maxIdx !== -1 && maxIdx !== firstIdx && maxIdx !== minIdx) {
+      bag.push(maxIdx);
+    }
+    if (
+      lastIdx !== -1 &&
+      lastIdx !== firstIdx &&
+      lastIdx !== minIdx &&
+      lastIdx !== maxIdx &&
+      Number.isFinite(y[lastIdx])
+    ) {
+      bag.push(lastIdx);
+    } else if (
+      lastIdx === firstIdx &&
+      Number.isFinite(y[lastIdx]) &&
+      bag.length === 0
+    ) {
+      bag.push(lastIdx);
     }
 
-    indices.sort((a, b) => a - b);
-    for (const idx of indices) {
-      appendIndex(idx);
+    bag.sort((a, b) => a - b);
+    for (const idx of bag) {
+      if (outCount === 0 || scratch.out[outCount - 1] !== idx) {
+        scratch.out[outCount] = idx;
+        outCount += 1;
+      }
     }
   }
 
   return {
-    x: Float32Array.from(outX),
-    y: Float32Array.from(outY),
+    indices: scratch.out,
+    count: outCount,
   };
+}
+
+function ensureScratchCapacity(scratch: DecimationScratch, bucketCount: number) {
+  const required = Math.max(1, bucketCount);
+  const nextSize = computeNextSize(scratch.first.length, required);
+  if (scratch.first.length < required) {
+    scratch.first = new Int32Array(nextSize);
+    scratch.last = new Int32Array(nextSize);
+    scratch.min = new Int32Array(nextSize);
+    scratch.max = new Int32Array(nextSize);
+    scratch.minValue = new Float32Array(nextSize);
+    scratch.maxValue = new Float32Array(nextSize);
+  }
+  scratch.first.fill(-1, 0, required);
+  scratch.last.fill(-1, 0, required);
+  scratch.min.fill(-1, 0, required);
+  scratch.max.fill(-1, 0, required);
+  scratch.minValue.fill(Number.POSITIVE_INFINITY, 0, required);
+  scratch.maxValue.fill(Number.NEGATIVE_INFINITY, 0, required);
+
+  const neededOut = Math.max(4, required * 4);
+  if (scratch.out.length < neededOut) {
+    const outSize = computeNextSize(scratch.out.length, neededOut);
+    scratch.out = new Uint32Array(outSize);
+  }
+}
+
+function computeNextSize(current: number, required: number): number {
+  if (current >= required) {
+    return current;
+  }
+  const growth = current === 0 ? required : Math.ceil(current * 1.5);
+  return Math.max(required, growth);
 }

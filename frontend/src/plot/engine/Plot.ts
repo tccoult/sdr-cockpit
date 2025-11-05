@@ -311,8 +311,15 @@ class PlotEngine implements PlotHandle {
       x: buildAxisOptions("bottom", options.axes?.x),
       y: buildAxisOptions("left", options.axes?.y),
     };
-    this.axisModelX = new AxisModel(this.axisOptions.x);
-    this.axisModelY = new AxisModel(this.axisOptions.y);
+    const axisTheme = toAxisTheme(this.theme);
+    this.axisModelX = new AxisModel({
+      ...this.axisOptions.x,
+      themeFont: axisTheme.font,
+    });
+    this.axisModelY = new AxisModel({
+      ...this.axisOptions.y,
+      themeFont: axisTheme.font,
+    });
     this.axisFormatters = {
       x: createAxisFormatter(options.axes?.x),
       y: createAxisFormatter(options.axes?.y),
@@ -377,6 +384,10 @@ class PlotEngine implements PlotHandle {
       },
       setFullImage: (data, normalize) => {
         layer.setFullImage(data, normalize);
+        this.requestDraw();
+      },
+      setClip: (value) => {
+        layer.setClip(value);
         this.requestDraw();
       },
       setVisible: (visible) => {
@@ -462,51 +473,50 @@ class PlotEngine implements PlotHandle {
   }
 
   fit(): void {
-    if (this.destroyed) return;
-    let xMin = Number.POSITIVE_INFINITY;
-    let xMax = Number.NEGATIVE_INFINITY;
-    let yMin = Number.POSITIVE_INFINITY;
-    let yMax = Number.NEGATIVE_INFINITY;
-    let hasX = false;
-    let hasY = false;
+    this.assertAlive();
+    let xr: AxisRange | null = null;
+    let yr: AxisRange | null = null;
 
-    for (const { layer } of this.layers.values()) {
-      if (!layer.visible) continue;
-      const extents = layer.getExtents?.();
-      if (!extents) continue;
-      if (extents.x) {
-        const { min, max } = extents.x;
-        if (Number.isFinite(min) && Number.isFinite(max)) {
-          xMin = Math.min(xMin, min);
-          xMax = Math.max(xMax, max);
-          hasX = true;
+    for (const phase of PHASE_SEQUENCE) {
+      const bucket = this.phaseBuckets[phase];
+      for (const record of bucket) {
+        const layer = record.layer;
+        if (!layer.visible) continue;
+        const extents = layer.getExtents?.();
+        if (!extents) continue;
+        const ex = extents.x;
+        if (ex && Number.isFinite(ex.min) && Number.isFinite(ex.max) && ex.min < ex.max) {
+          xr = xr
+            ? { min: Math.min(xr.min, ex.min), max: Math.max(xr.max, ex.max) }
+            : { min: ex.min, max: ex.max };
         }
-      }
-      if (extents.y) {
-        const { min, max } = extents.y;
-        if (Number.isFinite(min) && Number.isFinite(max)) {
-          yMin = Math.min(yMin, min);
-          yMax = Math.max(yMax, max);
-          hasY = true;
+        const ey = extents.y;
+        if (ey && Number.isFinite(ey.min) && Number.isFinite(ey.max) && ey.min < ey.max) {
+          yr = yr
+            ? { min: Math.min(yr.min, ey.min), max: Math.max(yr.max, ey.max) }
+            : { min: ey.min, max: ey.max };
         }
       }
     }
 
-    if (hasX) {
-      const range = normalizeRange({ min: xMin, max: xMax });
+    let updated = false;
+    if (xr) {
+      const range = normalizeRange(xr);
       if (range) {
         this.viewport.setXRange(range);
         this.axisModelX.setRange(rangeToTuple(range));
+        updated = true;
       }
     }
-    if (hasY) {
-      const range = normalizeRange({ min: yMin, max: yMax });
+    if (yr) {
+      const range = normalizeRange(yr);
       if (range) {
         this.viewport.setYRange(range);
         this.axisModelY.setRange(rangeToTuple(range));
+        updated = true;
       }
     }
-    if (hasX || hasY) {
+    if (updated) {
       this.requestDraw();
     }
   }

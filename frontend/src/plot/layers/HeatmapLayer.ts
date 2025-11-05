@@ -12,6 +12,7 @@ export interface HeatmapLayer extends Layer, HeatmapLayerHandle {}
 
 const DEFAULT_CLIP = { min: -120, max: 0 };
 const MIN_CLIP_SPAN = 1e-6;
+const CLIP_EPSILON = 1e-6;
 
 let idCounter = 0;
 
@@ -40,6 +41,7 @@ export function createHeatmapLayer(
         );
 
   let clip = normalizeClip(options.clip ?? DEFAULT_CLIP);
+  let autoClip = false;
 
   const bufferCanvas = createBufferCanvas(width, height);
   const bufferCtx = bufferCanvas.getContext("2d");
@@ -67,12 +69,52 @@ export function createHeatmapLayer(
     return Math.min(255, Math.max(0, Math.round(clamped * 255)));
   };
 
-  const writeColumn = (
-    columnIndex: number,
-    values: Float32Array | number[]
-  ) => {
-    const column =
-      values instanceof Float32Array ? values : Float32Array.from(values);
+  const applyClipToBuffer = () => {
+    for (let i = 0; i < valueBuffer.length; i += 1) {
+      const value = valueBuffer[i];
+      const base = i * 4;
+      if (Number.isFinite(value)) {
+        const lutIndex = valueToIndex(value) * 4;
+        rgba[base] = colormap[lutIndex];
+        rgba[base + 1] = colormap[lutIndex + 1];
+        rgba[base + 2] = colormap[lutIndex + 2];
+        rgba[base + 3] = 255;
+      } else {
+        rgba[base] = 0;
+        rgba[base + 1] = 0;
+        rgba[base + 2] = 0;
+        rgba[base + 3] = 0;
+      }
+    }
+    dirty = true;
+  };
+
+  const recomputeAutoClip = () => {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < valueBuffer.length; i += 1) {
+      const value = valueBuffer[i];
+      if (!Number.isFinite(value)) continue;
+      if (value < min) min = value;
+      if (value > max) max = value;
+    }
+    if (!(min < max && Number.isFinite(min) && Number.isFinite(max))) {
+      return false;
+    }
+    const next = normalizeClip({ min, max });
+    const changed =
+      Math.abs(next.min - clip.min) > CLIP_EPSILON ||
+      Math.abs(next.max - clip.max) > CLIP_EPSILON;
+    clip = next;
+    return changed;
+  };
+
+  const toFloat32 = (values: Float32Array | number[]): Float32Array => {
+    return values instanceof Float32Array ? values : Float32Array.from(values);
+  };
+
+  const writeColumn = (columnIndex: number, values: Float32Array) => {
+    const column = values;
     if (column.length !== height) {
       throw new Error(
         `HeatmapLayer "${id}" expected column of length ${height}, received ${column.length}`
@@ -104,7 +146,10 @@ export function createHeatmapLayer(
     const targetColumn = head;
     head = (head + 1) % width;
     filled = Math.min(width, filled + 1);
-    writeColumn(targetColumn, values);
+    writeColumn(targetColumn, toFloat32(values));
+    if (autoClip && recomputeAutoClip()) {
+      applyClipToBuffer();
+    }
     requestDraw();
   };
 
@@ -139,9 +184,10 @@ export function createHeatmapLayer(
           }, received ${data.length}`
         );
       }
-      source = data.slice();
+      source = data;
     }
 
+    autoClip = Boolean(normalize);
     if (normalize) {
       let min = Number.POSITIVE_INFINITY;
       let max = Number.NEGATIVE_INFINITY;
@@ -179,6 +225,20 @@ export function createHeatmapLayer(
     filled = width;
     head = 0;
     dirty = true;
+    requestDraw();
+  };
+
+  const setClipMode = (value: { min: number; max: number } | "auto") => {
+    if (value === "auto") {
+      autoClip = true;
+      recomputeAutoClip();
+      applyClipToBuffer();
+      requestDraw();
+      return;
+    }
+    autoClip = false;
+    clip = normalizeClip(value);
+    applyClipToBuffer();
     requestDraw();
   };
 
@@ -274,6 +334,9 @@ export function createHeatmapLayer(
     },
     setFullImage(data: Float32Array | number[][], normalize?: boolean) {
       setFullImage(data, normalize);
+    },
+    setClip(value: { min: number; max: number } | "auto") {
+      setClipMode(value);
     },
     remove() {
       visible = false;

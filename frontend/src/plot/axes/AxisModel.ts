@@ -1,31 +1,52 @@
-import { computeTicks } from "../math/ticks";
+import {
+  computeLogTicks,
+  computeTicks,
+  computeTimeTicks,
+} from "../math/ticks";
 import type { AxisOptions, AxisScaleKind, Range, Tick } from "./axisTypes";
 
 const DEFAULT_TARGET_TICKS = 8;
 const MIN_SPAN = 1e-12;
+const MIN_LOG_VALUE = 1e-12;
+const SECOND_MS = 1_000;
+const MINUTE_MS = 60 * SECOND_MS;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
 export interface AxisModelInit extends AxisOptions {
   ticksCacheKey?: string;
+  themeFont?: string;
 }
 
 export class AxisModel {
   private readonly scale: AxisScaleKind;
   private readonly formatter?: (value: number) => string;
   private readonly targetTicks: number;
+  private readonly font: string;
 
   private range: Range = [0, 1];
   private spanPx = 1;
   private cachedTicks: Tick[] = [];
   private cacheKey = "";
+  private logRange: Range | null = null;
 
-  constructor(options: AxisOptions) {
+  constructor(options: AxisOptions & { themeFont?: string }) {
     this.scale = options.scale ?? "linear";
     this.formatter = options.format;
     this.targetTicks = Math.max(2, Math.round(options.ticksTarget ?? DEFAULT_TARGET_TICKS));
+    this.font = options.themeFont ?? "12px sans-serif";
   }
 
   setRange(range: Range) {
-    this.range = normalizeRange(range);
+    this.range = normalizeRange(range, this.scale);
+    if (this.scale === "log") {
+      const [min, max] = this.range;
+      const safeMin = Math.max(min, MIN_LOG_VALUE);
+      const safeMax = Math.max(max, safeMin * (1 + MIN_SPAN));
+      this.logRange = [Math.log(safeMin), Math.log(safeMax)];
+    } else {
+      this.logRange = null;
+    }
     this.invalidate();
   }
 
@@ -35,24 +56,18 @@ export class AxisModel {
   }
 
   ticks(): Tick[] {
-    const cacheKey = `${this.range[0]}|${this.range[1]}|${this.spanPx}|${this.scale}|${this.targetTicks}`;
+    const cacheKey = `${this.range[0]}|${this.range[1]}|${this.spanPx}|${this.scale}|${this.targetTicks}|${this.font}`;
     if (cacheKey === this.cacheKey && this.cachedTicks.length > 0) {
       return this.cachedTicks;
     }
 
-    const [min, max] = this.range;
-    const tickCount = this.targetTicks;
-    const font = "12px sans-serif";
-    const values = computeTicks({
-      min,
-      max,
-      count: tickCount,
-      font,
-    });
+    const values = this.computeTickValues();
+    const spacing =
+      values.length >= 2 ? values[1] - values[0] : this.range[1] - this.range[0];
 
     const ticks: Tick[] = values.map((value) => ({
       value,
-      label: this.format(value),
+      label: this.format(value, spacing),
       px: this.valueToPx(value),
     }));
 
@@ -66,7 +81,42 @@ export class AxisModel {
     this.cachedTicks = [];
   }
 
-  private format(value: number): string {
+  pxToValue(px: number): number {
+    const clamped = Math.max(0, Math.min(this.spanPx, px));
+    const ratio = clamped / (this.spanPx || 1);
+    if (this.scale === "log" && this.logRange) {
+      const [logMin, logMax] = this.logRange;
+      const logSpan = logMax - logMin || MIN_SPAN;
+      const logValue = logMin + ratio * logSpan;
+      return Math.exp(logValue);
+    }
+    const [min, max] = this.range;
+    const span = max - min || MIN_SPAN;
+    return min + ratio * span;
+  }
+
+  private computeTickValues(): number[] {
+    const [min, max] = this.range;
+    if (this.scale === "log") {
+      const ticks = computeLogTicks(min, max, this.targetTicks);
+      if (ticks.length > 0) {
+        return ticks;
+      }
+    } else if (this.scale === "time") {
+      const timeTicks = computeTimeTicks(min, max, this.targetTicks);
+      if (timeTicks.length > 0) {
+        return timeTicks;
+      }
+    }
+    return computeTicks({
+      min,
+      max,
+      count: this.targetTicks,
+      font: this.font,
+    });
+  }
+
+  private format(value: number, spacing: number): string {
     if (this.formatter) {
       try {
         return this.formatter(value);
@@ -76,17 +126,36 @@ export class AxisModel {
         }
       }
     }
+    if (this.scale === "time") {
+      return defaultTimeFormat(value, spacing, this.range);
+    }
     return defaultFormat(value);
   }
 
   private valueToPx(value: number): number {
+    if (this.scale === "log" && this.logRange) {
+      if (!Number.isFinite(value) || value <= 0) {
+        return 0;
+      }
+      const [logMin, logMax] = this.logRange;
+      const logSpan = logMax - logMin || MIN_SPAN;
+      const clamped = Math.min(Math.max(Math.log(value), logMin), logMax);
+      return ((clamped - logMin) / logSpan) * this.spanPx;
+    }
     const [min, max] = this.range;
     const span = max - min || MIN_SPAN;
     return ((value - min) / span) * this.spanPx;
   }
 }
 
-function normalizeRange(range: Range): Range {
+function normalizeRange(range: Range, scale: AxisScaleKind): Range {
+  if (scale === "log") {
+    return normalizeLogRange(range);
+  }
+  return normalizeLinearRange(range);
+}
+
+function normalizeLinearRange(range: Range): Range {
   let [min, max] = range;
   if (!Number.isFinite(min) || !Number.isFinite(max)) {
     min = 0;
@@ -101,6 +170,22 @@ function normalizeRange(range: Range): Range {
     const pad = min === 0 ? MIN_SPAN : Math.abs(min) * 1e-6;
     min -= pad;
     max += pad;
+  }
+  return [min, max];
+}
+
+function normalizeLogRange(range: Range): Range {
+  let [min, max] = range;
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= 0) {
+    min = 1;
+    max = 10;
+  }
+  min = Math.max(min, MIN_LOG_VALUE);
+  max = Math.max(max, min * (1 + MIN_SPAN));
+  if (min > max) {
+    const tmp = min;
+    min = max;
+    max = tmp;
   }
   return [min, max];
 }
@@ -121,4 +206,56 @@ function defaultFormat(value: number): string {
     return value.toFixed(2);
   }
   return value.toPrecision(2);
+}
+
+function defaultTimeFormat(value: number, spacing: number, range: Range): string {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const span = Math.max(Math.abs(range[1] - range[0]), spacing);
+  const absSpacing = Math.max(Math.abs(spacing), 0);
+  const includeDate = span >= DAY_MS;
+
+  const hours = pad(date.getUTCHours(), 2);
+  const minutes = pad(date.getUTCMinutes(), 2);
+  const seconds = pad(date.getUTCSeconds(), 2);
+  const millis = pad(date.getUTCMilliseconds(), 3);
+
+  let timePart: string;
+  if (absSpacing >= DAY_MS) {
+    timePart = "";
+  } else if (absSpacing >= HOUR_MS) {
+    timePart = `${hours}:${minutes}`;
+  } else if (absSpacing >= MINUTE_MS) {
+    timePart = `${hours}:${minutes}`;
+  } else if (absSpacing >= SECOND_MS) {
+    timePart = `${hours}:${minutes}:${seconds}`;
+  } else {
+    timePart = `${hours}:${minutes}:${seconds}.${millis}`;
+  }
+
+  const datePart = `${date.getUTCFullYear()}-${pad(
+    date.getUTCMonth() + 1,
+    2
+  )}-${pad(date.getUTCDate(), 2)}`;
+
+  if (includeDate && timePart) {
+    return `${datePart} ${timePart}`;
+  }
+  if (includeDate) {
+    return datePart;
+  }
+  return timePart || datePart;
+}
+
+function pad(value: number, width: number): string {
+  const str = `${Math.trunc(Math.abs(value))}`;
+  if (str.length >= width) {
+    return str;
+  }
+  return `${"0".repeat(width - str.length)}${str}`;
 }

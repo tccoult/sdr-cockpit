@@ -1,4 +1,7 @@
-import { minMaxDecimate } from "../math/decimate";
+import {
+  createDecimationScratch,
+  minMaxDecimateIndices,
+} from "../math/decimate";
 import type {
   AxisRange,
   CursorState,
@@ -41,6 +44,12 @@ export function createLineLayer(
   let length = 0;
   let xDomain: AxisRange | null = null;
   let yDomain: AxisRange | null = null;
+  let dataVersion = 0;
+
+  const scratch = createDecimationScratch();
+  let decimationKey = "";
+  let decimationCount = 0;
+  let decimationIndices: Uint32Array = scratch.out;
 
   const requestDraw = context.requestDraw;
   const formatXValue = (value: number) => context.formatAxisValue("x", value);
@@ -78,12 +87,17 @@ export function createLineLayer(
         : null;
   };
 
+  const invalidateDecimation = () => {
+    decimationKey = "";
+    decimationCount = 0;
+    decimationIndices = scratch.out;
+  };
+
   const cloneToFloat32 = (values: Float32Array | number[]): Float32Array => {
-    const result = new Float32Array(values.length);
-    for (let i = 0; i < values.length; i += 1) {
-      result[i] = (values as ArrayLike<number>)[i];
+    if (values instanceof Float32Array) {
+      return values.slice();
     }
-    return result;
+    return Float32Array.from(values);
   };
 
   const setXY = (
@@ -99,6 +113,8 @@ export function createLineLayer(
     yData = cloneToFloat32(inputY);
     length = xData.length;
     recalcDomains();
+    dataVersion += 1;
+    invalidateDecimation();
     requestDraw();
   };
 
@@ -128,6 +144,8 @@ export function createLineLayer(
     yData = mergedY;
     length = newLength;
     recalcDomains();
+    dataVersion += 1;
+    invalidateDecimation();
     requestDraw();
   };
 
@@ -138,56 +156,105 @@ export function createLineLayer(
     };
   };
 
-  const drawLine = (ctx: CanvasRenderingContext2D, renderContext: LayerRenderContext) => {
+  const formatKeyValue = (value: number) =>
+    Number.isFinite(value) ? value.toPrecision(12) : "NaN";
+
+  const computeDecimationKey = (range: AxisRange, pixelWidth: number) =>
+    `${formatKeyValue(range.min)}:${formatKeyValue(range.max)}:${pixelWidth}:${dataVersion}`;
+
+  const drawLine = (
+    ctx: CanvasRenderingContext2D,
+    renderContext: LayerRenderContext
+  ) => {
     if (length === 0) {
       return;
     }
     const { viewport, dimensions } = renderContext;
-    const decimated = minMaxDecimate(
-      xData.subarray(0, length),
-      yData.subarray(0, length),
-      viewport.xRange,
-      Math.max(1, Math.floor(dimensions.width * dimensions.devicePixelRatio))
+    const pixelWidth = Math.max(
+      1,
+      Math.floor(dimensions.width * dimensions.devicePixelRatio)
     );
-    const { x: decimatedX, y: decimatedY } = decimated;
-    const count = Math.min(decimatedX.length, decimatedY.length);
+    const range = viewport.xRange;
+    const key = computeDecimationKey(range, pixelWidth);
+    if (key !== decimationKey) {
+      const result = minMaxDecimateIndices(
+        xData,
+        yData,
+        range,
+        pixelWidth,
+        scratch
+      );
+      decimationIndices = result.indices;
+      decimationCount = result.count;
+      decimationKey = key;
+    }
+
+    const count = decimationCount;
     if (count === 0) {
       return;
     }
+
     ctx.save();
-    ctx.globalAlpha = opacity;
-    ctx.lineWidth = lineWidth;
     ctx.strokeStyle = color;
-    if (dash && dash.length > 0) {
-      ctx.setLineDash(dash);
+    const requiresDash = Boolean(dash && dash.length > 0);
+    const useDefaultStroke =
+      !requiresDash && opacity === 1 && lineWidth === DEFAULT_LINE_WIDTH;
+
+    if (requiresDash) {
+      ctx.setLineDash(dash as number[]);
     } else {
       ctx.setLineDash([]);
     }
+    ctx.lineWidth = lineWidth;
+    if (opacity !== 1) {
+      ctx.globalAlpha = opacity;
+    }
+    if (useDefaultStroke) {
+      ctx.lineWidth = DEFAULT_LINE_WIDTH;
+      ctx.globalAlpha = 1;
+    }
 
     ctx.beginPath();
-    ctx.moveTo(
-      viewport.projectX(decimatedX[0]),
-      viewport.projectY(decimatedY[0])
-    );
-    for (let i = 1; i < count; i += 1) {
-      ctx.lineTo(
-        viewport.projectX(decimatedX[i]),
-        viewport.projectY(decimatedY[i])
-      );
+    let hasPoint = false;
+    let firstIdx = -1;
+    let lastIdx = -1;
+
+    for (let i = 0; i < count; i += 1) {
+      const dataIndex = decimationIndices[i];
+      if (dataIndex >= length) {
+        continue;
+      }
+      const xValue = xData[dataIndex];
+      const yValue = yData[dataIndex];
+      if (!Number.isFinite(xValue) || !Number.isFinite(yValue)) {
+        continue;
+      }
+      const sx = viewport.projectX(xValue);
+      const sy = viewport.projectY(yValue);
+      if (!hasPoint) {
+        ctx.moveTo(sx, sy);
+        hasPoint = true;
+        firstIdx = dataIndex;
+      } else {
+        ctx.lineTo(sx, sy);
+      }
+      lastIdx = dataIndex;
     }
+
+    if (!hasPoint) {
+      ctx.restore();
+      return;
+    }
+
     ctx.stroke();
 
-    if (fillConfig.enabled && baseline !== null) {
-      ctx.lineTo(
-        viewport.projectX(decimatedX[count - 1]),
-        viewport.projectY(baseline)
-      );
-      ctx.lineTo(
-        viewport.projectX(decimatedX[0]),
-        viewport.projectY(baseline)
-      );
+    if (fillConfig.enabled && baseline !== null && firstIdx !== -1 && lastIdx !== -1) {
+      const baselineY = viewport.projectY(baseline);
+      ctx.lineTo(viewport.projectX(xData[lastIdx]), baselineY);
+      ctx.lineTo(viewport.projectX(xData[firstIdx]), baselineY);
       ctx.closePath();
-      ctx.globalAlpha = fillConfig.opacity ?? opacity * 0.3;
+      const fillOpacity = fillConfig.opacity ?? opacity * 0.3;
+      ctx.globalAlpha = fillOpacity;
       ctx.fillStyle = fillConfig.color ?? color;
       ctx.fill();
     }
@@ -259,6 +326,8 @@ export function createLineLayer(
       yData = new Float32Array(0);
       xDomain = null;
       yDomain = null;
+      dataVersion += 1;
+      invalidateDecimation();
       requestDraw();
     },
     getReadout(cursor: CursorState) {
