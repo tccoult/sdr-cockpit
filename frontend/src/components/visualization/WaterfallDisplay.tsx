@@ -57,12 +57,14 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         background: "rgba(10, 10, 15, 0.95)",
         scaleBackground: "rgba(0, 0, 0, 0.7)",
         scaleText: "white",
+        emptyRowRgb: { r: 0, g: 0, b: 0 },
       };
     }
     return {
       background: "rgba(245, 245, 250, 0.95)",
       scaleBackground: "rgba(255, 255, 255, 0.7)",
       scaleText: "#1e293b",
+      emptyRowRgb: { r: 245, g: 245, b: 250 },
     };
   }, [isDark]);
 
@@ -104,15 +106,16 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     // Create image buffer for plot area only
     waterfallDataRef.current = ctx.createImageData(plotWidthInt, plotHeightInt);
 
-    // Initialize to black
+    // Initialize to theme-appropriate background
     const data = waterfallDataRef.current.data;
+    const { r, g, b } = waterfallColors.emptyRowRgb;
     for (let i = 0; i < data.length; i += 4) {
-      data[i] = 0; // R
-      data[i + 1] = 0; // G
-      data[i + 2] = 0; // B
+      data[i] = r; // R
+      data[i + 1] = g; // G
+      data[i + 2] = b; // B
       data[i + 3] = 255; // A
     }
-  }, [plotWidthInt, plotHeightInt, dataKey]);
+  }, [plotWidthInt, plotHeightInt, dataKey, waterfallColors.emptyRowRgb]);
 
   // Build color lookup table when colormap changes
   useEffect(() => {
@@ -150,10 +153,11 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const buffer = waterfallDataRef.current;
     if (buffer) {
       const data = buffer.data;
+      const { r, g, b } = waterfallColors.emptyRowRgb;
       for (let i = 0; i < data.length; i += 4) {
-        data[i] = 0;
-        data[i + 1] = 0;
-        data[i + 2] = 0;
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
         data[i + 3] = 255;
       }
     }
@@ -165,7 +169,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       }
     }
     requestRender();
-  }, [dataKey, requestRender]);
+  }, [dataKey, requestRender, waterfallColors.emptyRowRgb]);
 
   const addFFTRow = useCallback(
     (fftData: FFTData) => {
