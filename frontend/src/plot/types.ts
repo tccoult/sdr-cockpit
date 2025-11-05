@@ -145,7 +145,37 @@ export interface HeatmapLayerOptions {
 
 export interface AnnotationLayerOptions {
   id?: string;
+  annotations?: AnnotationDefinition[];
 }
+
+export type AnnotationDefinition =
+  | {
+      type: "line";
+      id: string;
+      x: number;
+      color?: string;
+      width?: number;
+      visible?: boolean;
+    }
+  | {
+      type: "span";
+      id: string;
+      x0: number;
+      x1: number;
+      color?: string;
+      fill?: string;
+      opacity?: number;
+      visible?: boolean;
+    }
+  | {
+      type: "point";
+      id: string;
+      x: number;
+      y: number;
+      radius?: number;
+      color?: string;
+      visible?: boolean;
+    };
 
 export interface LayerHandle {
   readonly id: string;
@@ -163,7 +193,11 @@ export interface HeatmapLayerHandle extends LayerHandle {
   setFullImage(data: Float32Array | number[][], normalize?: boolean): void;
 }
 
-export interface AnnotationLayerHandle extends LayerHandle {}
+export interface AnnotationLayerHandle extends LayerHandle {
+  addAnnotation(annotation: AnnotationDefinition): void;
+  upsertAnnotations(annotations: AnnotationDefinition[]): void;
+  deleteAnnotation(id: string): void;
+}
 
 export interface PlotCreationOptions {
   dpr?: number;

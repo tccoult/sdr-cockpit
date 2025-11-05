@@ -382,6 +382,18 @@ class PlotEngine implements PlotHandle {
       remove: () => {
         this.removeLayer(layer.id);
       },
+      addAnnotation: (annotation) => {
+        layer.addAnnotation(annotation);
+        this.requestDraw();
+      },
+      upsertAnnotations: (annotations) => {
+        layer.upsertAnnotations(annotations);
+        this.requestDraw();
+      },
+      deleteAnnotation: (annotationId) => {
+        layer.deleteAnnotation(annotationId);
+        this.requestDraw();
+      },
     };
   }
 
