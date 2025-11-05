@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import App from './App'
 import { ThemeProvider } from './components/app/ThemeProvider'
@@ -11,41 +11,53 @@ const renderApp = () =>
   )
 
 describe('App', () => {
-  it('renders SDR Cockpit heading', () => {
+  it('renders SDR Cockpit heading', async () => {
     renderApp()
-    const heading = screen.getByText(/SDR Cockpit/i)
-    expect(heading).toBeInTheDocument()
+    await waitFor(() => {
+      const heading = screen.getByText(/SDR Cockpit/i)
+      expect(heading).toBeInTheDocument()
+    })
   })
 
-  it('renders FPS counter', () => {
+  it('renders FPS counter', async () => {
     renderApp()
-    const fpsCounter = screen.getByText(/FPS/i)
-    expect(fpsCounter).toBeInTheDocument()
+    await waitFor(() => {
+      const fpsCounter = screen.getByText(/FPS/i)
+      expect(fpsCounter).toBeInTheDocument()
+    })
   })
 
-  it('shows task discovery state initially', () => {
+  it('shows task discovery state initially', async () => {
     renderApp()
-    const discoveringText = screen.getByText(/Discovering tasks/i)
-    expect(discoveringText).toBeInTheDocument()
+    await waitFor(() => {
+      const discoveringText = screen.getByText(/Discovering tasks/i)
+      expect(discoveringText).toBeInTheDocument()
+    })
   })
 
-  it('shows task sidebar', () => {
+  it('shows task sidebar', async () => {
     renderApp()
-    const tasksHeading = screen.getByRole('heading', { name: /Tasks/i })
-    expect(tasksHeading).toBeInTheDocument()
+    await waitFor(() => {
+      const tasksHeading = screen.getByRole('heading', { name: /Tasks/i })
+      expect(tasksHeading).toBeInTheDocument()
+    })
   })
 
-  it('shows create task button in sidebar', () => {
+  it('shows create task button in sidebar', async () => {
     renderApp()
-    const createButton = screen.getByTitle(/Create new task/i)
-    expect(createButton).toBeInTheDocument()
+    await waitFor(() => {
+      const createButton = screen.getByTitle(/Create new task/i)
+      expect(createButton).toBeInTheDocument()
+    })
   })
 
-  it('shows filter tabs (All, RX, TX)', () => {
+  it('shows filter tabs (All, RX, TX)', async () => {
     renderApp()
-    expect(screen.getByRole('button', { name: /^all$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^rx$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^tx$/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^all$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^rx$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^tx$/i })).toBeInTheDocument()
+    })
   })
 
   it('loads demo tasks after discovery', async () => {
