@@ -5,6 +5,7 @@ from typing import Dict
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from app.utils.fft_generator import MockFFTGenerator
 from app.api.routes.tasks import tasks
+from app.config.constants import TARGET_FPS
 
 router = APIRouter()
 
@@ -55,8 +56,8 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
                 fft_data = generator.generate_fft()
                 await websocket.send_json(fft_data)
 
-                # Target ~60 FPS
-                await asyncio.sleep(1.0 / 60)
+                # Target FPS
+                await asyncio.sleep(1.0 / TARGET_FPS)
             else:
                 # If paused, just wait a bit
                 await asyncio.sleep(0.1)

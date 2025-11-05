@@ -4,6 +4,7 @@ import time
 from typing import Dict, List, Union
 from fastapi import APIRouter, HTTPException
 
+from app.config.constants import TARGET_FPS
 from app.models.task import (
     Task,
     CreateRxTaskParams,
@@ -57,7 +58,7 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
             status=TaskStatus.LIVE,
             uptime=0,
             createdAt=now,
-            fps=60,
+            fps=TARGET_FPS,
         )
     else:  # CreateTxTaskParams
         task = Task(
@@ -73,7 +74,7 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
             status=TaskStatus.TRANSMITTING,
             uptime=0,
             createdAt=now,
-            fps=60,
+            fps=TARGET_FPS,
             playback=PlaybackInfo(
                 filename=params.filename,
                 progress=0.0,
@@ -107,7 +108,7 @@ async def update_task(task_id: str, params: UpdateTaskParams):
         task.name = params.name
     if params.status is not None:
         task.status = params.status
-        task.fps = 60 if params.status == TaskStatus.LIVE else 0
+        task.fps = TARGET_FPS if params.status == TaskStatus.LIVE else 0
     if params.frequency is not None:
         task.frequency = params.frequency
 
@@ -158,7 +159,7 @@ async def resume_task(task_id: str):
         task.status = TaskStatus.LIVE
     else:
         task.status = TaskStatus.TRANSMITTING
-    task.fps = 60
+    task.fps = TARGET_FPS
     return task
 
 

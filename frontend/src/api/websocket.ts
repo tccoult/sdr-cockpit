@@ -5,6 +5,7 @@
 import { FFTData } from '../types/sdr';
 import { getWsBaseUrl, getApiMode } from './config';
 import { MockFFTGenerator } from '../utils/mockDataGenerator';
+import { TARGET_FPS } from '../config/constants';
 
 export type DataStreamStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -142,11 +143,11 @@ class OfflineDataStream {
   private start(): void {
     this.callbacks.onStatusChange('connected');
 
-    // Generate and send FFT data at ~60 FPS
+    // Generate and send FFT data at target FPS
     this.intervalId = window.setInterval(() => {
       const fftData = this.generator.generateFFT();
       this.callbacks.onData(fftData);
-    }, 1000 / 60);
+    }, 1000 / TARGET_FPS);
   }
 
   disconnect(): void {
