@@ -30,6 +30,7 @@ const mockGetContext = function() {
     rotate: () => {},
     arc: () => {},
     fill: () => {},
+    fillText: () => {},
     measureText: () => ({ width: 0 }),
     transform: () => {},
     rect: () => {},

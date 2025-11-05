@@ -17,6 +17,8 @@ interface SpectrumViewProps {
   centerFreq: number; // Center frequency in Hz
   sampleRate: number; // Sample rate in Hz
   colorMap: ColorMap; // Selected color map
+  dataError?: string; // Optional error message when data can't be retrieved
+  isConnecting?: boolean; // Optional flag for connection state
 }
 
 export const SpectrumView = memo(function SpectrumView({
@@ -24,6 +26,8 @@ export const SpectrumView = memo(function SpectrumView({
   centerFreq,
   sampleRate,
   colorMap,
+  dataError,
+  isConnecting,
 }: SpectrumViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -174,8 +178,33 @@ export const SpectrumView = memo(function SpectrumView({
 
       <div
         ref={fftContainerRef}
-        className="flex-[35] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40"
+        className="flex-[35] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative"
       >
+        {(dataError || isConnecting) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg z-10">
+            <div className="text-center px-4">
+              {isConnecting ? (
+                <>
+                  <div className="text-lg font-medium text-slate-700 dark:text-slate-200">
+                    Connecting to data stream...
+                  </div>
+                  <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Please wait
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-medium text-red-600 dark:text-red-400">
+                    Unable to retrieve data
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                    {dataError || 'Connection to data stream failed'}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <FFTDisplay
           width={plotWidth}
           height={Math.max(fftHeight - 24, 180)}
@@ -190,8 +219,33 @@ export const SpectrumView = memo(function SpectrumView({
 
       <div
         ref={waterfallContainerRef}
-        className="flex-[65] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40"
+        className="flex-[65] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative"
       >
+        {(dataError || isConnecting) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg z-10">
+            <div className="text-center px-4">
+              {isConnecting ? (
+                <>
+                  <div className="text-lg font-medium text-slate-700 dark:text-slate-200">
+                    Connecting to data stream...
+                  </div>
+                  <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Please wait
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-medium text-red-600 dark:text-red-400">
+                    Unable to retrieve data
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                    {dataError || 'Connection to data stream failed'}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <WaterfallDisplay
           width={plotWidth}
           height={Math.max(waterfallHeight - 24, 240)}

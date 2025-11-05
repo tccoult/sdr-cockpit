@@ -1,10 +1,14 @@
 """FastAPI application entry point"""
+
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+
+from app.api.routes import tasks
+from app.api import websocket
 
 app = FastAPI(
     title="SDR Cockpit API",
@@ -20,6 +24,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+app.include_router(tasks.router)
+app.include_router(websocket.router)
 
 
 @app.get("/api/")
