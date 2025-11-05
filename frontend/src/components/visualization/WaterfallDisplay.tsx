@@ -8,6 +8,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap, buildColorLUT, dbToColorIndex } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
+import type { Theme } from "../app/theme-context";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -18,6 +19,7 @@ interface WaterfallDisplayProps {
   frequencyRange: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
   dataKey?: string;
+  theme: Theme;
 }
 
 const shiftImageDown = (
@@ -45,7 +47,25 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   frequencyRange,
   onFrequencyRangeChange,
   dataKey,
+  theme,
 }: WaterfallDisplayProps) {
+  const isDark = theme === "dark";
+
+  const waterfallColors = useMemo(() => {
+    if (isDark) {
+      return {
+        background: "rgba(10, 10, 15, 0.95)",
+        scaleBackground: "rgba(0, 0, 0, 0.7)",
+        scaleText: "white",
+      };
+    }
+    return {
+      background: "rgba(245, 245, 250, 0.95)",
+      scaleBackground: "rgba(255, 255, 255, 0.7)",
+      scaleText: "#1e293b",
+    };
+  }, [isDark]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallDataRef = useRef<ImageData | null>(null);
   const colorLUTRef = useRef<Uint8ClampedArray | null>(null);
@@ -107,12 +127,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!ctx) return;
 
     // Clear canvas
-    ctx.fillStyle = "rgba(10, 10, 15, 0.95)";
+    ctx.fillStyle = waterfallColors.background;
     ctx.fillRect(0, 0, width, height);
 
     // Draw waterfall data in plot area
     ctx.putImageData(waterfallDataRef.current, margin.left, margin.top);
-  }, [width, height, margin.left, margin.top]);
+  }, [width, height, margin.left, margin.top, waterfallColors.background]);
 
   const requestRender = useCallback(() => {
     if (animationFrameRef.current !== null) return; // Already scheduled
@@ -317,8 +337,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
           left: margin.left,
           right: margin.right,
           height: 20,
-          background: "rgba(0, 0, 0, 0.7)",
-          color: "white",
+          background: waterfallColors.scaleBackground,
+          color: waterfallColors.scaleText,
           fontSize: 12,
           display: "flex",
           justifyContent: "space-between",
