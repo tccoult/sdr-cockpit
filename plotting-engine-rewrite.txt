@@ -1,0 +1,1203 @@
+Here’s a self-contained “spec pack” a coding agent can follow to fully rewrite/refactor your plotting system with **multi-trace 1D**, **spectrogram 2D**, **overlays/annotations**, and **60 FPS** as hard goals—while keeping the public API **simple** and the internals **maintainable**.
+
+---
+
+# 0) Goals & non-goals
+
+**Goals**
+
+* Simple, imperative public API (React optional).
+* Multiple plots/traces per canvas; shared or independent axes.
+* 1D lines/points (FFT, max-hold) + 2D spectrogram (streaming columns **and** full-image set).
+* Consistent 60 FPS on typical modern hardware with multiple plots.
+* Cursor, pan, zoom; clean overlays (markers, spans, tooltips).
+* Deterministic, testable modules; low GC.
+
+**Non-goals (initial)**
+
+* WebGL requirement (keep CPU path; allow future GPU drop-in).
+* Complex layout manager (start with a single plot viewport; allow multiple canvases or stacked panes later).
+
+---
+
+# 1) High-level architecture
+
+**Layered engine (no React):**
+
+* `Plot` orchestrates:
+
+  * **Viewport** (world↔screen transforms, DPR/size)
+  * **Scheduler** (RAF coalescing)
+  * **Layers** (Line, Heatmap, Annotation)
+  * **Input** (pointer/wheel → pan/zoom/cursor)
+  * **Renderer entry** (calls each layer’s `draw`)
+
+**React is a thin wrapper** (`usePlot`) that creates/destroys `Plot` and exposes the handle.
+
+**Module boundaries**
+
+* `engine/*`: orchestration, scheduling, viewport, Plot factory
+* `layers/*`: drawing implementations (no DOM, no React)
+* `math/*`: pure helpers (ticks, decimation, scales)
+* `input/*`: translate DOM events → plot commands (pure-ish utilities)
+* `color/*`: LUTs for heatmaps
+* `theme/*`: all defaults
+* `react/*`: wrapper only
+* `types.ts`: public types/interfaces
+
+---
+
+# 2) File tree (initial)
+
+```
+src/plot/
+  engine/
+    Plot.ts
+    Scheduler.ts
+    Viewport.ts
+  layers/
+    LineLayer.ts
+    HeatmapLayer.ts
+    AnnotationLayer.ts
+  math/
+    ticks.ts
+    decimate.ts
+    scales.ts
+  input/
+    pointer.ts
+    wheel.ts
+  color/
+    colormap.ts
+  theme/
+    theme.ts
+  react/
+    usePlot.tsx
+  types.ts
+```
+
+---
+
+# 3) Public API (stable, imperative)
+
+```ts
+// create
+const plot = createPlot(canvas, { dpr?: number, background?: string });
+
+// layers
+const line    = plot.addLine({ id, color?, mode?: 'line'|'points' });
+const maxHold = plot.addLine({ id: 'max', color: '#f90' });
+const spec    = plot.addHeatmap({ id, width, height, colormap?: string });
+
+// data
+line.setXY(x: Float32Array|number[], y: Float32Array|number[]);
+line.appendXY(x: Float32Array|number[], y: Float32Array|number[]);
+
+spec.pushColumn(bins: Float32Array|number[]);           // streaming spectrogram
+spec.setFullImage(data: Float32Array|number[][], normalize?: boolean); // replace whole map
+
+// overlays
+const ann = plot.addAnnotation({ id, type, ...props }); // markers, spans, labels
+
+// view
+plot.setXRange([min,max]);
+plot.setYRange([min,max]);
+plot.fit();             // asks layers for extents; optional precise behavior later
+plot.requestDraw();     // coalesce via RAF
+
+// lifecycle
+plot.destroy();
+```
+
+**React wrapper**
+
+```ts
+const { attachCanvas, plot } = usePlot({ dpr: devicePixelRatio });
+// <canvas ref={attachCanvas} /> then use plot?.addLine(...), etc.
+```
+
+---
+
+# 4) Internal interfaces (key methods)
+
+### `Plot.ts`
+
+* `createPlot(canvas, options): PlotHandle`
+* Keeps:
+
+  * `Viewport` (xRange, yRange, width/height, dpr)
+  * `Scheduler` (RAF debouncing)
+  * `layers: Array<Layer>`
+  * `resizeObserver`, listener registration
+* Methods: `addLine`, `addHeatmap`, `addAnnotation`, `setXRange`, `setYRange`, `fit`, `requestDraw`, `destroy`
+* Draw pipeline: clear → grid/axes (later) → each visible `Layer.draw(ctx, vp)`
+
+### `Viewport.ts`
+
+* Holds `[xMin,xMax]`, `[yMin,yMax]`, `width`, `height`, `dpr`
+* Methods: `setRanges`, `setSize`, `sx(x)`, `sy(y)`
+
+### `Scheduler.ts`
+
+* `request()` coalesces draw calls into a single RAF
+* `cancel()` on destroy
+
+### `LineLayer.ts`
+
+* State: `x: Float32Array`, `y: Float32Array`, `color`, `mode`
+* Methods: `setXY`, `appendXY`, `draw(ctx, vp)`, `destroy()`
+* Uses `decimateMinMax(x, y, vp.width, vp.xRange)`
+
+### `HeatmapLayer.ts`
+
+* Config: `width`, `height`, `colormap`
+* State:
+
+  * `rgba: Uint8ClampedArray` length `width * height * 4`
+  * `head` (next column index), `readyCols` (0..width)
+  * `lut = getColormapLUT(name)`
+* Methods:
+
+  * `pushColumn(bins: Float32Array|number[])`: write a column at `head`, `head = (head+1)%width`
+  * `setFullImage(data: Float32Array|number[][], normalize?: boolean)`
+  * `clear()`, `draw(ctx, vp)`, `destroy()`
+* Render strategy:
+
+  * Streaming: two `ImageData` segments split at `head`, `putImageData`, then scale `drawImage` to viewport
+  * Full-image: directly create `ImageData` once and blit (cache result)
+
+### `AnnotationLayer.ts`
+
+* Simple drawables: vertical lines, spans, labels, points
+* Public: `add/remove/updateAnnotation`
+* Draw last (over lines/heatmap)
+
+---
+
+# 5) Math & formatting
+
+### `decimate.ts`
+
+* `decimateMinMax(x,y,pixelWidth,[xMin,xMax]) → Uint32Array`
+
+  * Binary search to visible window
+  * Bucket by pixel column; emit min & max indices (good faithfulness)
+  * O(pixels) time; re-run when xRange or size changes
+
+### `ticks.ts`
+
+* `niceTicks([min,max], targetCount) → number[]`
+* `formatTick(value) → string`
+* Cache tick text when range & font unchanged
+
+### `scales.ts`
+
+* Linear/log mapping, `clamp`, `union`, percentage expansions
+* Pixel snapping helpers (if needed to align crisp lines)
+
+---
+
+# 6) Input/interaction
+
+### `pointer.ts`
+
+* Given pointer events + modifiers → domain ops:
+
+  * Drag → pan (translate x/y ranges)
+  * (Optional) drag+modifier → box zoom
+* No DOM calls here; pure calculations
+
+### `wheel.ts`
+
+* Wheel delta → zoom around cursor:
+
+  * Compute cursor domain position
+  * Apply symmetric zoom keeping cursor fixed
+* Optional vertical wheel → y-pan if enabled
+
+**Hooking into Plot**
+
+* `Plot` registers DOM listeners and calls `pointer/wheel` helpers
+* Apply results via `setXRange/setYRange`, then `requestDraw()`
+
+---
+
+# 7) Theme & rendering hygiene
+
+* All defaults in `theme.ts` (background, line width, grid, fonts)
+* Canvas DPR sizing:
+
+  * On resize/DPR change only:
+
+    * `canvas.width = clientWidth * dpr`, `canvas.height = clientHeight * dpr`
+    * `ctx.setTransform(dpr,0,0,dpr,0,0)`
+* Per-frame: avoid changing transform; just draw
+* Zero allocations in hot paths (reuse arrays/paths where possible)
+
+---
+
+# 8) Performance rules (to hit 60 FPS)
+
+* **RAF coalescing**: single scheduler per Plot
+* **O(pixels) draw**: 1D uses min/max decimation; 2D uses LUT + column copy
+* **Data structures**:
+
+  * Typed arrays for data; no per-frame `new`
+  * `ImageData` re-used where possible (beware cloning cost)
+  * Optional `ImageBitmap` conversion (can help on some browsers)
+* **Text**:
+
+  * Cache `measureText` and formatted tick labels while ranges unchanged
+* **DPR & resize**:
+
+  * Size calcs only on resize/DPR change, not per frame
+* **Optional off-main-thread** (future):
+
+  * OffscreenCanvas + Worker for heatmap colorization
+  * Transfer column buffers (transferables)
+
+---
+
+# 9) Maintainability guidance
+
+* **Small files, single responsibility**; hard module boundaries
+* **Public types in `types.ts` only**; JSDoc every public method
+* **No React in engine/layers/math** (testable anywhere)
+* **Consistent error handling**:
+
+  * Throw on shape mismatches (e.g., wrong heatmap size)
+  * Guard nulls at API boundary, not deep inside
+* **Config flags** for optional features:
+
+  * `interactions: { boxSelect?: boolean, yWheelPan?: boolean }`
+  * `debug: { overlay?: boolean }`
+* **Avoid “god state”**: layers own their data; Plot owns viewport/scheduler
+* **Extensibility**: adding a new `Layer` should not touch `Plot` (beyond `addXxx` factory)
+
+---
+
+# 10) Testing plan
+
+**Unit tests**
+
+* `decimateMinMax`: edge cases (tiny ranges, monotonic x, missing values)
+* `ticks`: stable outputs across representative ranges
+* `scales`: linear/log round-trip, clamp behavior
+
+**Golden render tests (optional)**
+
+* Small deterministic scenes drawn to an in-memory canvas; compare pixels with tolerances
+
+**Perf checks**
+
+* Micro-benchmarks: decimation cost vs data size
+* Heatmap column push throughput (columns/sec)
+* RAF frame budget under trace count N
+
+---
+
+# 11) Migration plan (2–3 PRs)
+
+**PR1 – Non-behavioral split**
+
+* Move constants → `theme`
+* Extract math helpers → `math`
+* Create `Viewport`, `Scheduler`
+* Keep current rendering but call through `Plot.draw()`
+
+**PR2 – Layers & API**
+
+* Create `LineLayer`, `HeatmapLayer`, `AnnotationLayer`
+* Implement `addLine`, `addHeatmap`, `addAnnotation`
+* Wire `decimateMinMax`; add `pushColumn` + `setFullImage`
+
+**PR3 – Interactions & cleanups**
+
+* Add `pointer`, `wheel` helpers; hook events in `Plot`
+* Remove dead code; gate debug; finalize public API docs
+
+---
+
+# 12) Key types (for the agent)
+
+```ts
+// types.ts
+export type Range = [number, number];
+
+export interface PlotOptions {
+  dpr?: number;
+  background?: string;
+  interactions?: { boxSelect?: boolean; yWheelPan?: boolean };
+  debug?: { overlay?: boolean };
+}
+
+export interface PlotHandle {
+  addLine(cfg: LineConfig): LineHandle;
+  addHeatmap(cfg: HeatmapConfig): HeatmapHandle;
+  addAnnotation(cfg: AnnotationConfig): AnnotationHandle;
+  setXRange(r: Range): void;
+  setYRange(r: Range): void;
+  fit(): void;
+  requestDraw(): void;
+  destroy(): void;
+}
+
+export type LineMode = 'line' | 'points';
+export interface LineConfig { id: string; color?: string; mode?: LineMode; }
+export interface LineHandle {
+  id: string;
+  setXY(x: Float32Array|number[], y: Float32Array|number[]): void;
+  appendXY(x: Float32Array|number[], y: Float32Array|number[]): void;
+  setVisible(v: boolean): void;
+  remove(): void;
+}
+
+export interface HeatmapConfig { id: string; width: number; height: number; colormap?: string; }
+export interface HeatmapHandle {
+  id: string;
+  pushColumn(bins: Float32Array|number[]): void;
+  setFullImage(data: Float32Array|number[][], normalize?: boolean): void;
+  setVisible(v: boolean): void;
+  clear(): void;
+  remove(): void;
+}
+
+export type AnnotationType = 'vline' | 'hline' | 'span' | 'label' | 'point';
+export interface AnnotationConfig { id: string; type: AnnotationType; [k: string]: unknown; }
+export interface AnnotationHandle { id: string; update(p: Partial<AnnotationConfig>): void; remove(): void; }
+```
+
+---
+
+# 13) Example usage (multiple layers)
+
+```ts
+const plot = createPlot(canvas, { dpr: devicePixelRatio });
+
+const fft = plot.addLine({ id: 'fft', color: '#6cf', mode: 'line' });
+fft.setXY(freqs, magnitudes);
+
+const maxH = plot.addLine({ id: 'max', color: '#f90', mode: 'line' });
+maxH.setXY(freqs, maxHold);
+
+const spec = plot.addHeatmap({ id: 'spec', width: 2048, height: 1024, colormap: 'plasma' });
+spec.pushColumn(powerBins);          // called repeatedly
+// or:
+spec.setFullImage(fullFloat32Array, true);
+
+plot.setXRange([minHz, maxHz]);
+plot.setYRange([minDb, maxDb]);
+plot.requestDraw();
+```
+
+---
+
+This blueprint gives a coding agent everything needed to implement the rewrite: **clear APIs**, **module contracts**, **performance tactics**, and a **migration path**. If you want, I can tailor the method names to your existing `usePlot.ts` and generate the initial files so you can drop them into your repo.
+
+
+Absolutely—here’s a deeper, implementation-grade spec for the **lower-level components** so an agent (or you) can implement them without guesswork. I’ll keep it practical: exact method signatures, data contracts, performance expectations, and error/dirty-state semantics.
+
+---
+
+# 1) Core engine
+
+## 1.1 `Viewport`
+
+Purpose: world↔screen transforms, ranges, DPR/size.
+
+```ts
+export class Viewport {
+  // CSS pixels (not device pixels)
+  width: number;  // e.g., clientWidth
+  height: number; // e.g., clientHeight
+  dpr: number;    // devicePixelRatio
+
+  x: [number, number];
+  y: [number, number];
+
+  constructor(x: [number, number], y: [number, number], width = 300, height = 150, dpr = 1);
+
+  setRanges(x: [number, number], y: [number, number]): void;
+  setSize(width: number, height: number, dpr: number): void;
+
+  // world → screen (CSS pixels)
+  sx(x: number): number;
+  sy(y: number): number;
+
+  // screen → world
+  ix(px: number): number;
+  iy(py: number): number;
+
+  // visible domain extents, cached computation
+  xSpan(): number; // x[1] - x[0]
+  ySpan(): number;
+}
+```
+
+**Notes**
+
+* All transforms are in CSS pixels; the engine sets `ctx.setTransform(dpr,0,0,dpr,0,0)` once after resize.
+* No allocations in hot paths.
+* `ix/iy` are used by input handlers (cursor, zoom-around-cursor).
+
+---
+
+## 1.2 `Scheduler`
+
+RAF coalescer.
+
+```ts
+export class Scheduler {
+  constructor(draw: () => void);
+  request(): void; // schedule a draw if not pending
+  cancel(): void;  // cancel any pending RAF
+  get pending(): boolean;
+}
+```
+
+**Notes**
+
+* Must guarantee at most one RAF per frame per `Plot`.
+* No-op if already pending.
+
+---
+
+## 1.3 `Plot`
+
+Thin orchestrator; owns canvas, context, layers, viewport, scheduler.
+
+```ts
+export interface PlotOptions {
+  dpr?: number;
+  background?: string;
+  interactions?: { boxSelect?: boolean; yWheelPan?: boolean };
+  debug?: { overlay?: boolean };
+}
+
+export function createPlot(canvas: HTMLCanvasElement, opts?: PlotOptions): PlotHandle;
+
+export interface PlotHandle {
+  // Layers
+  addLine(cfg: LineConfig): LineHandle;
+  addHeatmap(cfg: HeatmapConfig): HeatmapHandle;
+  addAnnotation(cfg: AnnotationConfig): AnnotationHandle;
+
+  // View
+  setXRange(r: [number, number]): void;
+  setYRange(r: [number, number]): void;
+  fit(): void; // ask layers for extents; no-op until implemented
+
+  // Render
+  requestDraw(): void;
+
+  // Lifecycle
+  destroy(): void;
+}
+```
+
+**Internal responsibilities**
+
+* Maintain `layers: Layer[]` where `Layer` has `id`, `visible`, `draw(ctx, vp)`, `destroy()`, and optional `getExtents(): { x?: [number,number]; y?: [number,number] }`.
+* `ResizeObserver`: recompute canvas backing store (`canvas.width/height`) and `ctx.setTransform`, then `requestDraw()`.
+* Clear frame: one background fill per frame. Grid/axes can be separate layers or an internal prepass.
+
+---
+
+# 2) Layers
+
+All layers implement:
+
+```ts
+export interface Layer {
+  id: string;
+  visible: boolean;
+  draw(ctx: CanvasRenderingContext2D, vp: Viewport): void;
+  destroy(): void;
+
+  // Optional: used by Plot.fit()
+  getExtents?(): { x?: [number, number]; y?: [number, number] };
+}
+```
+
+## 2.1 `LineLayer` (1D)
+
+For FFT plots, overlays (max-hold), etc.
+
+```ts
+export type LineMode = 'line' | 'points';
+
+export interface LineConfig {
+  id: string;
+  color?: string;         // default theme color
+  mode?: LineMode;        // 'line' (default)
+  lineWidth?: number;     // optional override
+}
+
+export class LineLayer implements Layer {
+  readonly id: string;
+  visible = true;
+
+  constructor(cfg: LineConfig, onDirty: () => void);
+
+  setXY(x: Float32Array | number[], y: Float32Array | number[]): void;
+  appendXY(x: Float32Array | number[], y: Float32Array | number[]): void; // O(n) copy; caller decides frequency
+  setColor(c: string): void;
+  setMode(m: LineMode): void;
+
+  draw(ctx: CanvasRenderingContext2D, vp: Viewport): void;
+  destroy(): void;
+
+  getExtents(): { x: [number, number]; y: [number, number] };
+}
+```
+
+**Implementation details**
+
+* Internal storage: `x: Float32Array`, `y: Float32Array`. Convert `number[]` once at boundary.
+* **Decimation:** Use `decimateMinMax(x, y, vp.width, vp.x)`; return indices in draw order.
+* **Complexity:** O(pixels) per frame, not O(n).
+* **GC:** No allocations in `draw` except a reusable index buffer. Pre-allocate index array to `2*vp.width` and reuse.
+* **Extents:** Cache min/max on `setXY/appendXY`.
+
+---
+
+## 2.2 `HeatmapLayer` (2D / spectrogram)
+
+Column streaming + full image set. RGBA backing store for fast blits.
+
+```ts
+export interface HeatmapConfig {
+  id: string;
+  width: number;    // columns (time)
+  height: number;   // rows (freq bins)
+  colormap?: string; // 'plasma' default
+  clip?: { min: number; max: number } | 'auto'; // normalization range
+}
+
+export class HeatmapLayer implements Layer {
+  readonly id: string;
+  visible = true;
+
+  constructor(cfg: HeatmapConfig, onDirty: () => void);
+
+  pushColumn(bins: Float32Array | number[]): void;             // length == height
+  setFullImage(data: Float32Array | number[][], normalize?: boolean): void;
+
+  setColormap(name: string): void;         // updates LUT
+  setClip(clip: HeatmapConfig['clip']): void;
+
+  clear(): void;
+
+  draw(ctx: CanvasRenderingContext2D, vp: Viewport): void;
+  destroy(): void;
+
+  // Optional (for fit() if spec wants to influence y-range)
+  getExtents(): { y: [number, number] };
+}
+```
+
+**Implementation details**
+
+* **Storage**: `rgba = new Uint8ClampedArray(width * height * 4)` (column-major or row-major—pick one and stick to it).
+* **Streaming**: Maintain `head` column index; on `pushColumn`, write RGBA for that column using a **precomputed LUT**.
+* **LUT**: `Uint8Array(256*4)` from `color/colormap.ts`.
+* **Normalization/Clip**:
+
+  * If `clip:'auto'`, track running min/max or an EMA of min/max to avoid spikes.
+  * Provide `setClip({min,max})` to lock normalization.
+  * Mapping: `vNorm = clamp((v-min)/(max-min), 0, 1); idx = (vNorm*255)|0`.
+* **Draw**:
+
+  * **Streaming:** Split at `head` and `putImageData` two segments (right then left), then scale once using `drawImage` to viewport rect (disable smoothing).
+  * **Full image:** fill entire `rgba` and `putImageData` once; cache any immutable `ImageData` if your browser perf benefits.
+* **Complexity**:
+
+  * `pushColumn`: O(height) + LUT lookup.
+  * `draw`: `putImageData` (two segments) + one `drawImage` to scale.
+
+**Memory notes**
+
+* RGBA buffer = `width * height * 4` bytes. 2048×1024 ≈ 8 MB—fine.
+
+---
+
+## 2.3 `AnnotationLayer`
+
+Draw simple overlays last.
+
+```ts
+export type AnnotationType = 'vline' | 'hline' | 'span' | 'label' | 'point';
+
+export interface AnnotationBase { id: string; type: AnnotationType; visible?: boolean; z?: number; }
+export interface VLine extends AnnotationBase { type: 'vline'; x: number; color?: string; lineWidth?: number; }
+export interface HLine extends AnnotationBase { type: 'hline'; y: number; color?: string; lineWidth?: number; }
+export interface Span  extends AnnotationBase { type: 'span'; x0: number; x1: number; color?: string; alpha?: number; }
+export interface Label extends AnnotationBase { type: 'label'; x: number; y: number; text: string; color?: string; bg?: string; }
+export interface Point extends AnnotationBase { type: 'point'; x: number; y: number; radius?: number; color?: string; }
+
+export type Annotation = VLine | HLine | Span | Label | Point;
+
+export interface AnnotationConfig extends Annotation {}
+
+export interface AnnotationHandle { id: string; update(patch: Partial<Annotation>): void; remove(): void; }
+
+export class AnnotationLayer implements Layer {
+  readonly id = '__annotations__';
+  visible = true;
+
+  add(a: Annotation): AnnotationHandle;
+  update(id: string, patch: Partial<Annotation>): void;
+  remove(id: string): void;
+
+  draw(ctx: CanvasRenderingContext2D, vp: Viewport): void;
+  destroy(): void;
+}
+```
+
+**Notes**
+
+* Keep it simple and stateless: data is a small array; sort by `z` each draw if needed (or maintain a min-heap keyed by z if lots of edits).
+* Avoid `save/restore` per item; batch where possible.
+
+---
+
+# 3) Math & utility modules
+
+## 3.1 `decimate.ts` (1D decimator)
+
+```ts
+export function decimateMinMax(
+  x: Float32Array, y: Float32Array, pixelWidth: number, xrange: [number, number],
+  reusableOut?: Uint32Array // optional: caller supplies buffer of length >= 2*pixelWidth
+): Uint32Array;
+```
+
+**Behavior**
+
+* Binary-search `x` to visible [xa, xb] window.
+* Bucket points by screen column, compute min & max y per bucket.
+* Emit indices `[iMin, iMax, ...]` in draw order; if min==max, emit once.
+* **O(pixels)** time, **O(pixels)** memory.
+
+## 3.2 `ticks.ts`
+
+```ts
+export function niceTicks(range: [number, number], targetCount: number): number[];
+export function formatTick(v: number): string; // engineering notation if appropriate
+```
+
+**Notes**
+
+* Cache the last `(range, targetCount, font)` → (ticks, labels) pair to avoid recomputation.
+
+## 3.3 `scales.ts`
+
+```ts
+export type Scale = { toPx(v: number): number; toVal(px: number): number; };
+export function linear(domain: [number, number], spanPx: number): Scale;
+
+export function clamp(v: number, lo: number, hi: number): number;
+export function union(a: [number, number], b: [number, number]): [number, number];
+export function expandByPct(r: [number, number], pct: number): [number, number];
+```
+
+---
+
+# 4) Color
+
+## 4.1 `colormap.ts`
+
+```ts
+export function getColormapLUT(name: string): Uint8Array; // 256*4 RGBA
+export function registerColormap(name: string, lut: Uint8Array): void;
+export function listColormaps(): string[];
+```
+
+**Notes**
+
+* LUT must be length 1024 with RGBA order; alpha 255 unless special effects.
+
+---
+
+# 5) Input (pointer/wheel helpers)
+
+## 5.1 `pointer.ts`
+
+```ts
+export interface PanState {
+  startX: number; startY: number;        // screen px (CSS)
+  startRangeX: [number, number];
+  startRangeY: [number, number];
+  active: boolean;
+}
+
+export function beginPan(state: PanState, px: number, py: number, xRange: [number,number], yRange: [number,number]): void;
+export function updatePan(state: PanState, px: number, py: number, vp: Viewport): { x?: [number,number]; y?: [number,number] };
+export function endPan(state: PanState): void;
+
+// Optional: box zoom
+export interface BoxSelect { x0: number; y0: number; x1: number; y1: number; active: boolean; }
+export function beginBox(box: BoxSelect, px: number, py: number): void;
+export function updateBox(box: BoxSelect, px: number, py: number): void;
+export function finishBox(box: BoxSelect, vp: Viewport): { x: [number,number]; y: [number,number] };
+```
+
+**Notes**
+
+* These are **pure calculators**—no DOM. `Plot` handles event listeners and uses these to compute new ranges.
+
+## 5.2 `wheel.ts`
+
+```ts
+export interface WheelConfig { zoomFactor?: number; yWheelPan?: boolean; }
+export function applyWheel(
+  px: number, py: number, deltaY: number, vp: Viewport,
+  cfg: WheelConfig
+): { x?: [number,number]; y?: [number,number] };
+```
+
+**Behavior**
+
+* `deltaY < 0` zoom in, `deltaY > 0` zoom out around `(px, py)` fixed point.
+* If `yWheelPan`, treat small deltas as y-translate instead of y-zoom.
+
+---
+
+# 6) Axes & grid (optional separate modules)
+
+If you want axes/grid modularized:
+
+```ts
+export interface AxesOptions {
+  ticksX?: number; ticksY?: number;
+  font?: string; textColor?: string;
+  axisColor?: string; gridColor?: string;
+}
+
+export function drawGrid(ctx: CanvasRenderingContext2D, vp: Viewport, opts: AxesOptions): void;
+export function drawAxes(ctx: CanvasRenderingContext2D, vp: Viewport, opts: AxesOptions): void;
+```
+
+**Notes**
+
+* Use `niceTicks` to compute tick positions; draw labels with cached `measureText`.
+
+---
+
+# 7) Dirty-state & draw contract
+
+* **Plot** maintains a single `requestDraw()` method; layers call the `onDirty` callback they receive in constructor to trigger a redraw.
+* **Never** draw directly from data setters; always call `onDirty()` then the coalesced draw happens on next RAF.
+* **Resize/DPR**: only recalculates canvas backing store and transform, then `requestDraw()`.
+
+---
+
+# 8) Error handling & invariants
+
+* `LineLayer.setXY/appendXY`: `x.length === y.length` or throw.
+* `HeatmapLayer.pushColumn`: `bins.length === height` or throw.
+* `HeatmapLayer.setFullImage`: length must equal `width*height` (or nested `[height][width]`) or throw.
+* `Viewport` ranges: guard zero-span (expand by tiny epsilon).
+
+---
+
+# 9) Performance budgets & complexity
+
+* `LineLayer.draw`: O(pixels) per frame; no allocations (reused index buffer).
+* `HeatmapLayer.pushColumn`: O(height) per column; LUT lookup; zero extra allocations.
+* `HeatmapLayer.draw`: 1–2 `putImageData` + 1 `drawImage`; avoid per-frame `new ImageData` by reusing where possible (browser-dependent—measure).
+* `Scheduler`: ≤ 1 RAF pending; frame time target ~2–4 ms for multi-layer scenes.
+
+---
+
+# 10) OffscreenCanvas / Worker (future)
+
+* Wrap `HeatmapLayer` colorization (`float→uint8→LUT`) into a tiny worker contract:
+
+  * `msg: { type:'push', bins: Float32Array, clip:{min,max}, colormap }`
+  * Transfers: `bins.buffer`
+  * Returns: `{ type:'column', rgbaCol: Uint8ClampedArray }` (transfer buffer)
+* Keep public API identical; `HeatmapLayer` chooses CPU vs Worker internally.
+
+---
+
+# 11) Theme
+
+```ts
+export const DEFAULT_BACKGROUND = '#0b0d12';
+export const DEFAULT_LINE_WIDTH = 1.25;
+export const DEFAULT_GRID_COLOR = 'rgba(255,255,255,0.1)';
+export const DEFAULT_AXIS_COLOR = 'rgba(255,255,255,0.4)';
+export const DEFAULT_TEXT_COLOR = '#fff';
+export const DEFAULT_FONT = '12px Inter, system-ui, sans-serif';
+```
+
+**Rule:** No magic numbers scattered in layers; pull from theme.
+
+---
+
+# 12) Maintainability checkpoints
+
+* **Public types** live only in `types.ts`, all exported with JSDoc.
+* **No React in engine/layers**; only in `react/usePlot.tsx`.
+* **One responsibility per file** (≤ ~200 LOC target).
+* **Unit tests** for `decimate.ts`, `ticks.ts`, `scales.ts`, and `pointer/wheel` math (pure functions).
+* **Consistent naming**: world (x,y), screen (sx,sy), `vp` for viewport.
+* **Comments** at the top of each file: “What it does / What it doesn’t / Big-O”.
+
+---
+
+If you want, I can generate stubs for each of these files with function signatures and TODOs so a coding agent can immediately fill in logic without deciding structure.
+
+
+Great question. I read through your current monolithic `usePlot.ts` (~1.8k LOC) and here are the **specific gaps / risks** I’d address in the rewrite, with **concrete fixes**. I’ll group them by area so it’s easy to hand to a coding agent.
+
+---
+
+## Rendering & performance
+
+1. **No 1D decimation (draws every point)**
+
+* **Problem:** The 1D path walks all samples and draws line segments for each. Large arrays + multiple traces = dropped frames.
+* **Fix:** Add an O(pixels) decimator (min/max per pixel column) and reuse a preallocated `Uint32Array` of length `2 * width`. Recompute only when x-range or width changes.
+
+2. **Heatmap builds a full device-sized `ImageData`**
+
+* **Problem:** Each draw builds / fills an RGBA buffer at device resolution and `putImageData`s it. That’s expensive and CPU-bound.
+* **Fix:** Store heatmap in source resolution and **scale with `drawImage`** to viewport (GPU path). For streaming, maintain a **column ring buffer** in RGBA and only update the new column(s); then composite with **two blits** (split at head) + a single `drawImage`. Disable smoothing for crisp pixels.
+
+3. **Global `imageSmoothingEnabled = true`**
+
+* **Problem:** Good for lines; **bad for heatmaps** (blurry + slower resampling).
+* **Fix:** For heatmap draw, `save()`, `imageSmoothingEnabled = false`, `drawImage`, then `restore()`; leave the default for lines.
+
+4. **No `ResizeObserver` / DPR-change trigger**
+
+* **Problem:** Canvas backing store is sized during draw; if the element resizes (or DPR changes) without other interactions, the canvas can stay stale.
+* **Fix:** Add a `ResizeObserver` on the canvas (or container) and a **DPR change listener** (`matchMedia` or timer check) to call a tiny `resizeToElement()` that updates `canvas.width/height` and `ctx.setTransform(dpr,0,0,dpr,0,0)`, then `requestDraw()`.
+
+5. **Per-frame `getBoundingClientRect`**
+
+* **Observation:** You call it inside render. It’s okay if you render rarely, but it’s measurable at 60 FPS.
+* **Fix:** Cache rect in `ResizeObserver` and in pointer events; during steady animation, avoid calling it every frame.
+
+6. **Text/tick cost not cached**
+
+* **Problem:** If ticks/labels are measured or formatted every draw, text layout becomes a hidden perf sink.
+* **Fix:** Cache tick positions + formatted strings keyed by `(range, font, targetCount)`. Only recompute when range or font changes.
+
+7. **Area fill under line always on**
+
+* **Problem:** The line path ends by adding a baseline, closing, and filling, which can be costly and not always desired.
+* **Fix:** Gate fill under line behind a config flag; set default to off for performance unless explicitly enabled.
+
+---
+
+## Interaction & input
+
+8. **Wheel zoom factor constant + smoothing**
+
+* **Observation:** Uses a fixed factor (1.1/0.9) and doesn’t incorporate the cursor fixed-point zoom math fully for both axes.
+* **Fix:** Use cursor anchoring for zoom on the active axes, configurable `zoomFactor`, and (optionally) clamp to min/max span.
+
+9. **Pointer capture is used (good) but…**
+
+* **Check:** Ensure you always release capture on `pointerup`/`pointercancel` and ignore events when `projection` is null (you already do most of this; keep it tight).
+
+10. **No keyboard shortcuts (optional)**
+
+* **Suggestion:** Add optional keyboard handlers (e.g., `R` to reset, `+/-` to zoom, arrows to pan) behind a config flag. Keep them in a separate module so the core stays clean.
+
+---
+
+## Data & memory
+
+11. **ArrayLike → numeric conversion scatter**
+
+* **Problem:** Repeated conversions and per-draw checks on `ArrayLike` types inflate cost.
+* **Fix:** Normalize at the API boundary: convert `number[]` → `Float32Array` in setters; internal code always uses typed arrays.
+
+12. **Heatmap normalization**
+
+* **Problem:** If you normalize per frame or per column with new min/max from the current data, the image will “pump”.
+* **Fix:** Support `clip: 'auto' | {min,max}`; with `'auto'`, use a **smoothed** min/max (EMA) to stabilize; allow callers to lock `{min,max}` for consistent color mapping.
+
+13. **GC pressure during draw**
+
+* **Problem:** Creating `ImageData` or temporary arrays each draw creates steady GC churn.
+* **Fix:** Reuse buffers. Keep one `ImageData` matching **source** dimensions and only recreate on source-size change; do not rebuild per-frame unless the size actually changed.
+
+---
+
+## Structure & layering
+
+14. **Monolith mixes orchestration, math, IO, and drawing**
+
+* **Problem:** Hard to test, reason about, and optimize; AI will struggle to make localized changes safely.
+* **Fix:** Split into `engine` (Plot/Scheduler/Viewport), `layers` (Line, Heatmap, Annotation), `math` (decimate/ticks/scales), `input` (pointer/wheel), `color` (colormap LUT), `theme`. Keep the React wrapper thin.
+
+15. **No formal layer interface**
+
+* **Problem:** Adding new visual features (e.g., markers, spans) forces you back into the monolith.
+* **Fix:** Formalize a `Layer` interface with `draw(ctx, vp)`, `destroy()`, `visible`, and optional `getExtents()`. Every new visual is a new layer.
+
+16. **Debug drawing intermingled**
+
+* **Problem:** Debug instrumentation can hit hot paths and complicate state.
+* **Fix:** Gate debug overlay behind `config.debug?.enabled` and split into its own layer. Keep it off by default.
+
+---
+
+## API coverage & ergonomics
+
+17. **Full-heatmap set missing (now requested)**
+
+* **Fix:** Add `HeatmapHandle.setFullImage(data, normalize?)`, length = `width * height` or `[height][width]`.
+
+18. **Imperative public API (React optional)**
+
+* **Fix:** Keep a tiny API:
+
+  * `addLine`, `addHeatmap`, `addAnnotation`
+  * `setXRange`, `setYRange`, `fit`, `requestDraw`, `destroy`
+  * Plus layer methods: `setXY`, `appendXY`, `pushColumn`, `setFullImage`, `setVisible`, `remove`
+
+19. **Axes/grid modularity**
+
+* **Observation:** Axes & grid are rendered inline with traces and cursor.
+* **Fix:** Move axes/grid to their own utility or layer with cached ticks/labels. It helps perf and lets you toggle them easily.
+
+---
+
+## Correctness / visual quality
+
+20. **Crisp lines at DPR**
+
+* **Problem:** Without aligning to half-pixel boundaries, 1px strokes can look soft.
+* **Fix:** For 1px strokes, offset by 0.5 in device pixels (or snap world-to-screen results to device pixels). Do it in the renderer, not in the math.
+
+21. **Baseline logic for filled lines**
+
+* **Check:** Make sure the “last point to baseline” doesn’t overshoot when data ends with `NaN`/gaps; skip fill when not continuous or when `fillOpacity=0`.
+
+22. **Heatmap orientation / transposition**
+
+* **Check:** Ensure indexing is consistent (row-major vs column-major). The current code writes per-pixel into a full-sized `ImageData`; the ring-buffer approach requires a clear column/row layout decision to avoid mistakes when splitting at `head`.
+
+---
+
+## Observability & testability
+
+23. **Hard to unit test now**
+
+* **Fix:** Pure modules for `decimate`, `ticks`, `scales`, `pointer`, `wheel` with deterministic tests.
+* **Add lightweight perf counters** (e.g., last decimation time, columns/sec) exposed under `debug` so you can sanity-check regressions quickly.
+
+24. **No golden tests**
+
+* **Fix (optional):** Add tiny golden image tests (e.g., 200×100 canvas snapshots) for line and heatmap with fixed seeds and compare within tolerance.
+
+---
+
+## Summary of “must-change” items
+
+* Add **decimation** for 1D traces (min/max per pixel).
+* Rework **heatmap** to **store at source res**, do **LUT once per new column**, and **scale via `drawImage`**; support `setFullImage`.
+* Add **ResizeObserver** (+ DPR change detection) to keep canvas sizing correct without user input.
+* **Cache** ticks/labels and text measures; **disable smoothing** for heatmaps only.
+* Normalize **ArrayLike** inputs at API boundary to **Float32Array**.
+* Split into **engine/layers/math/input/color/theme**; add a **Layer** interface.
+* Gate **fill under line** and **debug overlay** behind config flags.
+
+If you want, I can annotate your existing file with TODO markers at the exact lines where each of these rewrites should happen (and/or generate the split files with the correct signatures so you can paste your current logic into the right places).
+
+Here’s a tight, implementation-ready summary for building **Axes** that the agent can follow.
+
+---
+
+# Axes: Implementation Summary
+
+## Purpose
+
+Provide reusable axis math + rendering that:
+
+* Works for **bottom/top/left/right** axes
+* Supports **linear/log/time** scales
+* Draws **grid lines** (behind data) and **axis lines/ticks/labels** (in front)
+* Is **fast**, **cache-friendly**, and **testable**
+
+---
+
+## Design Pattern (pick one)
+
+**Recommended (A): Two regular layers**
+
+* `GridLayer` (zIndex: -500) — draws grid using ticks from models.
+* `AxisLabelLayer` (zIndex: +500) — draws axis lines, tick marks, tick labels, titles.
+* Both layers consume the same `AxisModel`(s).
+
+**Alternative (B): Phased rendering**
+
+* Add `phase` to Layer: `'background' | 'grid' | 'content' | 'foreground' | 'cursor' | 'debug'`.
+* Engine draws phases in fixed order. Axis grid in `grid`, labels in `foreground`.
+
+**Simplest (C): Hard-wired passes**
+
+* Call `drawGridFromAxes` before data; `drawAxisLabels` after data (not pluggable).
+
+> A or B keeps axes pluggable and predictable. A is simplest to drop in now.
+
+---
+
+## Files
+
+```
+axes/
+  axisTypes.ts     // types & enums (public)
+  AxisModel.ts     // pure math: ranges → ticks → labels (cached)
+  AxisLayer.ts     // canvas rendering: grid + axis lines/labels
+```
+
+---
+
+## Public Types (axisTypes.ts)
+
+```ts
+export type Range = [number, number];
+export type AxisScaleKind = 'linear' | 'log' | 'time';
+export type AxisSide = 'left' | 'right' | 'top' | 'bottom';
+
+export interface AxisOptions {
+  side: AxisSide;
+  scale?: AxisScaleKind;          // default 'linear'
+  label?: string;                 // axis title
+  unit?: string;                  // 'Hz', 'dB', etc. (formatter appends)
+  ticksTarget?: number;           // default ~8
+  tickSizePx?: number;            // default 6
+  grid?: boolean;                 // GridLayer uses this (or pass separately)
+  format?: (v: number) => string; // optional label override
+}
+
+export interface AxisTheme {
+  axisColor: string;
+  gridColor: string;
+  textColor: string;
+  font: string;          // e.g., "12px Inter, system-ui, sans-serif"
+  lineWidth: number;     // 1px strokes snapped to device pixel
+  labelPaddingPx: number;
+  tickLabelPaddingPx: number;
+}
+```
+
+---
+
+## AxisModel (pure math, cached)
+
+**Responsibilities**
+
+* Holds `range`, `spanPx` (axis length in CSS px), `side`, `scale`.
+* Computes **nice ticks** and **formatted labels**.
+* Caches results keyed by `(range, spanPx, scale, ticksTarget, formatter presence)`.
+
+**API**
+
+```ts
+export interface Tick { value: number; label: string; px: number; }
+
+export class AxisModel {
+  constructor(opts: AxisOptions);
+  setRange(r: Range): void;
+  setSpanPx(px: number): void;            // axis length in CSS px
+  ticks(): Tick[];                         // cached; recompute only on key change
+}
+```
+
+**Notes**
+
+* `px` is **CSS** px (engine sets `ctx.setTransform(dpr,0,0,dpr,0,0)` once).
+* For Y axes, compute `px` with inverted mapping (canvas Y grows downward).
+* Implement `niceTicksLinear`, `niceTicksLog`, `niceTicksTime`, and default `formatEng`/`formatTime`.
+* Keep this file **pure** and fully unit-tested.
+
+---
+
+## AxisLayer (canvas)
+
+**Responsibilities**
+
+* Draw **grid** (optional).
+* Draw **axis line**, **tick marks**, **tick labels**, **axis title**.
+* Use **device-pixel snapping** for crisp 1px strokes.
+
+**API**
+
+```ts
+export class AxisLayer {
+  constructor(opts: AxisOptions, theme: AxisTheme);
+  setRange(r: Range): void;       // forward to model
+  setSpanPx(px: number): void;    // forward to model
+  setTheme(t: AxisTheme): void;
+  draw(ctx: CanvasRenderingContext2D, vp: Viewport): void;
+}
+```
+
+**Drawing rules**
+
+* **Grid**: draw first (behind data). For bottom/top use vertical lines at `tick.px`; for left/right use horizontal lines.
+* **Axis line + ticks**: snap to device pixel (`Math.round(px) + 0.5`) for crispness.
+* **Labels**: cache `measureText` or avoid measuring unless necessary; place with small paddings from `AxisTheme`.
+* Keep `imageSmoothingEnabled` default (only disable when scaling images, not for vector lines/text).
+
+---
+
+## Engine Wiring
+
+* Create one `AxisModel` per side you need (typically `bottom` and `left`).
+* On **resize**:
+
+  * `axisBottom.setSpanPx(vp.width)`
+  * `axisLeft.setSpanPx(vp.height)`
+* On **range change**:
+
+  * `axisBottom.setRange(vp.x)`
+  * `axisLeft.setRange(vp.y)`
+* **Draw order**:
+
+  * Background
+  * **GridLayer** (or `AxisLayer` drawing just grid)
+  * Data layers (Line, Heatmap, etc.)
+  * **Axis labels/ticks** (second AxisLayer or same instance in foreground)
+  * Cursor/hover/annotations
+  * Debug
+
+If using option A, you can implement `GridLayer` and `AxisLabelLayer` as two tiny wrappers around the same `AxisModel`(s), differing only in what they draw and their `zIndex`.
+
+---
+
+## Interaction Coupling
+
+* Pan/zoom modifies `vp.x/vp.y` → call `setRange` on corresponding `AxisModel` → `ticks()` cache invalidates automatically → next draw reflects updated ticks/labels.
+* For **log**/**time** scales, keep pan/zoom math in domain; `AxisModel` handles display formatting.
+
+---
+
+## Performance Checklist
+
+* `AxisModel.ticks()` is cached; recompute only when `(range/span/scale/target/formatter)` changes.
+* Avoid per-frame `measureText`; cache label widths if label text is stable.
+* Use **device-pixel snapping** for crisp lines: `Math.round(px) + 0.5`.
+* Don’t call `getBoundingClientRect` during draw; rely on `ResizeObserver` updates from the engine.
+
+---
+
+## Tests
+
+* Unit tests for:
+
+  * `niceTicksLinear`, `niceTicksLog`, `niceTicksTime` (range extremes, tiny/huge spans)
+  * formatter behavior with/without `unit`
+  * Y-axis inversion mapping
+* Visual (optional): small golden renders for bottom+left axes with and without grid.
+
+---
+
+**Bottom line:** Axes are cleanly separated into **AxisModel (math/cache)** and **AxisLayer (draw)**. Use either **two axis layers** (grid vs labels) with z-ordering or **phased rendering** to guarantee order. This plugs into your `Plot` without special cases, keeps performance predictable, and is easy to test and extend.

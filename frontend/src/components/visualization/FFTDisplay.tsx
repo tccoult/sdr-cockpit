@@ -1,13 +1,12 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
 import {
-  CursorStyle,
-  Trace1DType,
   usePlot,
-  type CursorInfo,
-  type TraceHandle1D,
-} from "../../utils/plotting";
+  type CursorState,
+  type LineLayerHandle,
+  type PlotCreationOptions,
+} from "../../plot";
 import type { Theme } from "../app/theme-context";
 
 interface FFTDisplayProps {
@@ -40,8 +39,9 @@ export const FFTDisplay = memo(function FFTDisplay({
     if (isDark) {
       return {
         background: "rgba(10, 10, 15, 0.85)",
-        gridColor: "rgba(255, 255, 255, 0.1)",
+        gridColor: "rgba(255, 255, 255, 0.12)",
         textColor: "#ffffff",
+        axisColor: "rgba(255, 255, 255, 0.4)",
         traceColor: "#FF00FF",
         tooltipBackground: "rgba(20, 20, 30, 0.95)",
         tooltipBorder: "rgba(255, 255, 255, 0.2)",
@@ -50,8 +50,9 @@ export const FFTDisplay = memo(function FFTDisplay({
     }
     return {
       background: "rgba(245, 245, 250, 0.95)",
-      gridColor: "rgba(0, 0, 0, 0.1)",
+      gridColor: "rgba(0, 0, 0, 0.08)",
       textColor: "#1e293b",
+      axisColor: "rgba(51, 65, 85, 0.8)",
       traceColor: "#8b5cf6",
       tooltipBackground: "rgba(255, 255, 255, 0.95)",
       tooltipBorder: "rgba(0, 0, 0, 0.2)",
@@ -59,104 +60,125 @@ export const FFTDisplay = memo(function FFTDisplay({
     };
   }, [isDark]);
 
-  const plotConfig = useMemo(
+  const plotOptions = useMemo<PlotCreationOptions>(
     () => ({
+      background: plotColors.background,
+      theme: {
+        gridColor: plotColors.gridColor,
+        textColor: plotColors.textColor,
+        axisColor: plotColors.axisColor,
+        cursorLineColor: plotColors.textColor,
+        cursorHighlightColor: plotColors.traceColor,
+      },
+      interactions: {
+        pan: { x: true, y: false },
+        zoom: { x: true, y: false, factor: 0.2 },
+        cursor: { enabled: true, style: "vertical" },
+      },
       axes: {
         x: {
           label: "Frequency (Hz)",
           formatter: (value: number) => formatFrequency(value, true),
-          range: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+          ticksTarget: 8,
         },
         y: {
           label: "Power (dB)",
           formatter: (value: number) => `${value.toFixed(1)}`,
-          range: { min: minDb, max: maxDb },
+          ticksTarget: 6,
         },
       },
-      interactions: {
-        zoom: "x" as const,
-        pan: "x" as const,
-        boxSelect: true,
-        cursor: {
-          style: CursorStyle.Vertical,
-          snap: true,
-        },
-      },
-      background: plotColors.background,
-      textColor: plotColors.textColor,
-      grid: {
-        show: true,
-        color: plotColors.gridColor,
-      },
-      margins: { top: 20, right: 30, bottom: 40, left: 60 },
     }),
-    [frequencyRange, minDb, maxDb, plotColors]
+    [plotColors]
   );
 
-  const plot = usePlot(plotConfig);
-  const traceRef = useRef<TraceHandle1D | null>(null);
+  const { plot, attachCanvas } = usePlot(plotOptions);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const traceRef = useRef<LineLayerHandle | null>(null);
   const smoothingRef = useRef<Float32Array | null>(null);
   const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
-  const [cursorInfo, setCursorInfo] = useState<CursorInfo | null>(null);
+  const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
+
+  const handleCanvasAttach = useCallback(
+    (canvas: HTMLCanvasElement | null) => {
+      canvasRef.current = canvas;
+      attachCanvas(canvas);
+    },
+    [attachCanvas]
+  );
 
   useEffect(() => {
-    const handleZoom = (
-      axis: "x" | "y" | "both",
-      range: { min: number; max: number }
-    ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.style.touchAction = "none";
+    canvas.style.cursor = "crosshair";
+  }, [plotColors]);
+
+  useEffect(() => {
+    if (!plot) return;
+    const unsubscribeZoom = plot.onZoom((axis, range) => {
       if (axis !== "x" || !onFrequencyRangeChange) return;
       onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
-    };
-    return plot.onZoom(handleZoom);
+    });
+    return unsubscribeZoom;
   }, [plot, onFrequencyRangeChange]);
 
   useEffect(() => {
-    const handlePan = (
-      axis: "x" | "y" | "both",
-      range: { min: number; max: number }
-    ) => {
+    if (!plot) return;
+    const unsubscribePan = plot.onPan((axis, range) => {
       if (axis !== "x" || !onFrequencyRangeChange) return;
       onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
-    };
-    return plot.onPan(handlePan);
+    });
+    return unsubscribePan;
   }, [plot, onFrequencyRangeChange]);
 
   useEffect(() => {
-    const unsubscribeCursor = plot.onCursor((info) => {
-      setCursorInfo(info);
+    if (!plot) return;
+    const unsubscribeCursor = plot.onCursor((cursor) => {
+      setCursorInfo(cursor);
     });
     return unsubscribeCursor;
   }, [plot]);
 
   useEffect(() => {
-    const trace = plot.addTrace1D({
-      type: Trace1DType.Line,
+    if (!plot) return;
+    const line = plot.addLine({
       color: plotColors.traceColor,
       lineWidth: 2,
     });
-    traceRef.current = trace;
+    traceRef.current = line;
     return () => {
-      trace.remove();
+      line.remove();
       traceRef.current = null;
     };
   }, [plot, plotColors.traceColor]);
+
+  useEffect(() => {
+    if (!plot) return;
+    plot.setXRange({
+      min: frequencyRange.startFreq,
+      max: frequencyRange.endFreq,
+    });
+  }, [plot, frequencyRange.endFreq, frequencyRange.startFreq]);
+
+  useEffect(() => {
+    if (!plot) return;
+    plot.setYRange({ min: minDb, max: maxDb });
+  }, [plot, minDb, maxDb]);
 
   useEffect(() => {
     smoothingRef.current = null;
     fftMetaRef.current = null;
     const trace = traceRef.current;
     if (trace) {
-      trace.update({
-        x: new Float32Array(0),
-        y: new Float32Array(0),
-      });
+      trace.setXY(new Float32Array(0), new Float32Array(0));
+      plot?.requestDraw();
     }
-    plot.requestRender();
   }, [plot, dataKey]);
 
   useEffect(() => {
+    if (!plot) return;
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
       const incomingFFT = customEvent.detail;
@@ -206,50 +228,28 @@ export const FFTDisplay = memo(function FFTDisplay({
       const powers = new Float32Array(maxPoints);
       const step = maxPoints > 1 ? (rangeBinCount - 1) / (maxPoints - 1) : 0;
 
-      const fillNaN = (index: number) => {
-        freqs[index] = Number.NaN;
-        powers[index] = Number.NaN;
-      };
-
       for (let i = 0; i < maxPoints; i += 1) {
         const offset = maxPoints > 1 ? Math.round(i * step) : 0;
         const binIndex = Math.min(rangeBinCount - 1, offset) + startBin;
         const freq = fftStart + binIndex * binWidth;
         const power = smoothed[binIndex];
         if (!Number.isFinite(power)) {
-          fillNaN(i);
+          freqs[i] = Number.NaN;
+          powers[i] = Number.NaN;
           continue;
         }
         freqs[i] = freq;
         powers[i] = power;
       }
 
-      trace.update({
-        x: freqs,
-        y: powers,
-      });
+      trace.setXY(freqs, powers);
+      plot.requestDraw();
     };
 
-    window.addEventListener("fft-data", handleFFTData);
-    return () => window.removeEventListener("fft-data", handleFFTData);
-  }, [frequencyRange, maxDb, minDb]);
-
-  useEffect(() => {
-    const range = plot.getAxisRange("x");
-    if (
-      range.min !== frequencyRange.startFreq ||
-      range.max !== frequencyRange.endFreq
-    ) {
-      plot.setAxisRange("x", frequencyRange.startFreq, frequencyRange.endFreq);
-    }
+    const eventName = "fft-data";
+    window.addEventListener(eventName, handleFFTData);
+    return () => window.removeEventListener(eventName, handleFFTData);
   }, [plot, frequencyRange]);
-
-  useEffect(() => {
-    const range = plot.getAxisRange("y");
-    if (range.min !== minDb || range.max !== maxDb) {
-      plot.setAxisRange("y", minDb, maxDb);
-    }
-  }, [plot, minDb, maxDb]);
 
   return (
     <div
@@ -263,14 +263,10 @@ export const FFTDisplay = memo(function FFTDisplay({
       }}
     >
       <canvas
-        ref={plot.canvasRef}
+        ref={handleCanvasAttach}
         width={width}
         height={height}
-        style={{
-          display: "block",
-          width: "100%",
-          height: "100%",
-        }}
+        style={{ display: "block", width: "100%", height: "100%" }}
       />
       {cursorInfo && (
         <div
