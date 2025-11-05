@@ -16,16 +16,50 @@ export function computeTicks(key: TickCacheKey): number[] {
   if (cached) {
     return cached;
   }
-  // Placeholder tick computation - to be replaced with nice tick logic.
-  const ticks: number[] = [];
-  const step = (key.max - key.min) / Math.max(1, key.count);
-  for (let i = 0; i <= key.count; i += 1) {
-    ticks.push(key.min + step * i);
-  }
+  const ticks = generateNiceTicks(key.min, key.max, key.count);
   cache.set(serialized, ticks);
   return ticks;
 }
 
 export function clearTickCache() {
   cache.clear();
+}
+
+function generateNiceTicks(min: number, max: number, targetCount: number): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
+    return [min];
+  }
+  const span = max - min;
+  const desiredCount = Math.max(1, targetCount);
+  const rawStep = span / desiredCount;
+  const niceStep = computeNiceStep(rawStep);
+  const ticks: number[] = [];
+  const epsilon = niceStep * 1e-6;
+  const firstTick = Math.ceil((min - epsilon) / niceStep) * niceStep;
+  for (let value = firstTick; value <= max + epsilon; value += niceStep) {
+    ticks.push(Number.parseFloat(value.toPrecision(12)));
+  }
+  if (ticks.length === 0) {
+    ticks.push(min, max);
+  }
+  return ticks;
+}
+
+function computeNiceStep(step: number): number {
+  if (!Number.isFinite(step) || step === 0) {
+    return 1;
+  }
+  const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(step))));
+  const residual = Math.abs(step) / magnitude;
+  let niceResidual: number;
+  if (residual < 1.5) {
+    niceResidual = 1;
+  } else if (residual < 3) {
+    niceResidual = 2;
+  } else if (residual < 7) {
+    niceResidual = 5;
+  } else {
+    niceResidual = 10;
+  }
+  return Math.sign(step) * niceResidual * magnitude;
 }

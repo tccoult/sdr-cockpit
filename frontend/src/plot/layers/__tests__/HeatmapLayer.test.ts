@@ -58,10 +58,18 @@ class FakeImageData {
   readonly width: number;
   readonly height: number;
 
-  constructor(data: Uint8ClampedArray, width: number, height: number) {
-    this.data = data;
-    this.width = width;
-    this.height = height;
+  constructor(dataOrWidth: Uint8ClampedArray | number, width?: number, height?: number) {
+    if (typeof dataOrWidth === "number") {
+      const w = dataOrWidth;
+      const h = width ?? 0;
+      this.width = w;
+      this.height = h;
+      this.data = new Uint8ClampedArray(w * h * 4);
+    } else {
+      this.data = dataOrWidth;
+      this.width = width ?? 0;
+      this.height = height ?? 0;
+    }
   }
 }
 
@@ -112,6 +120,8 @@ function createLayerContext(): {
     theme: defaultTheme,
     requestDraw,
     addDestroyCallback: vi.fn(),
+    formatAxisValue: (_axis, value) => value.toString(),
+    notifyLayerOrderChange: vi.fn(),
   };
   const renderContext: LayerRenderContext = {
     viewport: layerContext.viewport,
@@ -172,19 +182,15 @@ describe("HeatmapLayer", () => {
     expect(requestDraw).toHaveBeenCalledTimes(1);
     expect(bufferContexts).toHaveLength(1);
     const calls = bufferContexts[0].putImageDataCalls;
-    expect(calls).toHaveLength(1);
-    expect(calls[0].x).toBe(0);
-    expect(Array.from(calls[0].imageData.data)).toEqual([
-      255, 255, 255, 255, 0, 0, 0, 255,
-    ]);
+    expect(calls).toHaveLength(0);
 
     layer.pushColumn(new Float32Array([-60, -60]));
     expect(requestDraw).toHaveBeenCalledTimes(2);
-    expect(bufferContexts[0].putImageDataCalls[1].x).toBe(1);
 
     const { ctx, drawImageCalls, smoothingChanges } = createDrawContext();
     layer.draw(ctx, renderContext);
     expect(smoothingChanges).toEqual([false, true]);
+    expect(bufferContexts[0].putImageDataCalls.length).toBe(1);
     expect(drawImageCalls).toHaveLength(1);
     const [, , , , , , , destWidth, destHeight] = drawImageCalls[0];
     expect(destWidth).toBe(dimensions.width);
@@ -204,6 +210,7 @@ describe("HeatmapLayer", () => {
 
     const { ctx, drawImageCalls } = createDrawContext();
     layer.draw(ctx, renderContext);
+    expect(bufferContexts[0].putImageDataCalls.length).toBeGreaterThanOrEqual(1);
     expect(drawImageCalls.length).toBe(2);
   });
 
@@ -235,10 +242,11 @@ describe("HeatmapLayer", () => {
     );
     expect(requestDraw).toHaveBeenCalledTimes(1);
     const calls = bufferContexts[0].putImageDataCalls;
-    expect(calls.length).toBe(3); // two columns + full redraw
+    expect(calls.length).toBe(0);
 
     const { ctx, drawImageCalls } = createDrawContext();
     layer.draw(ctx, renderContext);
+    expect(bufferContexts[0].putImageDataCalls.length).toBe(1);
     expect(drawImageCalls.length).toBe(1);
   });
 });

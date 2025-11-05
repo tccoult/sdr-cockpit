@@ -22,6 +22,8 @@ function createContext() {
     theme: defaultTheme,
     requestDraw,
     addDestroyCallback: () => {},
+    formatAxisValue: (_axis: "x" | "y", value: number) => value.toString(),
+    notifyLayerOrderChange: () => {},
   };
 }
 

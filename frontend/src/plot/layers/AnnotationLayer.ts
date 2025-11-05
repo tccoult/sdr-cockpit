@@ -124,6 +124,7 @@ export function createAnnotationLayer(
     },
     set zIndex(value: number) {
       zIndex = value;
+      context.notifyLayerOrderChange();
       requestDraw();
     },
     draw(ctx: CanvasRenderingContext2D, context: LayerRenderContext) {

@@ -1,5 +1,6 @@
 import { resolveColormap } from "../color/colormap";
 import type {
+  CursorState,
   HeatmapLayerHandle,
   HeatmapLayerOptions,
   Layer,
@@ -35,9 +36,7 @@ export function createHeatmapLayer(
     options.colormap instanceof Uint8ClampedArray
       ? options.colormap
       : resolveColormap(
-          typeof options.colormap === "string"
-            ? options.colormap
-            : undefined
+          typeof options.colormap === "string" ? options.colormap : undefined
         );
 
   let clip = normalizeClip(options.clip ?? DEFAULT_CLIP);
@@ -48,13 +47,14 @@ export function createHeatmapLayer(
     throw new Error("HeatmapLayer requires a 2D rendering context");
   }
 
-  const columnBuffer = new Uint8ClampedArray(height * 4);
-  const columnImageData = new ImageData(columnBuffer, 1, height);
-  const fullBuffer = new Uint8ClampedArray(width * height * 4);
-  const fullImageData = new ImageData(fullBuffer, width, height);
+  const fullImageData = new ImageData(width, height);
+  const rgba = fullImageData.data;
+  const valueBuffer = new Float32Array(width * height).fill(Number.NaN);
 
   let head = 0; // Next column to overwrite
   let filled = 0; // Number of columns containing data
+  let dirty = true;
+
   const requestDraw = context.requestDraw;
 
   const valueToIndex = (value: number) => {
@@ -71,7 +71,8 @@ export function createHeatmapLayer(
     columnIndex: number,
     values: Float32Array | number[]
   ) => {
-    const column = values instanceof Float32Array ? values : Float32Array.from(values);
+    const column =
+      values instanceof Float32Array ? values : Float32Array.from(values);
     if (column.length !== height) {
       throw new Error(
         `HeatmapLayer "${id}" expected column of length ${height}, received ${column.length}`
@@ -82,23 +83,21 @@ export function createHeatmapLayer(
       const value = column[y];
       const lutIndex = valueToIndex(value) * 4;
       const targetRow = height - 1 - y;
-      const bufferIndex = targetRow * 4;
-      columnBuffer[bufferIndex] = colormap[lutIndex];
-      columnBuffer[bufferIndex + 1] = colormap[lutIndex + 1];
-      columnBuffer[bufferIndex + 2] = colormap[lutIndex + 2];
-      columnBuffer[bufferIndex + 3] = 255;
       const fullIndex = (targetRow * width + columnIndex) * 4;
-      fullBuffer[fullIndex] = colormap[lutIndex];
-      fullBuffer[fullIndex + 1] = colormap[lutIndex + 1];
-      fullBuffer[fullIndex + 2] = colormap[lutIndex + 2];
-      fullBuffer[fullIndex + 3] = 255;
+      if (Number.isFinite(value)) {
+        rgba[fullIndex] = colormap[lutIndex];
+        rgba[fullIndex + 1] = colormap[lutIndex + 1];
+        rgba[fullIndex + 2] = colormap[lutIndex + 2];
+        rgba[fullIndex + 3] = 255;
+      } else {
+        rgba[fullIndex] = 0;
+        rgba[fullIndex + 1] = 0;
+        rgba[fullIndex + 2] = 0;
+        rgba[fullIndex + 3] = 0;
+      }
+      valueBuffer[targetRow * width + columnIndex] = value;
     }
-
-    bufferCtx.putImageData(columnImageData, columnIndex, 0);
-  };
-
-  const redrawFullBuffer = () => {
-    bufferCtx.putImageData(fullImageData, 0, 0);
+    dirty = true;
   };
 
   const pushColumn = (values: Float32Array | number[]) => {
@@ -158,23 +157,44 @@ export function createHeatmapLayer(
     }
 
     for (let col = 0; col < width; col += 1) {
-      const columnValues = new Float32Array(height);
       for (let row = 0; row < height; row += 1) {
-        columnValues[row] = source[row * width + col];
+        const value = source[row * width + col];
+        const lutIndex = valueToIndex(value) * 4;
+        const targetRow = height - 1 - row;
+        const index = (targetRow * width + col) * 4;
+        if (Number.isFinite(value)) {
+          rgba[index] = colormap[lutIndex];
+          rgba[index + 1] = colormap[lutIndex + 1];
+          rgba[index + 2] = colormap[lutIndex + 2];
+          rgba[index + 3] = 255;
+        } else {
+          rgba[index] = 0;
+          rgba[index + 1] = 0;
+          rgba[index + 2] = 0;
+          rgba[index + 3] = 0;
+        }
+        valueBuffer[targetRow * width + col] = value;
       }
-      writeColumn(col, columnValues);
     }
     filled = width;
     head = 0;
-    redrawFullBuffer();
+    dirty = true;
     requestDraw();
   };
 
-  const draw = (ctx: CanvasRenderingContext2D, renderContext: LayerRenderContext) => {
+  const draw = (
+    ctx: CanvasRenderingContext2D,
+    renderContext: LayerRenderContext
+  ) => {
     if (!visible || filled === 0) return;
     const { viewport } = renderContext;
     const rect = viewport.rect;
     if (rect.width <= 0 || rect.height <= 0) return;
+
+    if (dirty) {
+      bufferCtx.putImageData(fullImageData, 0, 0);
+      dirty = false;
+    }
 
     ctx.save();
     ctx.globalAlpha = opacity;
@@ -238,6 +258,7 @@ export function createHeatmapLayer(
     },
     set zIndex(value: number) {
       zIndex = value;
+      context.notifyLayerOrderChange();
       requestDraw();
     },
     getExtents() {
@@ -262,6 +283,36 @@ export function createHeatmapLayer(
     },
     destroy() {
       visible = false;
+    },
+    getReadout(cursor: CursorState, renderContext: LayerRenderContext) {
+      if (filled === 0) {
+        return null;
+      }
+      const rect = renderContext.viewport.rect;
+      const relativeX = (cursor.canvasX - rect.left) / rect.width;
+      const relativeY = (cursor.canvasY - rect.top) / rect.height;
+      if (Number.isNaN(relativeX) || Number.isNaN(relativeY)) {
+        return null;
+      }
+      if (relativeX < 0 || relativeX > 1 || relativeY < 0 || relativeY > 1) {
+        return null;
+      }
+      const displayColumn = Math.min(
+        width - 1,
+        Math.max(0, Math.floor(relativeX * width))
+      );
+      const startIndex = (head + width - filled) % width;
+      const bufferColumn = (startIndex + displayColumn) % width;
+      const displayRow = Math.min(
+        height - 1,
+        Math.max(0, Math.floor(relativeY * height))
+      );
+      const bufferRow = height - 1 - displayRow;
+      const value = valueBuffer[bufferRow * width + bufferColumn];
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+      return [`value: ${value.toFixed(2)}`];
     },
   };
 }

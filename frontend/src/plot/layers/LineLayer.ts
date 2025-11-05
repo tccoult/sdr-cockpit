@@ -1,6 +1,7 @@
 import { minMaxDecimate } from "../math/decimate";
 import type {
   AxisRange,
+  CursorState,
   Layer,
   LayerCreateContext,
   LayerRenderContext,
@@ -42,6 +43,8 @@ export function createLineLayer(
   let yDomain: AxisRange | null = null;
 
   const requestDraw = context.requestDraw;
+  const formatXValue = (value: number) => context.formatAxisValue("x", value);
+  const formatYValue = (value: number) => context.formatAxisValue("y", value);
 
   const recalcDomains = () => {
     if (length === 0) {
@@ -231,6 +234,7 @@ export function createLineLayer(
     },
     set zIndex(value: number) {
       zIndex = value;
+      context.notifyLayerOrderChange();
       requestDraw();
     },
     getExtents,
@@ -257,5 +261,48 @@ export function createLineLayer(
       yDomain = null;
       requestDraw();
     },
+    getReadout(cursor: CursorState) {
+      if (length === 0) {
+        return null;
+      }
+      const index = findClosestIndex(cursor.dataX);
+      if (index === -1) {
+        return null;
+      }
+      const label = options.id ?? id;
+      const xValue = xData[index];
+      const yValue = yData[index];
+      if (!Number.isFinite(yValue)) {
+        return null;
+      }
+      return [
+        `${label}: ${formatYValue(yValue)} @ ${formatXValue(xValue)}`,
+      ];
+    },
   };
+
+  function findClosestIndex(value: number): number {
+    if (length === 0) {
+      return -1;
+    }
+    let low = 0;
+    let high = length - 1;
+    while (high - low > 1) {
+      const mid = Math.floor((low + high) / 2);
+      const midValue = xData[mid];
+      if (!Number.isFinite(midValue)) {
+        break;
+      }
+      if (midValue <= value) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    const lowValue = xData[low];
+    const highValue = xData[high];
+    const lowDiff = Math.abs(value - lowValue);
+    const highDiff = Math.abs(value - highValue);
+    return lowDiff <= highDiff ? low : high;
+  }
 }

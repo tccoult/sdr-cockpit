@@ -28,6 +28,7 @@ export interface CursorState {
   canvasY: number;
   dataX: number;
   dataY: number;
+  values?: string[];
 }
 
 export interface Layer {
@@ -38,6 +39,10 @@ export interface Layer {
   getExtents?(): { x?: AxisRange; y?: AxisRange } | null;
   draw(ctx: CanvasRenderingContext2D, context: LayerRenderContext): void;
   destroy?(): void;
+  getReadout?(
+    cursor: CursorState,
+    context: LayerRenderContext
+  ): string[] | null;
 }
 
 export interface PlotTheme {
@@ -67,6 +72,14 @@ export interface PlotAxisOptions {
 export interface PlotAxesConfig {
   x?: PlotAxisOptions;
   y?: PlotAxisOptions;
+}
+
+export interface CursorReadoutFormatter {
+  (
+    cursor: CursorState,
+    axis: PlotAxesConfig,
+    layerReadouts: string[]
+  ): string[];
 }
 
 export interface PlotHandle {
@@ -114,6 +127,8 @@ export interface LayerCreateContext {
   readonly theme: PlotTheme;
   readonly requestDraw: () => void;
   readonly addDestroyCallback: (fn: () => void) => void;
+  readonly formatAxisValue: (axis: "x" | "y", value: number) => string;
+  readonly notifyLayerOrderChange: () => void;
 }
 
 export type LineRenderMode = "line" | "points";
@@ -208,6 +223,7 @@ export interface PlotCreationOptions {
   scheduler?: Scheduler;
   interactions?: PlotInteractionsOptions;
   axes?: PlotAxesConfig;
+  cursorFormatter?: CursorReadoutFormatter;
 }
 
 export interface PlotInteractionsOptions {

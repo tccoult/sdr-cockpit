@@ -37,11 +37,14 @@ function createContext() {
   const requestDraw = vi.fn();
   const destroyCallbacks: Array<() => void> = [];
   const { viewport, projectedX, projectedY } = createViewportStub();
+  const notifyLayerOrderChange = vi.fn();
   const layerContext: LayerCreateContext = {
     viewport,
     theme: defaultTheme,
     requestDraw,
     addDestroyCallback: (fn) => destroyCallbacks.push(fn),
+    formatAxisValue: (_axis, value) => value.toString(),
+    notifyLayerOrderChange,
   };
   const renderContext: LayerRenderContext = {
     viewport,

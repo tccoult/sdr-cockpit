@@ -24,11 +24,13 @@ import {
   type LineLayerHandle,
   type LineLayerOptions,
   type PlotAxisOptions,
+  type PlotAxesConfig,
   type PlotCreationOptions,
   type PlotDimensions,
   type PlotHandle,
   type PlotInteractionsOptions,
   type PlotTheme,
+  type CursorReadoutFormatter,
   type Scheduler,
   type Viewport,
 } from "../types";
@@ -40,18 +42,17 @@ export type PlotInternalOptions = PlotCreationOptions;
 type LayerRecord = {
   readonly layer: Layer;
   readonly destroyCallbacks: Array<() => void>;
+  phase: LayerPhase;
 };
 
-const PHASE_ORDER: Record<LayerPhase, number> = {
-  background: 0,
-  grid: 100,
-  content: 200,
-  foreground: 300,
-  cursor: 400,
-  debug: 500,
-};
-
-const DEFAULT_PHASE_ORDER = PHASE_ORDER.content;
+const PHASE_SEQUENCE: LayerPhase[] = [
+  "background",
+  "grid",
+  "content",
+  "foreground",
+  "cursor",
+  "debug",
+];
 const FALLBACK_CANVAS_WIDTH = 640;
 const FALLBACK_CANVAS_HEIGHT = 360;
 const MIN_SPAN = 1e-12;
@@ -141,7 +142,14 @@ class PlotEngine implements PlotHandle {
   private readonly theme: PlotTheme;
   private readonly destroyCallbacks: Array<() => void> = [];
   private readonly layers = new Map<string, LayerRecord>();
-  private readonly sortedLayers: Layer[] = [];
+  private readonly phaseBuckets: Record<LayerPhase, LayerRecord[]> = {
+    background: [],
+    grid: [],
+    content: [],
+    foreground: [],
+    cursor: [],
+    debug: [],
+  };
   private readonly interactions: ResolvedInteractions;
   private readonly panListeners = new Set<(axis: "x" | "y", range: AxisRange) => void>();
   private readonly zoomListeners = new Set<(axis: "x" | "y", range: AxisRange) => void>();
@@ -149,7 +157,13 @@ class PlotEngine implements PlotHandle {
   private readonly panState = createPanState();
   private axisModelX: AxisModel;
   private axisModelY: AxisModel;
+  private axisConfig: PlotAxesConfig;
   private axisOptions: { x: AxisOptions; y: AxisOptions };
+  private axisFormatters: {
+    x: (value: number) => string;
+    y: (value: number) => string;
+  };
+  private cursorFormatter?: CursorReadoutFormatter;
   private cursorLayer: CursorLayer;
   private axesRegistered = false;
   private cursorState: CursorState | null = null;
@@ -289,12 +303,21 @@ class PlotEngine implements PlotHandle {
       initialYRange: options.yRange,
     });
 
+    this.axisConfig = {
+      x: options.axes?.x ?? {},
+      y: options.axes?.y ?? {},
+    };
     this.axisOptions = {
       x: buildAxisOptions("bottom", options.axes?.x),
       y: buildAxisOptions("left", options.axes?.y),
     };
     this.axisModelX = new AxisModel(this.axisOptions.x);
     this.axisModelY = new AxisModel(this.axisOptions.y);
+    this.axisFormatters = {
+      x: createAxisFormatter(options.axes?.x),
+      y: createAxisFormatter(options.axes?.y),
+    };
+    this.cursorFormatter = options.cursorFormatter;
    this.axisModelX.setRange(rangeToTuple(this.viewport.xRange));
    this.axisModelY.setRange(rangeToTuple(this.viewport.yRange));
    this.registerAxisLayers();
@@ -404,6 +427,11 @@ class PlotEngine implements PlotHandle {
       return;
     }
     this.layers.delete(id);
+    const bucket = this.phaseBuckets[record.phase];
+    const index = bucket.indexOf(record);
+    if (index !== -1) {
+      bucket.splice(index, 1);
+    }
     this.layersDirty = true;
 
     try {
@@ -603,7 +631,6 @@ class PlotEngine implements PlotHandle {
       }
     }
     this.layers.clear();
-    this.sortedLayers.length = 0;
 
     for (const cleanup of this.destroyCallbacks) {
       try {
@@ -646,13 +673,17 @@ class PlotEngine implements PlotHandle {
     ctx.fillStyle = this.theme.background;
     ctx.fillRect(0, 0, dimensions.width, dimensions.height);
 
-    for (const layer of this.sortedLayers) {
-      if (!layer.visible) continue;
-      try {
-        layer.draw(ctx, renderContext);
-      } catch (error) {
-        if (import.meta.env.MODE !== "production") {
-          console.warn(`[plot] Layer "${layer.id}" draw failed`, error);
+    for (const phase of PHASE_SEQUENCE) {
+      const bucket = this.phaseBuckets[phase];
+      for (const record of bucket) {
+        const layer = record.layer;
+        if (!layer.visible) continue;
+        try {
+          layer.draw(ctx, renderContext);
+        } catch (error) {
+          if (import.meta.env.MODE !== "production") {
+            console.warn(`[plot] Layer "${layer.id}" draw failed`, error);
+          }
         }
       }
     }
@@ -666,28 +697,25 @@ class PlotEngine implements PlotHandle {
     if (this.layers.has(layer.id)) {
       throw new Error(`Layer with id "${layer.id}" already exists`);
     }
-    this.layers.set(layer.id, { layer, destroyCallbacks });
+    const phase = layer.phase ?? "content";
+    const record: LayerRecord = { layer, destroyCallbacks, phase };
+    this.layers.set(layer.id, record);
+    this.phaseBuckets[phase].push(record);
     this.layersDirty = true;
     this.requestDraw();
   }
 
   private rebuildLayerOrder() {
     this.layersDirty = false;
-    this.sortedLayers.length = 0;
-    for (const { layer } of this.layers.values()) {
-      this.sortedLayers.push(layer);
+    for (const phase of PHASE_SEQUENCE) {
+      const bucket = this.phaseBuckets[phase];
+      bucket.sort((a, b) => {
+        if (a.layer.zIndex !== b.layer.zIndex) {
+          return a.layer.zIndex - b.layer.zIndex;
+        }
+        return a.layer.id.localeCompare(b.layer.id);
+      });
     }
-    this.sortedLayers.sort((a, b) => {
-      const phaseA = phaseOrder(a.phase);
-      const phaseB = phaseOrder(b.phase);
-      if (phaseA !== phaseB) {
-        return phaseA - phaseB;
-      }
-      if (a.zIndex !== b.zIndex) {
-        return a.zIndex - b.zIndex;
-      }
-      return a.id.localeCompare(b.id);
-    });
   }
 
   private syncCanvasSize() {
@@ -769,6 +797,7 @@ class PlotEngine implements PlotHandle {
     const dataX = this.viewport.invertX(x);
     const dataY = this.viewport.invertY(y);
     const next: CursorState = { canvasX: x, canvasY: y, dataX, dataY };
+    next.values = this.collectCursorValues(next);
     if (cursorEquals(this.cursorState, next)) {
       return;
     }
@@ -783,8 +812,8 @@ class PlotEngine implements PlotHandle {
       return;
     }
     this.cursorState = null;
-    this.emitCursor(null);
     this.cursorLayer.setCursor(null);
+    this.emitCursor(null);
     this.requestDraw();
   }
 
@@ -869,7 +898,44 @@ class PlotEngine implements PlotHandle {
       theme: this.theme,
       requestDraw: () => this.requestDraw(),
       addDestroyCallback: (fn) => destroyCallbacks.push(fn),
+      formatAxisValue: (axis, value) => this.formatAxisValue(axis, value),
+      notifyLayerOrderChange: () => {
+        this.layersDirty = true;
+      },
     };
+  }
+
+  private formatAxisValue(axis: "x" | "y", value: number): string {
+    const formatter = axis === "x" ? this.axisFormatters.x : this.axisFormatters.y;
+    return formatter(value);
+  }
+
+  private collectCursorValues(cursor: CursorState): string[] {
+    const values: string[] = [];
+    values.push(`x: ${this.formatAxisValue("x", cursor.dataX)}`);
+    values.push(`y: ${this.formatAxisValue("y", cursor.dataY)}`);
+    const renderContext: LayerRenderContext = {
+      viewport: this.viewport,
+      dimensions: this.dimensions,
+      now: now(),
+    };
+    for (const phase of PHASE_SEQUENCE) {
+      const bucket = this.phaseBuckets[phase];
+      for (const record of bucket) {
+        const readout = record.layer.getReadout?.(cursor, renderContext);
+        if (readout && readout.length) {
+          values.push(...readout);
+        }
+      }
+    }
+    if (this.cursorFormatter) {
+      const cursorWithValues: CursorState = {
+        ...cursor,
+        values: values.slice(),
+      };
+      return this.cursorFormatter(cursorWithValues, this.axisConfig, values.slice());
+    }
+    return values;
   }
 
   private resolveTheme(options: PlotInternalOptions): PlotTheme {
@@ -911,13 +977,6 @@ class PlotEngine implements PlotHandle {
   }
 }
 
-function phaseOrder(phase: LayerPhase | undefined): number {
-  if (!phase) {
-    return DEFAULT_PHASE_ORDER;
-  }
-  return PHASE_ORDER[phase] ?? DEFAULT_PHASE_ORDER;
-}
-
 function normalizeRange(range: AxisRange | undefined | null): AxisRange | null {
   if (!range) return null;
   let { min, max } = range;
@@ -955,7 +1014,8 @@ function cursorEquals(a: CursorState | null, b: CursorState | null): boolean {
     Math.abs(a.canvasX - b.canvasX) < 0.01 &&
     Math.abs(a.canvasY - b.canvasY) < 0.01 &&
     Math.abs(a.dataX - b.dataX) < RANGE_EPSILON &&
-    Math.abs(a.dataY - b.dataY) < RANGE_EPSILON
+    Math.abs(a.dataY - b.dataY) < RANGE_EPSILON &&
+    arraysEqual(a.values ?? null, b.values ?? null)
   );
 }
 
@@ -971,4 +1031,44 @@ function buildAxisOptions(
     scale: config?.scale,
     unit: config?.unit,
   };
+}
+
+function createAxisFormatter(config: PlotAxisOptions | undefined) {
+  const formatter = config?.formatter;
+  if (formatter) {
+    return (value: number) => formatter(value);
+  }
+  return (value: number) => formatNumber(value);
+}
+
+function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "NaN";
+  }
+  const abs = Math.abs(value);
+  if (abs >= 1e4 || (abs > 0 && abs < 1e-2)) {
+    return value.toExponential(3);
+  }
+  if (abs >= 1000) {
+    return value.toFixed(0);
+  }
+  if (abs >= 100) {
+    return value.toFixed(1);
+  }
+  if (abs >= 10) {
+    return value.toFixed(2);
+  }
+  return value.toFixed(3);
+}
+
+function arraysEqual(a: string[] | null, b: string[] | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
 }
