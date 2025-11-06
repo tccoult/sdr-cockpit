@@ -189,14 +189,6 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   }, [plot, dataKey, rowCount, colormap]);
 
   useEffect(() => {
-    const heatmap = heatmapRef.current;
-    if (!heatmap) return;
-    heatmap.setDomain({
-      x: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
-    });
-  }, [frequencyRange.startFreq, frequencyRange.endFreq]);
-
-  useEffect(() => {
     if (!plot) return;
 
     const ensureHeatmap = (widthBins: number) => {
@@ -216,7 +208,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         colormap,
         clip: { min: minDb, max: maxDb },
         domain: {
-          x: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+          x: { min: 0, max: widthBins },
           y: { min: 0, max: rowCount },
         },
       });
@@ -240,8 +232,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       };
       const heatmap = ensureHeatmap(frame.bins.length);
       heatmap.pushRow(frame.bins);
+      const halfSpan = frame.sampleRate / 2;
+      const dataMin = frame.centerFreq - halfSpan;
+      const dataMax = frame.centerFreq + halfSpan;
       heatmap.setDomain({
-        x: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+        x: { min: dataMin, max: dataMax },
+        y: { min: 0, max: rowCount },
       });
       if (
         !rowTimestampsRef.current ||

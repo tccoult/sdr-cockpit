@@ -341,20 +341,14 @@ class PlotEngine implements PlotHandle {
       this.canvas.style.cursor = "default";
       return;
     }
-    if (this.interactions.cursorStyle === "crosshair") {
-      this.canvas.style.cursor = "none";
-    } else {
-      this.canvas.style.cursor = "default";
-    }
+    this.canvas.style.cursor = "default";
   }
 
   private getSelectionColors() {
     const background = this.theme.background ?? "#000000";
     const isDark = isDarkColor(background);
-    const fill = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
-    const stroke =
-      this.theme.cursorHighlightColor ??
-      (isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.4)");
+    const fill = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)";
+    const stroke = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)";
     return { fill, stroke };
   }
 

@@ -67,7 +67,9 @@ export function createCursorLayer(
         ctx.stroke();
       }
 
-      ctx.strokeStyle = theme.cursorHighlightColor ?? "#ffff7a";
+      const highlightColor =
+        theme.cursorHighlightColor ?? theme.textColor ?? "#ffffff";
+      ctx.strokeStyle = highlightColor;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x - CENTER_ARM, y);

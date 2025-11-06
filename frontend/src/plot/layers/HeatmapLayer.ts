@@ -47,6 +47,10 @@ export function createHeatmapLayer(
     min: 0,
     max: Math.max(1, width),
   });
+  const defaultDomainY = (): AxisRange => ({
+    min: 0,
+    max: Math.max(1, height),
+  });
   let domainX =
     options.domain?.x !== undefined
       ? normalizeDomainRange(options.domain.x)
@@ -54,7 +58,7 @@ export function createHeatmapLayer(
   let domainY =
     options.domain?.y !== undefined
       ? normalizeDomainRange(options.domain.y)
-      : { min: 0, max: Math.max(1, height) };
+      : defaultDomainY();
 
   const bufferCanvas = createBufferCanvas(width, height);
   const bufferCtx = bufferCanvas.getContext("2d");
@@ -71,13 +75,6 @@ export function createHeatmapLayer(
   let dirty = true;
 
   const requestDraw = context.requestDraw;
-  const updateDomainY = () => {
-    domainY = {
-      min: 0,
-      max: Math.max(1, filled),
-    };
-  };
-
   const valueToIndex = (value: number) => {
     if (!Number.isFinite(value)) {
       return 0;
@@ -170,7 +167,6 @@ export function createHeatmapLayer(
     if (filled < height) {
       filled += 1;
     }
-    updateDomainY();
     const clipChanged = autoClip ? recomputeAutoClip() : false;
     if (clipChanged) {
       applyClipToBuffer();
@@ -230,7 +226,6 @@ export function createHeatmapLayer(
 
     filled = height;
     top = 0;
-    updateDomainY();
     requestDraw();
   };
 
@@ -282,13 +277,7 @@ export function createHeatmapLayer(
     const prevSmoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
 
-    const rowsAvailable = Math.min(filled, height);
-    if (rowsAvailable <= 0) {
-      ctx.imageSmoothingEnabled = prevSmoothing;
-      ctx.restore();
-      return;
-    }
-
+    const totalRows = height;
     const domainXSpan = domainX.max - domainX.min || 1;
     const domainYSpan = domainY.max - domainY.min || 1;
     const viewX = viewport.xRange;
@@ -313,28 +302,31 @@ export function createHeatmapLayer(
     const viewYMin = clampNumber(viewY.min, domainY.min, domainY.max);
     const viewYMax = clampNumber(viewY.max, domainY.min, domainY.max);
     const topRowFloat =
-      ((domainY.max - viewYMax) / domainYSpan) * rowsAvailable;
+      ((domainY.max - viewYMax) / domainYSpan) * totalRows;
     const bottomRowFloat =
-      ((domainY.max - viewYMin) / domainYSpan) * rowsAvailable;
-    const srcRowStart = clampInt(Math.floor(topRowFloat), 0, rowsAvailable - 1);
+      ((domainY.max - viewYMin) / domainYSpan) * totalRows;
+    const srcRowStart = clampInt(Math.floor(topRowFloat), 0, totalRows - 1);
     let srcRowEnd = clampInt(
       Math.ceil(bottomRowFloat),
       srcRowStart + 1,
-      rowsAvailable
+      totalRows
     );
     let srcRowCount = srcRowEnd - srcRowStart;
     if (srcRowCount <= 0) {
       srcRowCount = 1;
-      srcRowEnd = Math.min(rowsAvailable, srcRowStart + srcRowCount);
+      srcRowEnd = Math.min(totalRows, srcRowStart + srcRowCount);
     }
 
     let remainingRows = srcRowCount;
-    let bufferRow = (top + srcRowStart) % height;
-    let destY = rect.top;
+    let bufferRow = (top + srcRowStart) % totalRows;
+    const destTop = viewport.projectY(viewYMax);
+    const destBottom = viewport.projectY(viewYMin);
+    const destHeight = Math.abs(destBottom - destTop);
+    let destY = Math.min(destTop, destBottom);
 
     while (remainingRows > 0) {
-      const run = Math.min(remainingRows, height - bufferRow);
-      const destRunHeight = rect.height * (run / srcRowCount);
+      const run = Math.min(remainingRows, totalRows - bufferRow);
+      const destRunHeight = destHeight * (run / srcRowCount);
       ctx.drawImage(
         bufferCanvas as CanvasImageSource,
         srcXStart,
@@ -374,7 +366,10 @@ export function createHeatmapLayer(
       requestDraw();
     },
     getExtents() {
-      return null;
+      return {
+        x: { ...domainX },
+        y: { ...domainY },
+      };
     },
     draw,
     setVisible(value: boolean) {
@@ -398,7 +393,7 @@ export function createHeatmapLayer(
       filled = 0;
       top = 0;
       domainX = defaultDomainX();
-      updateDomainY();
+      domainY = defaultDomainY();
       requestDraw();
     },
     destroy() {
