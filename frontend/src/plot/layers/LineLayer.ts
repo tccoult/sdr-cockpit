@@ -51,7 +51,7 @@ export function createLineLayer(
   let decimationCount = 0;
   let decimationIndices: Uint32Array = scratch.out;
 
-  const requestDraw = context.requestDraw;
+  const invalidateLayer = () => context.invalidateLayer(id);
   const formatXValue = (value: number) => context.formatAxisValue("x", value);
   const formatYValue = (value: number) => context.formatAxisValue("y", value);
 
@@ -115,7 +115,7 @@ export function createLineLayer(
     recalcDomains();
     dataVersion += 1;
     invalidateDecimation();
-    requestDraw();
+    invalidateLayer();
   };
 
   const appendXY = (
@@ -146,7 +146,7 @@ export function createLineLayer(
     recalcDomains();
     dataVersion += 1;
     invalidateDecimation();
-    requestDraw();
+    invalidateLayer();
   };
 
   const getExtents = () => {
@@ -294,7 +294,7 @@ export function createLineLayer(
     },
     set visible(value: boolean) {
       visible = value;
-      requestDraw();
+      invalidateLayer();
     },
     get zIndex() {
       return zIndex;
@@ -302,7 +302,7 @@ export function createLineLayer(
     set zIndex(value: number) {
       zIndex = value;
       context.notifyLayerOrderChange();
-      requestDraw();
+      invalidateLayer();
     },
     getExtents,
     draw(ctx: CanvasRenderingContext2D, renderContext: LayerRenderContext) {
@@ -317,7 +317,7 @@ export function createLineLayer(
     appendXY,
     setVisible(value: boolean) {
       visible = value;
-      requestDraw();
+      invalidateLayer();
     },
     remove() {
       visible = false;
@@ -328,7 +328,7 @@ export function createLineLayer(
       yDomain = null;
       dataVersion += 1;
       invalidateDecimation();
-      requestDraw();
+      invalidateLayer();
     },
     getReadout(cursor: CursorState) {
       if (length === 0) {

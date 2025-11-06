@@ -35,8 +35,10 @@ import {
   type LayerCreateContext,
   type LayerPhase,
   type LayerRenderContext,
+  type PlotSurface,
   type LineLayerHandle,
   type LineLayerOptions,
+  type PlotRenderStats,
   type PlotAxisOptions,
   type PlotAxesConfig,
   type PlotCreationOptions,
@@ -51,6 +53,11 @@ import {
 import { createViewport } from "./Viewport";
 import { RafScheduler } from "./Scheduler";
 import { createDomRect } from "./domRect";
+import {
+  createSurfaceManager,
+  type SurfaceHandle,
+  type SurfaceManager,
+} from "./SurfaceManager";
 
 export type PlotInternalOptions = PlotCreationOptions;
 
@@ -58,6 +65,8 @@ type LayerRecord = {
   readonly layer: Layer;
   readonly destroyCallbacks: Array<() => void>;
   phase: LayerPhase;
+  surface: PlotSurface;
+  dirty: boolean;
 };
 
 const PHASE_SEQUENCE: LayerPhase[] = [
@@ -68,6 +77,22 @@ const PHASE_SEQUENCE: LayerPhase[] = [
   "cursor",
   "debug",
 ];
+const PHASE_SURFACE_MAP: Record<LayerPhase, PlotSurface> = {
+  background: "static",
+  grid: "static",
+  content: "data",
+  foreground: "data",
+  cursor: "overlay",
+  debug: "overlay",
+};
+const SURFACE_DRAW_ORDER: PlotSurface[] = ["static", "data", "overlay"];
+
+function resolveSurfaceForLayer(layer: Layer, phase: LayerPhase): PlotSurface {
+  if (layer.surface) {
+    return layer.surface;
+  }
+  return PHASE_SURFACE_MAP[phase];
+}
 const FALLBACK_CANVAS_WIDTH = 640;
 const FALLBACK_CANVAS_HEIGHT = 360;
 const MIN_SPAN = 1e-12;
@@ -193,8 +218,9 @@ export function createPlot(
 }
 
 class PlotEngine implements PlotHandle {
+  private readonly surfaceManager: SurfaceManager;
+  private readonly surfaces: Record<PlotSurface, SurfaceHandle>;
   private readonly canvas: HTMLCanvasElement;
-  private readonly ctx: CanvasRenderingContext2D;
   private readonly viewport: Viewport;
   private readonly scheduler: Scheduler;
   private readonly theme: PlotTheme;
@@ -214,6 +240,7 @@ class PlotEngine implements PlotHandle {
   private readonly cursorListeners = new Set<(cursor: CursorState | null) => void>();
   private readonly panState = createPanState();
   private readonly boxInteraction = createBoxInteraction();
+  private readonly frameListeners = new Set<(stats: PlotRenderStats) => void>();
   private axisModelX: AxisModel;
   private axisModelY: AxisModel;
   private axisConfig: PlotAxesConfig;
@@ -227,6 +254,9 @@ class PlotEngine implements PlotHandle {
   private axesRegistered = false;
   private cursorState: CursorState | null = null;
   private canvasRect: DOMRectReadOnly = createDomRect(0, 0, 1, 1);
+  private frameSampleCount = 0;
+  private frameSampleAccum = 0;
+  private frameStatsWindowStart = now();
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
@@ -270,7 +300,7 @@ class PlotEngine implements PlotHandle {
       this.boxInteraction.state.active
     ) {
       updateBoxInteraction(this.boxInteraction, coords.x, coords.y);
-      this.requestDraw();
+      this.markSurfaceDirty("overlay");
       if (this.interactions.cursor) {
         this.updateCursorPosition(coords.x, coords.y);
       }
@@ -329,7 +359,7 @@ class PlotEngine implements PlotHandle {
   private readonly handlePointerLeave = () => {
     if (this.boxInteraction.state.active) {
       this.cancelBoxSelection();
-      this.requestDraw();
+      this.markSurfaceDirty("overlay");
     }
     if (this.interactions.cursor) {
       this.clearCursor();
@@ -387,7 +417,7 @@ class PlotEngine implements PlotHandle {
         console.warn("[plot] failed to set pointer capture", error);
       }
     }
-    this.requestDraw();
+    this.markSurfaceDirty("overlay");
   }
 
   private finishBoxSelection(pointerId: number, x: number, y: number) {
@@ -409,7 +439,7 @@ class PlotEngine implements PlotHandle {
     }
     const MIN_SIZE_PX = 3;
     if (!result || widthPx < MIN_SIZE_PX) {
-      this.requestDraw();
+      this.markSurfaceDirty("overlay");
       return;
     }
     if (selectionMode === "xy" && heightPx < MIN_SIZE_PX) {
@@ -417,7 +447,7 @@ class PlotEngine implements PlotHandle {
     } else {
       this.applyBoxZoom(result, selectionMode);
     }
-    this.requestDraw();
+    this.markSurfaceDirty("overlay");
   }
 
   private cancelBoxSelection() {
@@ -431,6 +461,7 @@ class PlotEngine implements PlotHandle {
       }
     }
     cancelBoxInteraction(this.boxInteraction);
+    this.markSurfaceDirty("overlay");
   }
 
   private applyBoxZoom(result: BoxFinalizeResult, mode: SelectionMode) {
@@ -476,6 +507,54 @@ class PlotEngine implements PlotHandle {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+
+  private handleFrameMetrics(timestamp: number, frameDuration: number) {
+    this.frameSampleCount += 1;
+    this.frameSampleAccum += frameDuration;
+    const windowElapsed = timestamp - this.frameStatsWindowStart;
+    if (windowElapsed < 500) {
+      return;
+    }
+    const avgDuration =
+      this.frameSampleCount > 0
+        ? this.frameSampleAccum / this.frameSampleCount
+        : frameDuration;
+    const fps =
+      windowElapsed > 0
+        ? (this.frameSampleCount * 1000) / windowElapsed
+        : 0;
+    const stats: PlotRenderStats = {
+      timestamp,
+      frameDuration,
+      averageFrameDuration: avgDuration,
+      fps,
+    };
+    for (const listener of this.frameListeners) {
+      listener(stats);
+    }
+    this.frameSampleCount = 0;
+    this.frameSampleAccum = 0;
+    this.frameStatsWindowStart = timestamp;
+  }
+
+  private markSurfaceDirty(surface: PlotSurface) {
+    if (this.destroyed) return;
+    const handle = this.surfaces[surface];
+    handle.markDirty();
+    this.requestDraw();
+  }
+
+  private markLayerDirty(id: string) {
+    if (this.destroyed) return;
+    const record = this.layers.get(id);
+    if (!record) return;
+    if (!record.dirty) {
+      record.dirty = true;
+    }
+    const handle = this.surfaces[record.surface];
+    handle.markDirty();
+    this.requestDraw();
   }
 
   private readonly handleWheel = (event: WheelEvent) => {
@@ -525,15 +604,16 @@ class PlotEngine implements PlotHandle {
   private dprWatcher: { mq: MediaQueryList; listener: () => void } | null = null;
 
   constructor(canvas: HTMLCanvasElement, options: PlotInternalOptions) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("Plot engine requires a 2D canvas context");
-    }
-
-    this.canvas = canvas;
-    this.ctx = ctx;
     this.scheduler = options.scheduler ?? new RafScheduler();
     this.theme = this.resolveTheme(options);
+    this.surfaceManager = createSurfaceManager({ rootCanvas: canvas });
+    this.surfaces = {
+      static: this.surfaceManager.getSurface("static"),
+      data: this.surfaceManager.getSurface("data"),
+      overlay: this.surfaceManager.getSurface("overlay"),
+    };
+    this.canvas = this.surfaces.overlay.canvas;
+    this.surfaceManager.setBackgroundColor(this.theme.background);
     this.interactions = resolveInteractions(options.interactions);
     this.devicePixelRatio = this.resolveInitialDpr(options);
     this.viewport = createViewport({
@@ -593,15 +673,15 @@ class PlotEngine implements PlotHandle {
       id: layer.id,
       setXY: (x, y) => {
         layer.setXY(x, y);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       appendXY: (x, y) => {
         layer.appendXY(x, y);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       setVisible: (visible) => {
         layer.setVisible(visible);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       remove: () => {
         this.removeLayer(layer.id);
@@ -620,23 +700,23 @@ class PlotEngine implements PlotHandle {
       id: layer.id,
       pushRow: (values) => {
         layer.pushRow(values);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       setFullImage: (data, normalize) => {
         layer.setFullImage(data, normalize);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       setClip: (value) => {
         layer.setClip(value);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       setDomain: (domain) => {
         layer.setDomain(domain);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       setVisible: (visible) => {
         layer.setVisible(visible);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       remove: () => {
         this.removeLayer(layer.id);
@@ -655,22 +735,22 @@ class PlotEngine implements PlotHandle {
       id: layer.id,
       setVisible: (visible) => {
         layer.setVisible(visible);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       remove: () => {
         this.removeLayer(layer.id);
       },
       addAnnotation: (annotation) => {
         layer.addAnnotation(annotation);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       upsertAnnotations: (annotations) => {
         layer.upsertAnnotations(annotations);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
       deleteAnnotation: (annotationId) => {
         layer.deleteAnnotation(annotationId);
-        this.requestDraw();
+        this.markLayerDirty(layer.id);
       },
     };
   }
@@ -705,7 +785,7 @@ class PlotEngine implements PlotHandle {
         }
       }
     }
-    this.requestDraw();
+    this.markSurfaceDirty(record.surface);
   }
 
   setXRange(range: AxisRange): void {
@@ -761,7 +841,8 @@ class PlotEngine implements PlotHandle {
       }
     }
     if (updated) {
-      this.requestDraw();
+      this.markSurfaceDirty("data");
+      this.markSurfaceDirty("static");
     }
   }
 
@@ -829,7 +910,8 @@ class PlotEngine implements PlotHandle {
     if (this.cursorState && this.interactions.cursor) {
       this.updateCursorPosition(this.cursorState.canvasX, this.cursorState.canvasY);
     }
-    this.requestDraw();
+    this.markSurfaceDirty("data");
+    this.markSurfaceDirty("static");
   }
 
   requestDraw(): void {
@@ -854,6 +936,11 @@ class PlotEngine implements PlotHandle {
   onCursor(callback: (cursor: CursorState | null) => void): () => void {
     this.cursorListeners.add(callback);
     return () => this.cursorListeners.delete(callback);
+  }
+
+  onFrame(callback: (stats: PlotRenderStats) => void): () => void {
+    this.frameListeners.add(callback);
+    return () => this.frameListeners.delete(callback);
   }
 
   getCursor(): CursorState | null {
@@ -899,6 +986,8 @@ class PlotEngine implements PlotHandle {
         }
       }
     }
+    this.frameListeners.clear();
+    this.surfaceManager.destroy();
     this.destroyCallbacks.length = 0;
     this.clearCursor();
   }
@@ -906,7 +995,10 @@ class PlotEngine implements PlotHandle {
   private readonly flush = () => {
     if (this.destroyed) return;
     this.dirty = false;
+    const start = now();
     this.drawFrame();
+    const end = now();
+    this.handleFrameMetrics(end, end - start);
   };
 
   private drawFrame() {
@@ -918,7 +1010,6 @@ class PlotEngine implements PlotHandle {
       this.rebuildLayerOrder();
     }
 
-    const ctx = this.ctx;
     const dimensions = this.dimensions;
     const renderContext: LayerRenderContext = {
       viewport: this.viewport,
@@ -926,27 +1017,38 @@ class PlotEngine implements PlotHandle {
       now: now(),
     };
 
-    ctx.save();
-    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-    ctx.fillStyle = this.theme.background;
-    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-
-    for (const phase of PHASE_SEQUENCE) {
-      const bucket = this.phaseBuckets[phase];
-      for (const record of bucket) {
-        const layer = record.layer;
-        if (!layer.visible) continue;
-        try {
-          layer.draw(ctx, renderContext);
-        } catch (error) {
-          if (import.meta.env.MODE !== "production") {
-            console.warn(`[plot] Layer "${layer.id}" draw failed`, error);
+    for (const surfaceId of SURFACE_DRAW_ORDER) {
+      const surface = this.surfaces[surfaceId];
+      if (!surface.isDirty()) continue;
+      const ctx = surface.ctx;
+      surface.clear();
+      ctx.save();
+      if (surfaceId === "static") {
+        ctx.fillStyle = this.theme.background;
+        ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+      }
+      for (const phase of PHASE_SEQUENCE) {
+        const bucket = this.phaseBuckets[phase];
+        for (const record of bucket) {
+          if (record.surface !== surfaceId) continue;
+          const layer = record.layer;
+          if (!layer.visible) continue;
+          try {
+            layer.draw(ctx, renderContext);
+          } catch (error) {
+            if (import.meta.env.MODE !== "production") {
+              console.warn(`[plot] Layer "${layer.id}" draw failed`, error);
+            }
           }
+          record.dirty = false;
         }
       }
+      if (surfaceId === "overlay") {
+        this.drawSelectionOverlay(ctx);
+      }
+      ctx.restore();
+      surface.markClean();
     }
-    this.drawSelectionOverlay(ctx);
-    ctx.restore();
   }
 
   private registerLayer(
@@ -957,11 +1059,18 @@ class PlotEngine implements PlotHandle {
       throw new Error(`Layer with id "${layer.id}" already exists`);
     }
     const phase = layer.phase ?? "content";
-    const record: LayerRecord = { layer, destroyCallbacks, phase };
+    const surface = resolveSurfaceForLayer(layer, phase);
+    const record: LayerRecord = {
+      layer,
+      destroyCallbacks,
+      phase,
+      surface,
+      dirty: true,
+    };
     this.layers.set(layer.id, record);
     this.phaseBuckets[phase].push(record);
     this.layersDirty = true;
-    this.requestDraw();
+    this.markLayerDirty(layer.id);
   }
 
   private rebuildLayerOrder() {
@@ -979,30 +1088,21 @@ class PlotEngine implements PlotHandle {
 
   private syncCanvasSize() {
     this.needsResize = false;
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.surfaceManager.getBoundingClientRect();
     this.canvasRect = rect;
     const cssWidth = rect.width > 0 ? rect.width : FALLBACK_CANVAS_WIDTH;
     const cssHeight = rect.height > 0 ? rect.height : FALLBACK_CANVAS_HEIGHT;
     const dpr = this.devicePixelRatio;
-    const width = Math.max(1, Math.round(cssWidth * dpr));
-    const height = Math.max(1, Math.round(cssHeight * dpr));
-
-    if (this.canvas.width !== width) {
-      this.canvas.width = width;
-    }
-    if (this.canvas.height !== height) {
-      this.canvas.height = height;
-    }
-
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.viewport.updateDimensions(this.canvas, dpr);
-    this.axisModelX.setSpanPx(this.viewport.rect.width);
-    this.axisModelY.setSpanPx(this.viewport.rect.height);
-    this.dimensions = {
+    const dimensions: PlotDimensions = {
       width: cssWidth,
       height: cssHeight,
       devicePixelRatio: dpr,
     };
+    this.surfaceManager.resizeAll(dimensions);
+    this.viewport.updateDimensions(this.surfaces.data.canvas, dpr);
+    this.axisModelX.setSpanPx(this.viewport.rect.width);
+    this.axisModelY.setSpanPx(this.viewport.rect.height);
+    this.dimensions = dimensions;
   }
 
   private setupInputListeners() {
@@ -1063,7 +1163,7 @@ class PlotEngine implements PlotHandle {
     this.cursorState = next;
     this.cursorLayer.setCursor(next);
     this.emitCursor(next);
-    this.requestDraw();
+    this.markSurfaceDirty("overlay");
   }
 
   private clearCursor() {
@@ -1073,7 +1173,7 @@ class PlotEngine implements PlotHandle {
     this.cursorState = null;
     this.cursorLayer.setCursor(null);
     this.emitCursor(null);
-    this.requestDraw();
+    this.markSurfaceDirty("overlay");
   }
 
   private toCanvasCoordinates(clientX: number, clientY: number) {
@@ -1156,10 +1256,13 @@ class PlotEngine implements PlotHandle {
       viewport: this.viewport,
       theme: this.theme,
       requestDraw: () => this.requestDraw(),
+      invalidateLayer: (layerId) => this.markLayerDirty(layerId),
+      invalidateSurface: (surface) => this.markSurfaceDirty(surface),
       addDestroyCallback: (fn) => destroyCallbacks.push(fn),
       formatAxisValue: (axis, value) => this.formatAxisValue(axis, value),
       notifyLayerOrderChange: () => {
         this.layersDirty = true;
+        this.requestDraw();
       },
     };
   }

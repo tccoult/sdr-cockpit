@@ -22,8 +22,8 @@ describe('App', () => {
   it('renders FPS counter', async () => {
     renderApp()
     await waitFor(() => {
-      const fpsCounter = screen.getByText(/FPS/i)
-      expect(fpsCounter).toBeInTheDocument()
+      const fpsCounters = screen.getAllByText(/FPS/i)
+      expect(fpsCounters.length).toBeGreaterThan(0)
     })
   })
 

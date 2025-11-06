@@ -35,6 +35,8 @@ function createViewportStub() {
 
 function createContext() {
   const requestDraw = vi.fn();
+  const invalidateLayer = vi.fn();
+  const invalidateSurface = vi.fn();
   const destroyCallbacks: Array<() => void> = [];
   const { viewport, projectedX, projectedY } = createViewportStub();
   const notifyLayerOrderChange = vi.fn();
@@ -42,6 +44,8 @@ function createContext() {
     viewport,
     theme: defaultTheme,
     requestDraw,
+    invalidateLayer,
+    invalidateSurface,
     addDestroyCallback: (fn) => destroyCallbacks.push(fn),
     formatAxisValue: (_axis, value) => value.toString(),
     notifyLayerOrderChange,
@@ -55,6 +59,8 @@ function createContext() {
     layerContext,
     renderContext,
     requestDraw,
+    invalidateLayer,
+    invalidateSurface,
     destroyCallbacks,
     projectedX,
     projectedY,
@@ -101,13 +107,13 @@ function createCanvasContext() {
 
 describe("LineLayer", () => {
   it("clones incoming data and schedules renders", () => {
-    const { layerContext, renderContext, requestDraw, projectedX } = createContext();
+    const { layerContext, renderContext, invalidateLayer, projectedX } = createContext();
     const layer = createLineLayer(layerContext, {});
     const x = new Float32Array([0, 1]);
     const y = new Float32Array([0, 2]);
 
     layer.setXY(x, y);
-    expect(requestDraw).toHaveBeenCalledTimes(1);
+    expect(invalidateLayer).toHaveBeenCalledWith(layer.id);
 
     x[1] = 5;
     y[1] = 7;

@@ -74,7 +74,7 @@ export function createHeatmapLayer(
   let filled = 0; // Number of rows containing data
   let dirty = true;
 
-  const requestDraw = context.requestDraw;
+  const invalidateLayer = () => context.invalidateLayer(id);
   const valueToIndex = (value: number) => {
     if (!Number.isFinite(value)) {
       return 0;
@@ -173,7 +173,7 @@ export function createHeatmapLayer(
     } else {
       colorizeRow(top);
     }
-    requestDraw();
+    invalidateLayer();
   };
 
   const setFullImage = (
@@ -226,7 +226,7 @@ export function createHeatmapLayer(
 
     filled = height;
     top = 0;
-    requestDraw();
+    invalidateLayer();
   };
 
   const setClipMode = (value: { min: number; max: number } | "auto") => {
@@ -234,13 +234,13 @@ export function createHeatmapLayer(
       autoClip = true;
       recomputeAutoClip();
       applyClipToBuffer();
-      requestDraw();
+      invalidateLayer();
       return;
     }
     autoClip = false;
     clip = normalizeClip(value);
     applyClipToBuffer();
-    requestDraw();
+    invalidateLayer();
   };
 
   const setDomainRanges = (ranges: { x?: AxisRange; y?: AxisRange }) => {
@@ -254,7 +254,7 @@ export function createHeatmapLayer(
       changed = true;
     }
     if (changed) {
-      requestDraw();
+      invalidateLayer();
     }
   };
 
@@ -369,7 +369,7 @@ export function createHeatmapLayer(
     },
     set visible(value: boolean) {
       visible = value;
-      requestDraw();
+      invalidateLayer();
     },
     get zIndex() {
       return zIndex;
@@ -377,7 +377,7 @@ export function createHeatmapLayer(
     set zIndex(value: number) {
       zIndex = value;
       context.notifyLayerOrderChange();
-      requestDraw();
+      invalidateLayer();
     },
     getExtents() {
       return {
@@ -388,7 +388,7 @@ export function createHeatmapLayer(
     draw,
     setVisible(value: boolean) {
       visible = value;
-      requestDraw();
+      invalidateLayer();
     },
     pushRow(values: Float32Array | number[]) {
       pushRow(values);
@@ -408,7 +408,7 @@ export function createHeatmapLayer(
       top = 0;
       domainX = defaultDomainX();
       domainY = defaultDomainY();
-      requestDraw();
+      invalidateLayer();
     },
     destroy() {
       visible = false;

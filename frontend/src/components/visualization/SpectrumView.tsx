@@ -19,6 +19,7 @@ interface SpectrumViewProps {
   colorMap: ColorMap; // Selected color map
   dataError?: string; // Optional error message when data can't be retrieved
   isConnecting?: boolean; // Optional flag for connection state
+  onRenderFpsChange?: (fps: number) => void;
 }
 
 export const SpectrumView = memo(function SpectrumView({
@@ -28,6 +29,7 @@ export const SpectrumView = memo(function SpectrumView({
   colorMap,
   dataError,
   isConnecting,
+  onRenderFpsChange,
 }: SpectrumViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -40,6 +42,8 @@ export const SpectrumView = memo(function SpectrumView({
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
   const [waterfallResetKey, setWaterfallResetKey] = useState(0);
+  const [fftRenderFps, setFftRenderFps] = useState(0);
+  const [waterfallRenderFps, setWaterfallRenderFps] = useState(0);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
@@ -97,6 +101,26 @@ export const SpectrumView = memo(function SpectrumView({
   const handleFrequencyRangeChange = useCallback((newRange: FrequencyRange) => {
     setFrequencyRange(newRange);
   }, []);
+
+  useEffect(() => {
+    if (!onRenderFpsChange) {
+      return;
+    }
+    const fpsValues = [fftRenderFps, waterfallRenderFps].filter((value) => value > 0);
+    const combined =
+      fpsValues.length === 0
+        ? 0
+        : fpsValues.length === 1
+        ? fpsValues[0]
+        : Math.min(...fpsValues);
+    onRenderFpsChange(combined);
+  }, [fftRenderFps, waterfallRenderFps, onRenderFpsChange]);
+
+  useEffect(() => {
+    return () => {
+      onRenderFpsChange?.(0);
+    };
+  }, [onRenderFpsChange]);
 
   // Measure plot containers to derive usable content dimensions without hard-coding padding.
   useEffect(() => {
@@ -235,6 +259,7 @@ export const SpectrumView = memo(function SpectrumView({
           dataKey={taskId}
           onFrequencyRangeChange={handleFrequencyRangeChange}
           theme={theme}
+          onRenderFpsChange={setFftRenderFps}
         />
       </div>
 
@@ -279,6 +304,7 @@ export const SpectrumView = memo(function SpectrumView({
           onFrequencyRangeChange={handleFrequencyRangeChange}
           theme={theme}
           resetYKey={waterfallResetKey}
+          onRenderFpsChange={setWaterfallRenderFps}
         />
       </div>
 

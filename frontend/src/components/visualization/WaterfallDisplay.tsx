@@ -9,6 +9,7 @@ import { FFTData, FrequencyRange } from "../../types/sdr";
 import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
+import { usePlotRenderFps } from "../../hooks";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -21,6 +22,7 @@ interface WaterfallDisplayProps {
   dataKey?: string;
   theme: Theme;
   resetYKey?: number;
+  onRenderFpsChange?: (fps: number) => void;
 }
 
 const MIN_ROWS = 64;
@@ -37,6 +39,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   dataKey,
   theme,
   resetYKey,
+  onRenderFpsChange,
 }: WaterfallDisplayProps) {
   const isDark = theme === "dark";
 
@@ -105,6 +108,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   const rowHeadRef = useRef<number>(0);
   const rowsFilledRef = useRef<number>(0);
   const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
+  const renderFps = usePlotRenderFps(plot);
 
   const colormap = useMemo(() => buildColorLUT(colorMap), [colorMap]);
   const rowCount = useMemo(
@@ -164,6 +168,17 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     });
     return unsubscribe;
   }, [plot]);
+
+  useEffect(() => {
+    if (!onRenderFpsChange) return;
+    onRenderFpsChange(renderFps);
+  }, [renderFps, onRenderFpsChange]);
+
+  useEffect(() => {
+    return () => {
+      onRenderFpsChange?.(0);
+    };
+  }, [onRenderFpsChange]);
 
   useEffect(() => {
     heatmapRef.current?.setClip({ min: minDb, max: maxDb });
