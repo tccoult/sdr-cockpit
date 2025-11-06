@@ -54,6 +54,7 @@ function App() {
     sampleRate: selectedTask?.sampleRate,
     fftSize: selectedTask?.fftSize,
     enabled: !isWizardOpen, // Pause streaming when wizard is open
+    paused: selectedTask?.status === 'paused', // Pause when task is paused
   });
 
   const taskStatusLabel = getTaskStatusLabel(selectedTask);

@@ -14,6 +14,7 @@ export interface UseDataStreamOptions {
   sampleRate?: number;
   fftSize?: number;
   enabled?: boolean; // Whether to enable streaming (e.g., disabled when wizard is open)
+  paused?: boolean; // Whether the task is paused
 }
 
 export interface UseDataStreamResult {
@@ -23,13 +24,13 @@ export interface UseDataStreamResult {
 }
 
 export function useDataStream(options: UseDataStreamOptions): UseDataStreamResult {
-  const { taskId, centerFreq, sampleRate, fftSize, enabled = true } = options;
+  const { taskId, centerFreq, sampleRate, fftSize, enabled = true, paused = false } = options;
 
   const [fps, setFps] = useState(0);
   const [streamStatus, setStreamStatus] = useState<DataStreamStatus>('disconnected');
   const [streamError, setStreamError] = useState<string | null>(null);
 
-  const dataStreamRef = useRef<{ disconnect: () => void } | null>(null);
+  const dataStreamRef = useRef<{ disconnect: () => void; pause?: () => void; resume?: () => void } | null>(null);
   const frameCountRef = useRef(0);
   const lastFpsUpdateRef = useRef(Date.now());
 
@@ -94,6 +95,20 @@ export function useDataStream(options: UseDataStreamOptions): UseDataStreamResul
       frameCountRef.current = 0;
     };
   }, [taskId, centerFreq, sampleRate, fftSize, enabled]);
+
+  // Handle pause/resume
+  useEffect(() => {
+    const stream = dataStreamRef.current;
+    if (!stream) return;
+
+    if (paused) {
+      stream.pause?.();
+      setFps(0);
+      frameCountRef.current = 0;
+    } else {
+      stream.resume?.();
+    }
+  }, [paused]);
 
   return {
     fps,
