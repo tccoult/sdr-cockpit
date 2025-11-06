@@ -8,6 +8,27 @@ import '@testing-library/jest-dom'
   disconnect() {}
 }
 
+if (typeof (globalThis as any).ImageData === "undefined") {
+  (globalThis as any).ImageData = class ImageData {
+    data: Uint8ClampedArray;
+    width: number;
+    height: number;
+    constructor(widthOrData: number | Uint8ClampedArray, width?: number, height?: number) {
+      if (widthOrData instanceof Uint8ClampedArray) {
+        this.data = widthOrData;
+        this.width = width ?? 0;
+        this.height = height ?? 0;
+      } else {
+        const w = widthOrData;
+        const h = width ?? 0;
+        this.width = w;
+        this.height = h;
+        this.data = new Uint8ClampedArray(w * h * 4);
+      }
+    }
+  };
+}
+
 // Mock HTMLCanvasElement.getContext which is used by waterfall display
 const mockGetContext = function() {
   return {
