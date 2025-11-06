@@ -1,12 +1,8 @@
-/**
- * High-performance waterfall display using Canvas 2D
- * Optimized for 30+ FPS real-time rendering
- */
-
-// FIX: Added useCallback
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import type { HeatmapLayerHandle, PlotCreationOptions } from "../../plot";
+import { usePlot } from "../../plot";
 import { FFTData, FrequencyRange } from "../../types/sdr";
-import { ColorMap, buildColorLUT, dbToColorIndex } from "../../utils/colorMaps";
+import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 
@@ -22,21 +18,8 @@ interface WaterfallDisplayProps {
   theme: Theme;
 }
 
-const shiftImageDown = (
-  data: Uint8ClampedArray,
-  width: number,
-  height: number
-) => {
-  const rowBytes = width * 4;
-  if (rowBytes <= 0 || data.length === 0) return;
-
-  // Copy rows downward (last row discarded)
-  for (let y = height - 1; y > 0; y--) {
-    const srcOffset = (y - 1) * rowBytes;
-    const dstOffset = y * rowBytes;
-    data.copyWithin(dstOffset, srcOffset, srcOffset + rowBytes);
-  }
-};
+const MIN_ROWS = 64;
+const MAX_ROWS = 2048;
 
 export const WaterfallDisplay = memo(function WaterfallDisplay({
   width,
@@ -55,309 +38,222 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (isDark) {
       return {
         background: "rgba(10, 10, 15, 0.95)",
+        axisColor: "rgba(255, 255, 255, 0.4)",
+        textColor: "rgba(255, 255, 255, 0.85)",
+        gridColor: "rgba(255, 255, 255, 0.08)",
         scaleBackground: "rgba(0, 0, 0, 0.7)",
-        scaleText: "white",
-        emptyRowRgb: { r: 0, g: 0, b: 0 },
+        scaleText: "#ffffff",
       };
     }
     return {
       background: "rgba(245, 245, 250, 0.95)",
+      axisColor: "rgba(51, 65, 85, 0.6)",
+      textColor: "#1e293b",
+      gridColor: "rgba(15, 23, 42, 0.08)",
       scaleBackground: "rgba(255, 255, 255, 0.7)",
       scaleText: "#1e293b",
-      emptyRowRgb: { r: 245, g: 245, b: 250 },
     };
   }, [isDark]);
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const waterfallDataRef = useRef<ImageData | null>(null);
-  const colorLUTRef = useRef<Uint8ClampedArray | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+  const plotOptions = useMemo<PlotCreationOptions>(
+    () => ({
+      background: waterfallColors.background,
+      theme: {
+        background: waterfallColors.background,
+        axisColor: waterfallColors.axisColor,
+        textColor: waterfallColors.textColor,
+        gridColor: waterfallColors.gridColor,
+        cursorLineColor: waterfallColors.textColor,
+        cursorHighlightColor: waterfallColors.textColor,
+      },
+      interactions: {
+        pan: { x: true, y: false },
+        zoom: { x: true, y: false, factor: 0.2 },
+        cursor: { enabled: false },
+      },
+      axes: {
+        x: {
+          label: "Frequency (Hz)",
+          formatter: (value: number) => formatFrequency(value, true),
+          ticksTarget: 8,
+        },
+        y: {
+          label: "Time",
+          formatter: () => "",
+          ticksTarget: 4,
+        },
+      },
+    }),
+    [waterfallColors]
+  );
+
+  const { plot, attachCanvas } = usePlot(plotOptions);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const heatmapRef = useRef<HeatmapLayerHandle | null>(null);
+  const heatmapInfoRef = useRef<{ width: number; height: number } | null>(null);
+  const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
-  const lastMouseYRef = useRef<number>(0);
 
-  // Margins to match FFT display for horizontal alignment
-  const margin = { top: 20, right: 30, bottom: 40, left: 60 };
-
-  // Create a memoized, integer-based source of truth for dimensions.
-  const plotWidthInt = useMemo(
-    () => Math.floor(width - margin.left - margin.right),
-    [width, margin.left, margin.right]
-  );
-  const plotHeightInt = useMemo(
-    () => Math.floor(height - margin.top - margin.bottom),
-    [height, margin.top, margin.bottom]
+  const colormap = useMemo(() => buildColorLUT(colorMap), [colorMap]);
+  const rowCount = useMemo(
+    () => Math.max(MIN_ROWS, Math.min(MAX_ROWS, Math.floor(height))),
+    [height]
   );
 
-  // Initialize waterfall image buffer
+  const handleCanvasAttach = useCallback(
+    (canvas: HTMLCanvasElement | null) => {
+      canvasRef.current = canvas;
+      attachCanvas(canvas);
+    },
+    [attachCanvas]
+  );
+
   useEffect(() => {
-    // Don't create a buffer if width/height is invalid
-    if (!canvasRef.current || plotWidthInt <= 0 || plotHeightInt <= 0) {
-      waterfallDataRef.current = null;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.style.touchAction = "none";
+    canvas.style.cursor = "crosshair";
+  }, [isDark]);
+
+  useEffect(() => {
+    if (!plot) return;
+    plot.setXRange({
+      min: frequencyRange.startFreq,
+      max: frequencyRange.endFreq,
+    });
+  }, [plot, frequencyRange.endFreq, frequencyRange.startFreq]);
+
+  useEffect(() => {
+    if (!plot) return;
+    plot.setYRange({ min: 0, max: rowCount });
+  }, [plot, rowCount]);
+
+  useEffect(() => {
+    if (!plot || !onFrequencyRangeChange) {
       return;
     }
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Create image buffer for plot area only
-    waterfallDataRef.current = ctx.createImageData(plotWidthInt, plotHeightInt);
-
-    // Initialize to theme-appropriate background
-    const data = waterfallDataRef.current.data;
-    const { r, g, b } = waterfallColors.emptyRowRgb;
-    for (let i = 0; i < data.length; i += 4) {
-      data[i] = r; // R
-      data[i + 1] = g; // G
-      data[i + 2] = b; // B
-      data[i + 3] = 255; // A
-    }
-  }, [plotWidthInt, plotHeightInt, dataKey, waterfallColors.emptyRowRgb]);
-
-  // Build color lookup table when colormap changes
-  useEffect(() => {
-    colorLUTRef.current = buildColorLUT(colorMap);
-  }, [colorMap]);
-
-  const render = useCallback(() => {
-    if (!canvasRef.current || !waterfallDataRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.fillStyle = waterfallColors.background;
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw waterfall data in plot area
-    ctx.putImageData(waterfallDataRef.current, margin.left, margin.top);
-  }, [width, height, margin.left, margin.top, waterfallColors.background]);
-
-  const requestRender = useCallback(() => {
-    if (animationFrameRef.current !== null) return; // Already scheduled
-
-    animationFrameRef.current = requestAnimationFrame(() => {
-      render();
-      animationFrameRef.current = null;
+    const unsubscribeZoom = plot.onZoom((axis, range) => {
+      if (axis !== "x") return;
+      onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
     });
-  }, [render]);
+    const unsubscribePan = plot.onPan((axis, range) => {
+      if (axis !== "x") return;
+      onFrequencyRangeChange({ startFreq: range.min, endFreq: range.max });
+    });
+    return () => {
+      unsubscribeZoom?.();
+      unsubscribePan?.();
+    };
+  }, [plot, onFrequencyRangeChange]);
 
   useEffect(() => {
-    setIsDragging(false);
-    setDragStart(null);
-    lastMouseYRef.current = 0;
-    const buffer = waterfallDataRef.current;
-    if (buffer) {
-      const data = buffer.data;
-      const { r, g, b } = waterfallColors.emptyRowRgb;
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = r;
-        data[i + 1] = g;
-        data[i + 2] = b;
-        data[i + 3] = 255;
-      }
-    }
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-    requestRender();
-  }, [dataKey, requestRender, waterfallColors.emptyRowRgb]);
+    heatmapRef.current?.setClip({ min: minDb, max: maxDb });
+  }, [minDb, maxDb]);
 
-  const addFFTRow = useCallback(
-    (fftData: FFTData) => {
-      // Check for valid state
-      if (
-        !waterfallDataRef.current ||
-        !colorLUTRef.current ||
-        plotWidthInt <= 0
-      ) {
-        return;
-      }
-
-      // Verify buffer integrity
-      if (
-        waterfallDataRef.current.width !== plotWidthInt ||
-        waterfallDataRef.current.height !== plotHeightInt
-      ) {
-        // Buffer is out of sync (e.g., resizing), skip frame.
-        // The useEffect hook will create a new buffer and this will work next frame.
-        return;
-      }
-
-      const imageData = waterfallDataRef.current;
-      const colorLUT = colorLUTRef.current;
-      const data = imageData.data;
-
-      // Shift existing data down by one row
-      shiftImageDown(data, plotWidthInt, plotHeightInt);
-
-      // Calculate which FFT bins to display based on frequency range
-      const { startFreq, endFreq } = frequencyRange;
-      const binWidth = fftData.sampleRate / fftData.bins.length;
-      const centerFreq = fftData.centerFreq;
-      const startBin = Math.max(
-        0,
-        Math.floor((startFreq - centerFreq + fftData.sampleRate / 2) / binWidth)
-      );
-      const endBin = Math.min(
-        fftData.bins.length,
-        Math.ceil((endFreq - centerFreq + fftData.sampleRate / 2) / binWidth)
-      );
-
-      // Map FFT bins to display pixels (plot area only)
-      for (let x = 0; x < plotWidthInt; x++) {
-        const binIndex = Math.floor(
-          startBin + (x / plotWidthInt) * (endBin - startBin)
-        );
-        if (binIndex >= 0 && binIndex < fftData.bins.length) {
-          const dbValue = fftData.bins[binIndex];
-          const colorIdx = dbToColorIndex(dbValue, minDb, maxDb);
-
-          // Get color from LUT
-          const r = colorLUT[colorIdx * 4];
-          const g = colorLUT[colorIdx * 4 + 1];
-          const b = colorLUT[colorIdx * 4 + 2];
-
-          // Set pixel in top row
-          const pixelIdx = x * 4;
-          data[pixelIdx] = r;
-          data[pixelIdx + 1] = g;
-          data[pixelIdx + 2] = b;
-          data[pixelIdx + 3] = 255;
-        }
-      }
-
-      // Request render
-      requestRender();
-    },
-    [minDb, maxDb, frequencyRange, plotWidthInt, plotHeightInt, requestRender]
-  );
-
-  // Public method to add FFT data (will be called by parent)
   useEffect(() => {
+    return () => {
+      heatmapRef.current?.remove();
+      heatmapRef.current = null;
+      heatmapInfoRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!plot) return;
+    heatmapRef.current?.remove();
+    heatmapRef.current = null;
+    heatmapInfoRef.current = null;
+  }, [plot, dataKey, rowCount, colormap]);
+
+  useEffect(() => {
+    if (!plot) return;
+
+    const ensureHeatmap = (widthBins: number) => {
+      const existing = heatmapInfoRef.current;
+      if (
+        heatmapRef.current &&
+        existing &&
+        existing.width === widthBins &&
+        existing.height === rowCount
+      ) {
+        return heatmapRef.current;
+      }
+      heatmapRef.current?.remove();
+      const layer = plot.addHeatmap({
+        width: widthBins,
+        height: rowCount,
+        colormap,
+        clip: { min: minDb, max: maxDb },
+      });
+      heatmapRef.current = layer;
+      heatmapInfoRef.current = { width: widthBins, height: rowCount };
+      return layer;
+    };
+
     const handleFFTData = (event: Event) => {
       const customEvent = event as CustomEvent<FFTData>;
-      addFFTRow(customEvent.detail);
+      const frame = customEvent.detail;
+      if (!frame || frame.bins.length === 0) {
+        return;
+      }
+      fftMetaRef.current = {
+        centerFreq: frame.centerFreq,
+        sampleRate: frame.sampleRate,
+      };
+      const heatmap = ensureHeatmap(frame.bins.length);
+      heatmap.pushRow(frame.bins);
     };
 
     window.addEventListener("fft-data", handleFFTData);
     return () => {
       window.removeEventListener("fft-data", handleFFTData);
     };
-  }, [addFFTRow]); // Now only depends on the stable, memoized addFFTRow
+  }, [plot, colormap, minDb, maxDb, rowCount]);
 
-  /**
-   * Handle mouse wheel for zoom
-   */
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    if (!onFrequencyRangeChange) return;
-
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const { startFreq, endFreq } = frequencyRange;
-    const centerFreq = (startFreq + endFreq) / 2;
-    const span = (endFreq - startFreq) / 2;
-    const newSpan = span * zoomFactor;
-
-    onFrequencyRangeChange({
-      startFreq: centerFreq - newSpan,
-      endFreq: centerFreq + newSpan,
-    });
-  };
-
-  /**
-   * Handle mouse down for panning
-   */
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-    lastMouseYRef.current = e.clientY;
-  };
-
-  /**
-   * Handle mouse move for panning
-   */
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (
-      !isDragging ||
-      !dragStart ||
-      !onFrequencyRangeChange ||
-      plotWidthInt <= 0
-    )
-      return;
-
-    const deltaX = e.clientX - dragStart.x;
-    const { startFreq, endFreq } = frequencyRange;
-    const span = endFreq - startFreq;
-    const freqShift = -(deltaX / plotWidthInt) * span;
-
-    onFrequencyRangeChange({
-      startFreq: startFreq + freqShift,
-      endFreq: endFreq + freqShift,
-    });
-
-    setDragStart({ x: e.clientX, y: e.clientY });
-  };
-
-  /**
-   * Handle mouse up
-   */
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setDragStart(null);
-  };
+  const leftFreq = formatFrequency(frequencyRange.startFreq);
+  const midFreq = formatFrequency(
+    (frequencyRange.startFreq + frequencyRange.endFreq) / 2
+  );
+  const rightFreq = formatFrequency(frequencyRange.endFreq);
 
   return (
-    <div style={{ position: "relative", width, height, overflow: "hidden" }}>
+    <div
+      style={{
+        position: "relative",
+        width,
+        height,
+        background: waterfallColors.background,
+        borderRadius: 4,
+        overflow: "hidden",
+      }}
+    >
       <canvas
-        ref={canvasRef}
+        ref={handleCanvasAttach}
         width={width}
         height={height}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{
-          display: "block",
-          cursor: isDragging ? "grabbing" : "grab",
-          imageRendering: "pixelated",
-        }}
+        style={{ display: "block", width: "100%", height: "100%" }}
       />
-
-      {/* Frequency scale overlay */}
       <div
         style={{
           position: "absolute",
           bottom: 0,
-          left: margin.left,
-          right: margin.right,
-          height: 20,
+          left: 0,
+          right: 0,
+          height: 24,
           background: waterfallColors.scaleBackground,
           color: waterfallColors.scaleText,
           fontSize: 12,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "0 5px",
+          padding: "0 8px",
           pointerEvents: "none",
         }}
       >
-        <span>{formatFrequency(frequencyRange.startFreq)}</span>
-        <span>
-          {formatFrequency(
-            (frequencyRange.startFreq + frequencyRange.endFreq) / 2
-          )}
-        </span>
-        <span>{formatFrequency(frequencyRange.endFreq)}</span>
+        <span>{leftFreq}</span>
+        <span>{midFreq}</span>
+        <span>{rightFreq}</span>
       </div>
     </div>
   );

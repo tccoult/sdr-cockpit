@@ -380,8 +380,8 @@ class PlotEngine implements PlotHandle {
 
     return {
       id: layer.id,
-      pushColumn: (values) => {
-        layer.pushColumn(values);
+      pushRow: (values) => {
+        layer.pushRow(values);
         this.requestDraw();
       },
       setFullImage: (data, normalize) => {

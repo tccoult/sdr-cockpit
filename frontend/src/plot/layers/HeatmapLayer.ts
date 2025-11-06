@@ -53,8 +53,8 @@ export function createHeatmapLayer(
   const rgba = fullImageData.data;
   const valueBuffer = new Float32Array(width * height).fill(Number.NaN);
 
-  let head = 0; // Next column to overwrite
-  let filled = 0; // Number of columns containing data
+  let top = 0; // Index of the newest row (rendered at the top)
+  let filled = 0; // Number of rows containing data
   let dirty = true;
 
   const requestDraw = context.requestDraw;
@@ -109,46 +109,53 @@ export function createHeatmapLayer(
     return changed;
   };
 
-  const toFloat32 = (values: Float32Array | number[]): Float32Array => {
-    return values instanceof Float32Array ? values : Float32Array.from(values);
-  };
+  const toFloat32 = (values: Float32Array | number[]): Float32Array =>
+    values instanceof Float32Array ? values : Float32Array.from(values);
 
-  const writeColumn = (columnIndex: number, values: Float32Array) => {
-    const column = values;
-    if (column.length !== height) {
+  const writeRowValues = (rowIndex: number, values: Float32Array) => {
+    if (values.length !== width) {
       throw new Error(
-        `HeatmapLayer "${id}" expected column of length ${height}, received ${column.length}`
+        `HeatmapLayer "${id}" expected row of length ${width}, received ${values.length}`
       );
     }
+    const rowOffset = rowIndex * width;
+    for (let x = 0; x < width; x += 1) {
+      valueBuffer[rowOffset + x] = values[x];
+    }
+  };
 
-    for (let y = 0; y < height; y += 1) {
-      const value = column[y];
-      const lutIndex = valueToIndex(value) * 4;
-      const targetRow = height - 1 - y;
-      const fullIndex = (targetRow * width + columnIndex) * 4;
+  const colorizeRow = (rowIndex: number) => {
+    const rowOffset = rowIndex * width;
+    for (let x = 0; x < width; x += 1) {
+      const value = valueBuffer[rowOffset + x];
+      const base = (rowOffset + x) * 4;
       if (Number.isFinite(value)) {
-        rgba[fullIndex] = colormap[lutIndex];
-        rgba[fullIndex + 1] = colormap[lutIndex + 1];
-        rgba[fullIndex + 2] = colormap[lutIndex + 2];
-        rgba[fullIndex + 3] = 255;
+        const lutIndex = valueToIndex(value) * 4;
+        rgba[base] = colormap[lutIndex];
+        rgba[base + 1] = colormap[lutIndex + 1];
+        rgba[base + 2] = colormap[lutIndex + 2];
+        rgba[base + 3] = 255;
       } else {
-        rgba[fullIndex] = 0;
-        rgba[fullIndex + 1] = 0;
-        rgba[fullIndex + 2] = 0;
-        rgba[fullIndex + 3] = 0;
+        rgba[base] = 0;
+        rgba[base + 1] = 0;
+        rgba[base + 2] = 0;
+        rgba[base + 3] = 0;
       }
-      valueBuffer[targetRow * width + columnIndex] = value;
     }
     dirty = true;
   };
 
-  const pushColumn = (values: Float32Array | number[]) => {
-    const targetColumn = head;
-    head = (head + 1) % width;
-    filled = Math.min(width, filled + 1);
-    writeColumn(targetColumn, toFloat32(values));
-    if (autoClip && recomputeAutoClip()) {
+  const pushRow = (values: Float32Array | number[]) => {
+    top = (top - 1 + height) % height;
+    writeRowValues(top, toFloat32(values));
+    if (filled < height) {
+      filled += 1;
+    }
+    const clipChanged = autoClip ? recomputeAutoClip() : false;
+    if (clipChanged) {
       applyClipToBuffer();
+    } else {
+      colorizeRow(top);
     }
     requestDraw();
   };
@@ -184,47 +191,25 @@ export function createHeatmapLayer(
           }, received ${data.length}`
         );
       }
-      source = data;
+      source = data.slice();
+    }
+
+    valueBuffer.fill(Number.NaN);
+    for (let row = 0; row < height; row += 1) {
+      const rowOffset = row * width;
+      for (let col = 0; col < width; col += 1) {
+        valueBuffer[rowOffset + col] = source[rowOffset + col];
+      }
     }
 
     autoClip = Boolean(normalize);
-    if (normalize) {
-      let min = Number.POSITIVE_INFINITY;
-      let max = Number.NEGATIVE_INFINITY;
-      for (let i = 0; i < source.length; i += 1) {
-        const value = source[i];
-        if (!Number.isFinite(value)) continue;
-        if (value < min) min = value;
-        if (value > max) max = value;
-      }
-      if (min < max && Number.isFinite(min) && Number.isFinite(max)) {
-        clip = normalizeClip({ min, max });
-      }
+    if (autoClip) {
+      recomputeAutoClip();
     }
+    applyClipToBuffer();
 
-    for (let col = 0; col < width; col += 1) {
-      for (let row = 0; row < height; row += 1) {
-        const value = source[row * width + col];
-        const lutIndex = valueToIndex(value) * 4;
-        const targetRow = height - 1 - row;
-        const index = (targetRow * width + col) * 4;
-        if (Number.isFinite(value)) {
-          rgba[index] = colormap[lutIndex];
-          rgba[index + 1] = colormap[lutIndex + 1];
-          rgba[index + 2] = colormap[lutIndex + 2];
-          rgba[index + 3] = 255;
-        } else {
-          rgba[index] = 0;
-          rgba[index + 1] = 0;
-          rgba[index + 2] = 0;
-          rgba[index + 3] = 0;
-        }
-        valueBuffer[targetRow * width + col] = value;
-      }
-    }
-    filled = width;
-    head = 0;
-    dirty = true;
+    filled = height;
+    top = 0;
     requestDraw();
   };
 
@@ -261,41 +246,39 @@ export function createHeatmapLayer(
     const prevSmoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
 
-    const activeColumns = filled;
-    const startIndex = (head + width - activeColumns) % width;
-    const drawWidth = rect.width;
+    const activeRows = filled;
     const drawHeight = rect.height;
-    const scalePerColumn = drawWidth / width;
-    let destX = rect.left;
+    const scalePerRow = drawHeight / height;
+    let destY = rect.top;
 
-    const firstSpan = Math.min(width - startIndex, activeColumns);
+    const firstSpan = Math.min(height - top, activeRows);
     if (firstSpan > 0) {
       ctx.drawImage(
         bufferCanvas as CanvasImageSource,
-        startIndex,
         0,
+        top,
+        width,
         firstSpan,
-        height,
-        destX,
-        rect.top,
-        firstSpan * scalePerColumn,
-        drawHeight
+        rect.left,
+        destY,
+        rect.width,
+        firstSpan * scalePerRow
       );
-      destX += firstSpan * scalePerColumn;
+      destY += firstSpan * scalePerRow;
     }
 
-    const remaining = activeColumns - firstSpan;
+    const remaining = activeRows - firstSpan;
     if (remaining > 0) {
       ctx.drawImage(
         bufferCanvas as CanvasImageSource,
         0,
         0,
+        width,
         remaining,
-        height,
-        destX,
-        rect.top,
-        remaining * scalePerColumn,
-        drawHeight
+        rect.left,
+        destY,
+        rect.width,
+        remaining * scalePerRow
       );
     }
 
@@ -329,8 +312,8 @@ export function createHeatmapLayer(
       visible = value;
       requestDraw();
     },
-    pushColumn(values: Float32Array | number[]) {
-      pushColumn(values);
+    pushRow(values: Float32Array | number[]) {
+      pushRow(values);
     },
     setFullImage(data: Float32Array | number[][], normalize?: boolean) {
       setFullImage(data, normalize);
@@ -341,7 +324,7 @@ export function createHeatmapLayer(
     remove() {
       visible = false;
       filled = 0;
-      head = 0;
+      top = 0;
       requestDraw();
     },
     destroy() {
@@ -364,14 +347,15 @@ export function createHeatmapLayer(
         width - 1,
         Math.max(0, Math.floor(relativeX * width))
       );
-      const startIndex = (head + width - filled) % width;
-      const bufferColumn = (startIndex + displayColumn) % width;
       const displayRow = Math.min(
         height - 1,
         Math.max(0, Math.floor(relativeY * height))
       );
-      const bufferRow = height - 1 - displayRow;
-      const value = valueBuffer[bufferRow * width + bufferColumn];
+      if (displayRow >= filled) {
+        return null;
+      }
+      const bufferRow = (top + displayRow) % height;
+      const value = valueBuffer[bufferRow * width + displayColumn];
       if (!Number.isFinite(value)) {
         return null;
       }

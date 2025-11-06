@@ -261,7 +261,7 @@ export interface LineLayerHandle extends LayerHandle {
 }
 
 export interface HeatmapLayerHandle extends LayerHandle {
-  pushColumn(values: Float32Array): void;
+  pushRow(values: Float32Array): void;
   setFullImage(data: Float32Array | number[][], normalize?: boolean): void;
   setClip(clip: { min: number; max: number } | "auto"): void;
 }

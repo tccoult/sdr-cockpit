@@ -170,7 +170,7 @@ function createColormap() {
 }
 
 describe("HeatmapLayer", () => {
-  it("colorizes streamed columns and schedules redraws", () => {
+  it("colorizes streamed rows and schedules redraws", () => {
     const { layerContext, renderContext, requestDraw } = createLayerContext();
     const layer = createHeatmapLayer(layerContext, {
       width: 2,
@@ -178,13 +178,13 @@ describe("HeatmapLayer", () => {
       colormap: createColormap(),
     });
 
-    layer.pushColumn(new Float32Array([-120, 0]));
+    layer.pushRow(new Float32Array([-120, 0]));
     expect(requestDraw).toHaveBeenCalledTimes(1);
     expect(bufferContexts).toHaveLength(1);
     const calls = bufferContexts[0].putImageDataCalls;
     expect(calls).toHaveLength(0);
 
-    layer.pushColumn(new Float32Array([-60, -60]));
+    layer.pushRow(new Float32Array([-60, -60]));
     expect(requestDraw).toHaveBeenCalledTimes(2);
 
     const { ctx, drawImageCalls, smoothingChanges } = createDrawContext();
@@ -204,9 +204,9 @@ describe("HeatmapLayer", () => {
       height: 2,
       colormap: createColormap(),
     });
-    layer.pushColumn(new Float32Array([-120, 0]));
-    layer.pushColumn(new Float32Array([-60, 0]));
-    layer.pushColumn(new Float32Array([-90, -90])); // wraps
+    layer.pushRow(new Float32Array([-120, 0]));
+    layer.pushRow(new Float32Array([-60, 0]));
+    layer.pushRow(new Float32Array([-90, -90])); // wraps
 
     const { ctx, drawImageCalls } = createDrawContext();
     layer.draw(ctx, renderContext);
@@ -214,15 +214,15 @@ describe("HeatmapLayer", () => {
     expect(drawImageCalls.length).toBe(2);
   });
 
-  it("throws when column size mismatches", () => {
+  it("throws when row size mismatches", () => {
     const { layerContext } = createLayerContext();
     const layer = createHeatmapLayer(layerContext, {
       width: 2,
       height: 2,
       colormap: createColormap(),
     });
-    expect(() => layer.pushColumn(new Float32Array([0]))).toThrow(
-      /expected column of length 2/i
+    expect(() => layer.pushRow(new Float32Array([0]))).toThrow(
+      /expected row of length 2/i
     );
   });
 
