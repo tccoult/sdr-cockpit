@@ -1,5 +1,7 @@
-import { useRef, useState } from "react";
-import { Button } from "./components/common/Button";
+import { useEffect, useRef, useState } from "react";
+import { ApiModeIndicator } from "./components/app/ApiModeIndicator";
+import { ThemeToggle } from "./components/app/ThemeToggle";
+import { useWindowSize } from "./components/app/useWindowSize";
 import {
   CockpitColumn,
   CockpitHeaderZone,
@@ -13,26 +15,22 @@ import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPa
 import { getTaskStatusLabel } from "./components/tasks/ActiveTaskPanel/taskStatus";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
-import { useWindowSize } from "./components/app/useWindowSize";
-import { ThemeToggle } from "./components/app/ThemeToggle";
-import { ApiModeIndicator } from "./components/app/ApiModeIndicator";
+import { useDataStream, useTasks } from "./hooks";
 import { SpectrumView } from "./components/visualization/SpectrumView";
-import { PlotSandbox } from "./components/visualization/PlotSandbox";
-import { PLASMA } from "./utils/colorMaps";
+import { Button } from "./components/common/Button";
 import { formatFrequency } from "./utils/formatters";
-import { useTasks, useDataStream } from "./hooks";
+import { PLASMA } from "./utils/colorMaps";
 
 function App() {
   const { width } = useWindowSize();
   const isMobile = width < 1024;
-
   const colorMap = PLASMA;
-  const showPlotSandbox = import.meta.env.VITE_PLOT_SANDBOX === "true";
 
   // UI state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
+  const [renderFps, setRenderFps] = useState(0);
 
   // Task management hook
   const {
@@ -62,6 +60,12 @@ function App() {
 
   const totalTasks = tasks.length;
   const operatorTasks = tasks.filter((task) => task.owner === "self").length;
+
+  useEffect(() => {
+    if (isWizardOpen || !selectedTaskId) {
+      setRenderFps(0);
+    }
+  }, [isWizardOpen, selectedTaskId]);
 
   return (
     <>
@@ -96,7 +100,8 @@ function App() {
                 </h1>
                 {selectedTask && (
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-                    {selectedTask.name} · {formatFrequency(selectedTask.frequency)}
+                    {selectedTask.name} ·{" "}
+                    {formatFrequency(selectedTask.frequency)}
                   </p>
                 )}
               </div>
@@ -108,19 +113,34 @@ function App() {
                 <ApiModeIndicator />
                 <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/30 dark:shadow-inner dark:shadow-black/20">
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Frame Rate
+                    Frame Rates
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
-                    {fps}
-                    <span className="ml-1 text-xs font-normal text-slate-500 dark:text-slate-400">FPS</span>
-                  </p>
+                  <div className="mt-1 flex flex-col gap-1 text-sm font-semibold text-slate-900 dark:text-white">
+                    <span>
+                      Data: {fps}
+                      <span className="ml-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        FPS
+                      </span>
+                    </span>
+                    <span>
+                      Render:{" "}
+                      {renderFps > 0 ? renderFps.toFixed(1) : "—"}
+                      <span className="ml-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        FPS
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/20 dark:shadow-inner dark:shadow-black/20">
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Tasks Online
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{totalTasks}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{operatorTasks} by operator</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    {totalTasks}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {operatorTasks} by operator
+                  </p>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/20 dark:shadow-inner dark:shadow-black/20">
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -140,9 +160,9 @@ function App() {
           className={`lg:w-[320px] ${
             isMobile
               ? isSidebarOpen
-                ? 'z-50 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-300/60 dark:border-white/10 dark:bg-[rgba(10,10,15,0.95)] dark:shadow-2xl dark:shadow-black/60'
-                : 'hidden'
-              : ''
+                ? "z-50 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-300/60 dark:border-white/10 dark:bg-[rgba(10,10,15,0.95)] dark:shadow-2xl dark:shadow-black/60"
+                : "hidden"
+              : ""
           }`}
         >
           <CockpitSpotlightSection>
@@ -169,41 +189,34 @@ function App() {
         <CockpitColumn position="center" className="flex-1">
           <CockpitMainArea className="backdrop-blur">
             {selectedTask ? (
-              <>
-                <SpectrumView
-                  taskId={selectedTask.id}
-                  centerFreq={selectedTask.frequency}
-                  sampleRate={selectedTask.sampleRate}
-                  colorMap={colorMap}
-                  dataError={streamError || undefined}
-                  isConnecting={streamStatus === 'connecting'}
-                />
-                {showPlotSandbox && (
-                  <div className="mt-6 flex flex-none justify-center">
-                    <PlotSandbox
-                      width={Math.min(Math.max(width - 160, 360), 960)}
-                      height={260}
-                    />
-                  </div>
-                )}
-              </>
+              <SpectrumView
+                taskId={selectedTask.id}
+                centerFreq={selectedTask.frequency}
+                sampleRate={selectedTask.sampleRate}
+                colorMap={colorMap}
+                dataError={streamError || undefined}
+                isConnecting={streamStatus === "connecting"}
+                onRenderFpsChange={setRenderFps}
+              />
             ) : (
-                <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
-                  <div className="text-6xl">📡</div>
-                  <div>
-                    <p className="text-xl font-semibold text-slate-900 dark:text-white">No Task Selected</p>
-                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      Select a task from the roster to view spectrum activity.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setIsWizardOpen(true)}
-                    variant="secondary"
-                    size="lg"
-                  >
-                    + Create New Task
-                  </Button>
+              <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+                <div className="text-6xl">📡</div>
+                <div>
+                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                    No Task Selected
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Select a task from the roster to view spectrum activity.
+                  </p>
                 </div>
+                <Button
+                  onClick={() => setIsWizardOpen(true)}
+                  variant="secondary"
+                  size="lg"
+                >
+                  + Create New Task
+                </Button>
+              </div>
             )}
           </CockpitMainArea>
         </CockpitColumn>

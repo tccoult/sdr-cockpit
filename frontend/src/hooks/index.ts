@@ -7,3 +7,5 @@ export type { UseTasksResult } from './useTasks';
 
 export { useDataStream } from './useDataStream';
 export type { UseDataStreamOptions, UseDataStreamResult } from './useDataStream';
+
+export { usePlotRenderFps } from './usePlotRenderFps';

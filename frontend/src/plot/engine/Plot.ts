@@ -38,6 +38,7 @@ import {
   type PlotSurface,
   type LineLayerHandle,
   type LineLayerOptions,
+  type PlotRenderStats,
   type PlotAxisOptions,
   type PlotAxesConfig,
   type PlotCreationOptions,
@@ -239,6 +240,7 @@ class PlotEngine implements PlotHandle {
   private readonly cursorListeners = new Set<(cursor: CursorState | null) => void>();
   private readonly panState = createPanState();
   private readonly boxInteraction = createBoxInteraction();
+  private readonly frameListeners = new Set<(stats: PlotRenderStats) => void>();
   private axisModelX: AxisModel;
   private axisModelY: AxisModel;
   private axisConfig: PlotAxesConfig;
@@ -252,6 +254,9 @@ class PlotEngine implements PlotHandle {
   private axesRegistered = false;
   private cursorState: CursorState | null = null;
   private canvasRect: DOMRectReadOnly = createDomRect(0, 0, 1, 1);
+  private frameSampleCount = 0;
+  private frameSampleAccum = 0;
+  private frameStatsWindowStart = now();
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
@@ -502,6 +507,35 @@ class PlotEngine implements PlotHandle {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+
+  private handleFrameMetrics(timestamp: number, frameDuration: number) {
+    this.frameSampleCount += 1;
+    this.frameSampleAccum += frameDuration;
+    const windowElapsed = timestamp - this.frameStatsWindowStart;
+    if (windowElapsed < 500) {
+      return;
+    }
+    const avgDuration =
+      this.frameSampleCount > 0
+        ? this.frameSampleAccum / this.frameSampleCount
+        : frameDuration;
+    const fps =
+      windowElapsed > 0
+        ? (this.frameSampleCount * 1000) / windowElapsed
+        : 0;
+    const stats: PlotRenderStats = {
+      timestamp,
+      frameDuration,
+      averageFrameDuration: avgDuration,
+      fps,
+    };
+    for (const listener of this.frameListeners) {
+      listener(stats);
+    }
+    this.frameSampleCount = 0;
+    this.frameSampleAccum = 0;
+    this.frameStatsWindowStart = timestamp;
   }
 
   private markSurfaceDirty(surface: PlotSurface) {
@@ -904,6 +938,11 @@ class PlotEngine implements PlotHandle {
     return () => this.cursorListeners.delete(callback);
   }
 
+  onFrame(callback: (stats: PlotRenderStats) => void): () => void {
+    this.frameListeners.add(callback);
+    return () => this.frameListeners.delete(callback);
+  }
+
   getCursor(): CursorState | null {
     return this.cursorState;
   }
@@ -947,6 +986,7 @@ class PlotEngine implements PlotHandle {
         }
       }
     }
+    this.frameListeners.clear();
     this.surfaceManager.destroy();
     this.destroyCallbacks.length = 0;
     this.clearCursor();
@@ -955,7 +995,10 @@ class PlotEngine implements PlotHandle {
   private readonly flush = () => {
     if (this.destroyed) return;
     this.dirty = false;
+    const start = now();
     this.drawFrame();
+    const end = now();
+    this.handleFrameMetrics(end, end - start);
   };
 
   private drawFrame() {

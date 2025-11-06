@@ -7,6 +7,7 @@ import {
   type LineLayerHandle,
   type PlotCreationOptions,
 } from "../../plot";
+import { usePlotRenderFps } from "../../hooks";
 import type { Theme } from "../app/theme-context";
 
 interface FFTDisplayProps {
@@ -18,6 +19,7 @@ interface FFTDisplayProps {
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
   dataKey?: string;
   theme: Theme;
+  onRenderFpsChange?: (fps: number) => void;
 }
 
 const SMOOTHING_FACTOR = 0.95;
@@ -32,6 +34,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   onFrequencyRangeChange,
   dataKey,
   theme,
+  onRenderFpsChange,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
 
@@ -100,6 +103,7 @@ export const FFTDisplay = memo(function FFTDisplay({
     null
   );
   const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
+  const renderFps = usePlotRenderFps(plot);
 
   const handleCanvasAttach = useCallback(
     (canvas: HTMLCanvasElement | null) => {
@@ -153,6 +157,17 @@ export const FFTDisplay = memo(function FFTDisplay({
       traceRef.current = null;
     };
   }, [plot, plotColors.traceColor]);
+
+  useEffect(() => {
+    if (!onRenderFpsChange) return;
+    onRenderFpsChange(renderFps);
+  }, [renderFps, onRenderFpsChange]);
+
+  useEffect(() => {
+    return () => {
+      onRenderFpsChange?.(0);
+    };
+  }, [onRenderFpsChange]);
 
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;

@@ -113,6 +113,18 @@ export interface CursorReadoutFormatter {
   ): string[];
 }
 
+/** Aggregate metrics emitted after plot frames are flushed. */
+export interface PlotRenderStats {
+  /** High-resolution timestamp captured after the frame completed. */
+  timestamp: number;
+  /** Instantaneous frame duration in milliseconds. */
+  frameDuration: number;
+  /** Rolling average frame duration during the reporting window. */
+  averageFrameDuration: number;
+  /** Calculated frames per second over the reporting window. */
+  fps: number;
+}
+
 /** Public imperative API returned by {@link createPlot}. */
 export interface PlotHandle {
   /** Adds and registers a new line layer. */
@@ -139,6 +151,8 @@ export interface PlotHandle {
   onCursor(callback: (cursor: CursorState | null) => void): () => void;
   /** Returns the latest cursor information, if any. */
   getCursor(): CursorState | null;
+  /** Subscribes to frame metrics emitted by the renderer. */
+  onFrame(callback: (stats: PlotRenderStats) => void): () => void;
   /** Indicates whether the plot has already been destroyed. */
   isDestroyed(): boolean;
   /** Tears down the plot and releases all resources. */
