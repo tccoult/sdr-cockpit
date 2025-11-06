@@ -1,5 +1,6 @@
 import { resolveColormap } from "../color/colormap";
 import type {
+  AxisRange,
   CursorState,
   HeatmapLayerHandle,
   HeatmapLayerOptions,
@@ -42,6 +43,18 @@ export function createHeatmapLayer(
 
   let clip = normalizeClip(options.clip ?? DEFAULT_CLIP);
   let autoClip = false;
+  const defaultDomainX = (): AxisRange => ({
+    min: 0,
+    max: Math.max(1, width),
+  });
+  let domainX =
+    options.domain?.x !== undefined
+      ? normalizeDomainRange(options.domain.x)
+      : defaultDomainX();
+  let domainY =
+    options.domain?.y !== undefined
+      ? normalizeDomainRange(options.domain.y)
+      : { min: 0, max: Math.max(1, height) };
 
   const bufferCanvas = createBufferCanvas(width, height);
   const bufferCtx = bufferCanvas.getContext("2d");
@@ -58,6 +71,12 @@ export function createHeatmapLayer(
   let dirty = true;
 
   const requestDraw = context.requestDraw;
+  const updateDomainY = () => {
+    domainY = {
+      min: 0,
+      max: Math.max(1, filled),
+    };
+  };
 
   const valueToIndex = (value: number) => {
     if (!Number.isFinite(value)) {
@@ -151,6 +170,7 @@ export function createHeatmapLayer(
     if (filled < height) {
       filled += 1;
     }
+    updateDomainY();
     const clipChanged = autoClip ? recomputeAutoClip() : false;
     if (clipChanged) {
       applyClipToBuffer();
@@ -210,6 +230,7 @@ export function createHeatmapLayer(
 
     filled = height;
     top = 0;
+    updateDomainY();
     requestDraw();
   };
 
@@ -225,6 +246,21 @@ export function createHeatmapLayer(
     clip = normalizeClip(value);
     applyClipToBuffer();
     requestDraw();
+  };
+
+  const setDomainRanges = (ranges: { x?: AxisRange; y?: AxisRange }) => {
+    let changed = false;
+    if (ranges.x) {
+      domainX = normalizeDomainRange(ranges.x);
+      changed = true;
+    }
+    if (ranges.y) {
+      domainY = normalizeDomainRange(ranges.y);
+      changed = true;
+    }
+    if (changed) {
+      requestDraw();
+    }
   };
 
   const draw = (
@@ -246,40 +282,73 @@ export function createHeatmapLayer(
     const prevSmoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
 
-    const activeRows = filled;
-    const drawHeight = rect.height;
-    const scalePerRow = drawHeight / height;
-    let destY = rect.top;
-
-    const firstSpan = Math.min(height - top, activeRows);
-    if (firstSpan > 0) {
-      ctx.drawImage(
-        bufferCanvas as CanvasImageSource,
-        0,
-        top,
-        width,
-        firstSpan,
-        rect.left,
-        destY,
-        rect.width,
-        firstSpan * scalePerRow
-      );
-      destY += firstSpan * scalePerRow;
+    const rowsAvailable = Math.min(filled, height);
+    if (rowsAvailable <= 0) {
+      ctx.imageSmoothingEnabled = prevSmoothing;
+      ctx.restore();
+      return;
     }
 
-    const remaining = activeRows - firstSpan;
-    if (remaining > 0) {
+    const domainXSpan = domainX.max - domainX.min || 1;
+    const domainYSpan = domainY.max - domainY.min || 1;
+    const viewX = viewport.xRange;
+    const viewY = viewport.yRange;
+
+    const viewXMin = clampNumber(viewX.min, domainX.min, domainX.max);
+    const viewXMax = clampNumber(viewX.max, domainX.min, domainX.max);
+    let srcXStart = Math.floor(
+      ((viewXMin - domainX.min) / domainXSpan) * width
+    );
+    let srcXEnd = Math.ceil(
+      ((viewXMax - domainX.min) / domainXSpan) * width
+    );
+    srcXStart = clampInt(srcXStart, 0, Math.max(0, width - 1));
+    srcXEnd = clampInt(srcXEnd, srcXStart + 1, width);
+    let srcWidth = srcXEnd - srcXStart;
+    if (srcWidth <= 0) {
+      srcWidth = 1;
+      srcXEnd = Math.min(width, srcXStart + srcWidth);
+    }
+
+    const viewYMin = clampNumber(viewY.min, domainY.min, domainY.max);
+    const viewYMax = clampNumber(viewY.max, domainY.min, domainY.max);
+    const topRowFloat =
+      ((domainY.max - viewYMax) / domainYSpan) * rowsAvailable;
+    const bottomRowFloat =
+      ((domainY.max - viewYMin) / domainYSpan) * rowsAvailable;
+    const srcRowStart = clampInt(Math.floor(topRowFloat), 0, rowsAvailable - 1);
+    let srcRowEnd = clampInt(
+      Math.ceil(bottomRowFloat),
+      srcRowStart + 1,
+      rowsAvailable
+    );
+    let srcRowCount = srcRowEnd - srcRowStart;
+    if (srcRowCount <= 0) {
+      srcRowCount = 1;
+      srcRowEnd = Math.min(rowsAvailable, srcRowStart + srcRowCount);
+    }
+
+    let remainingRows = srcRowCount;
+    let bufferRow = (top + srcRowStart) % height;
+    let destY = rect.top;
+
+    while (remainingRows > 0) {
+      const run = Math.min(remainingRows, height - bufferRow);
+      const destRunHeight = rect.height * (run / srcRowCount);
       ctx.drawImage(
         bufferCanvas as CanvasImageSource,
-        0,
-        0,
-        width,
-        remaining,
+        srcXStart,
+        bufferRow,
+        srcWidth,
+        run,
         rect.left,
         destY,
         rect.width,
-        remaining * scalePerRow
+        destRunHeight
       );
+      destY += destRunHeight;
+      remainingRows -= run;
+      bufferRow = 0;
     }
 
     ctx.imageSmoothingEnabled = prevSmoothing;
@@ -321,10 +390,15 @@ export function createHeatmapLayer(
     setClip(value: { min: number; max: number } | "auto") {
       setClipMode(value);
     },
+    setDomain(value: { x?: AxisRange; y?: AxisRange }) {
+      setDomainRanges(value);
+    },
     remove() {
       visible = false;
       filled = 0;
       top = 0;
+      domainX = defaultDomainX();
+      updateDomainY();
       requestDraw();
     },
     destroy() {
@@ -359,7 +433,7 @@ export function createHeatmapLayer(
       if (!Number.isFinite(value)) {
         return null;
       }
-      return [`value: ${value.toFixed(2)}`];
+      return [value.toFixed(2)];
     },
   };
 }
@@ -395,4 +469,39 @@ function normalizeClip(clip: { min: number; max: number }): { min: number; max: 
     max = min + MIN_CLIP_SPAN;
   }
   return { min, max };
+}
+
+function normalizeDomainRange(range: AxisRange): AxisRange {
+  let { min, max } = range;
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    min = 0;
+    max = 1;
+  }
+  if (min > max) {
+    const tmp = min;
+    min = max;
+    max = tmp;
+  }
+  if (max - min < MIN_CLIP_SPAN) {
+    max = min + MIN_CLIP_SPAN;
+  }
+  return { min, max };
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  if (min > max) {
+    const tmp = min;
+    min = max;
+    max = tmp;
+  }
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function clampInt(value: number, min: number, max: number): number {
+  if (max < min) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return Math.trunc(value);
 }

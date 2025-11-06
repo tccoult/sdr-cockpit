@@ -83,6 +83,9 @@ export interface PlotTheme {
 /** Supported cursor appearances. */
 export type CursorStyle = "none" | "crosshair" | "vertical" | "horizontal";
 
+export type BoxZoomMode = "auto" | "x" | "xy";
+export type BoxZoomModifier = "shift" | "ctrl" | "alt" | "meta";
+
 /** Configuration for a single axis. */
 export interface PlotAxisOptions {
   label?: string;
@@ -212,6 +215,7 @@ export interface HeatmapLayerOptions {
   colormap?: string | Uint8ClampedArray;
   clip?: { min: number; max: number };
   opacity?: number;
+  domain?: { x?: AxisRange; y?: AxisRange };
 }
 
 /** Options used when creating an annotation layer. */
@@ -264,6 +268,7 @@ export interface HeatmapLayerHandle extends LayerHandle {
   pushRow(values: Float32Array): void;
   setFullImage(data: Float32Array | number[][], normalize?: boolean): void;
   setClip(clip: { min: number; max: number } | "auto"): void;
+  setDomain(domain: { x?: AxisRange; y?: AxisRange }): void;
 }
 
 export interface AnnotationLayerHandle extends LayerHandle {
@@ -291,6 +296,7 @@ export interface PlotInteractionsOptions {
   pan?: boolean | { x?: boolean; y?: boolean };
   zoom?: boolean | { x?: boolean; y?: boolean; factor?: number };
   cursor?: boolean | { enabled?: boolean; style?: CursorStyle };
+  boxZoom?: boolean | { mode?: BoxZoomMode; modifier?: BoxZoomModifier };
 }
 
 export interface ReactPlotHandle {

@@ -29,6 +29,23 @@ export interface BoxFinalizeResult {
   y: AxisRange;
 }
 
+export type SelectionMode = "x" | "xy";
+
+export interface BoxOverlay {
+  active: boolean;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  mode: SelectionMode;
+}
+
+export interface BoxInteraction {
+  state: BoxSelectState;
+  pointerId: number | null;
+  overlay: BoxOverlay;
+}
+
 export function createPanState(): PanState {
   return {
     active: false,
@@ -49,6 +66,21 @@ export function createBoxState(): BoxSelectState {
     y0: 0,
     x1: 0,
     y1: 0,
+  };
+}
+
+export function createBoxInteraction(): BoxInteraction {
+  return {
+    state: createBoxState(),
+    pointerId: null,
+    overlay: {
+      active: false,
+      x0: 0,
+      y0: 0,
+      x1: 0,
+      y1: 0,
+      mode: "x",
+    },
   };
 }
 
@@ -158,5 +190,60 @@ export function finishBox(
       min: Math.min(yMin, yMax),
       max: Math.max(yMin, yMax),
     },
+  };
+}
+
+export function startBoxInteraction(
+  interaction: BoxInteraction,
+  pointerId: number,
+  px: number,
+  py: number,
+  mode: SelectionMode
+): void {
+  interaction.pointerId = pointerId;
+  interaction.overlay = {
+    active: true,
+    x0: px,
+    y0: py,
+    x1: px,
+    y1: py,
+    mode,
+  };
+  beginBox(interaction.state, px, py);
+}
+
+export function updateBoxInteraction(
+  interaction: BoxInteraction,
+  px: number,
+  py: number
+): void {
+  updateBox(interaction.state, px, py);
+  interaction.overlay = {
+    ...interaction.overlay,
+    active: interaction.state.active,
+    x1: px,
+    y1: py,
+  };
+}
+
+export function finishBoxInteraction(
+  interaction: BoxInteraction,
+  viewport: Viewport
+): BoxFinalizeResult | null {
+  const result = finishBox(interaction.state, viewport);
+  interaction.overlay = {
+    ...interaction.overlay,
+    active: false,
+  };
+  interaction.pointerId = null;
+  return result;
+}
+
+export function cancelBoxInteraction(interaction: BoxInteraction): void {
+  interaction.state.active = false;
+  interaction.pointerId = null;
+  interaction.overlay = {
+    ...interaction.overlay,
+    active: false,
   };
 }

@@ -2,7 +2,7 @@ import type { CursorState, Layer, LayerRenderContext, PlotTheme } from "../types
 import type { CursorStyle } from "../types";
 
 const DEFAULT_LINE_WIDTH = 1;
-const HIGHLIGHT_RADIUS = 4;
+const CENTER_ARM = 5;
 
 export interface CursorLayer extends Layer {
   setCursor(cursor: CursorState | null): void;
@@ -70,7 +70,10 @@ export function createCursorLayer(
       ctx.strokeStyle = theme.cursorHighlightColor ?? "#ffff7a";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(x, y, HIGHLIGHT_RADIUS, 0, Math.PI * 2);
+      ctx.moveTo(x - CENTER_ARM, y);
+      ctx.lineTo(x + CENTER_ARM, y);
+      ctx.moveTo(x, y - CENTER_ARM);
+      ctx.lineTo(x, y + CENTER_ARM);
       ctx.stroke();
 
       ctx.restore();

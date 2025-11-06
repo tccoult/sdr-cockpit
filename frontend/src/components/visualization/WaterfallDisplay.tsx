@@ -1,5 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import type { HeatmapLayerHandle, PlotCreationOptions } from "../../plot";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  CursorState,
+  HeatmapLayerHandle,
+  PlotCreationOptions,
+} from "../../plot";
 import { usePlot } from "../../plot";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
@@ -68,8 +72,9 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       },
       interactions: {
         pan: { x: true, y: false },
-        zoom: { x: true, y: false, factor: 0.2 },
-        cursor: { enabled: false },
+        zoom: { x: true, y: true, factor: 0.2 },
+        cursor: { enabled: true, style: "none" },
+        boxZoom: { mode: "xy", modifier: "shift" },
       },
       axes: {
         x: {
@@ -94,6 +99,10 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
+  const rowTimestampsRef = useRef<Float64Array | null>(null);
+  const rowHeadRef = useRef<number>(0);
+  const rowsFilledRef = useRef<number>(0);
+  const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
 
   const colormap = useMemo(() => buildColorLUT(colorMap), [colorMap]);
   const rowCount = useMemo(
@@ -113,8 +122,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.style.touchAction = "none";
-    canvas.style.cursor = "crosshair";
-  }, [isDark]);
+  }, []);
 
   useEffect(() => {
     if (!plot) return;
@@ -148,6 +156,14 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   }, [plot, onFrequencyRangeChange]);
 
   useEffect(() => {
+    if (!plot) return;
+    const unsubscribe = plot.onCursor((cursor) => {
+      setCursorInfo(cursor);
+    });
+    return unsubscribe;
+  }, [plot]);
+
+  useEffect(() => {
     heatmapRef.current?.setClip({ min: minDb, max: maxDb });
   }, [minDb, maxDb]);
 
@@ -156,6 +172,9 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       heatmapRef.current?.remove();
       heatmapRef.current = null;
       heatmapInfoRef.current = null;
+      rowTimestampsRef.current = null;
+      rowHeadRef.current = 0;
+      rowsFilledRef.current = 0;
     };
   }, []);
 
@@ -164,7 +183,18 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     heatmapRef.current?.remove();
     heatmapRef.current = null;
     heatmapInfoRef.current = null;
+    rowTimestampsRef.current = null;
+    rowHeadRef.current = 0;
+    rowsFilledRef.current = 0;
   }, [plot, dataKey, rowCount, colormap]);
+
+  useEffect(() => {
+    const heatmap = heatmapRef.current;
+    if (!heatmap) return;
+    heatmap.setDomain({
+      x: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+    });
+  }, [frequencyRange.startFreq, frequencyRange.endFreq]);
 
   useEffect(() => {
     if (!plot) return;
@@ -185,9 +215,16 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         height: rowCount,
         colormap,
         clip: { min: minDb, max: maxDb },
+        domain: {
+          x: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+          y: { min: 0, max: rowCount },
+        },
       });
       heatmapRef.current = layer;
       heatmapInfoRef.current = { width: widthBins, height: rowCount };
+      rowTimestampsRef.current = new Float64Array(rowCount).fill(Number.NaN);
+      rowHeadRef.current = 0;
+      rowsFilledRef.current = 0;
       return layer;
     };
 
@@ -203,13 +240,95 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       };
       const heatmap = ensureHeatmap(frame.bins.length);
       heatmap.pushRow(frame.bins);
+      heatmap.setDomain({
+        x: { min: frequencyRange.startFreq, max: frequencyRange.endFreq },
+      });
+      if (
+        !rowTimestampsRef.current ||
+        rowTimestampsRef.current.length !== rowCount
+      ) {
+        rowTimestampsRef.current = new Float64Array(rowCount).fill(Number.NaN);
+        rowHeadRef.current = 0;
+        rowsFilledRef.current = 0;
+      }
+      rowHeadRef.current = (rowHeadRef.current - 1 + rowCount) % rowCount;
+      if (rowTimestampsRef.current) {
+        rowTimestampsRef.current[rowHeadRef.current] = frame.timestamp;
+      }
+      if (rowsFilledRef.current < rowCount) {
+        rowsFilledRef.current += 1;
+      }
     };
 
     window.addEventListener("fft-data", handleFFTData);
     return () => {
       window.removeEventListener("fft-data", handleFFTData);
     };
-  }, [plot, colormap, minDb, maxDb, rowCount]);
+  }, [plot, colormap, minDb, maxDb, rowCount, frequencyRange.startFreq, frequencyRange.endFreq]);
+
+  let waterfallTooltip: { left: number; top: number; lines: string[] } | null =
+    null;
+  if (cursorInfo && canvasRef.current && rowCount > 0) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const freqLabel = formatFrequency(cursorInfo.dataX);
+      const rawValue =
+        cursorInfo.values && cursorInfo.values.length > 0
+          ? cursorInfo.values[cursorInfo.values.length - 1]
+          : undefined;
+      const intensityMatch =
+        rawValue !== undefined ? rawValue.match(/-?\d+(?:\.\d+)?/) : null;
+      const intensity =
+        intensityMatch !== null ? Number.parseFloat(intensityMatch[0]) : NaN;
+      const relativeY = (cursorInfo.canvasY - rect.top) / rect.height;
+      const timestamps = rowTimestampsRef.current;
+      const rowsFilled = rowsFilledRef.current;
+      let timeLabel: string | null = null;
+      if (timestamps && rowsFilled > 0) {
+        const clampedRelY = Math.min(Math.max(relativeY, 0), 0.999999);
+        const displayRow = Math.min(
+          rowCount - 1,
+          Math.max(0, Math.floor(clampedRelY * rowCount))
+        );
+        if (displayRow < rowsFilled) {
+          const bufferIndex =
+            (rowHeadRef.current + displayRow) % rowCount;
+          const ts = timestamps[bufferIndex];
+          const newestTs = timestamps[rowHeadRef.current];
+          if (Number.isFinite(ts) && Number.isFinite(newestTs)) {
+            const delta = (newestTs - ts) / 1000;
+            if (Math.abs(delta) < 0.05) {
+              timeLabel = "0.0s";
+            } else if (delta >= 0) {
+              timeLabel = `+${delta.toFixed(1)}s`;
+            }
+          }
+        }
+      }
+      const lines: string[] = [freqLabel];
+      if (timeLabel) {
+        lines.push(timeLabel);
+      }
+      if (Number.isFinite(intensity)) {
+        lines.push(intensity.toFixed(1));
+      }
+      if (lines.length > 0) {
+        const tooltipLeft = Math.min(
+          Math.max(cursorInfo.canvasX + 16, 8),
+          width - 140
+        );
+        const tooltipTop = Math.min(
+          Math.max(cursorInfo.canvasY - 32, 8),
+          height - 48
+        );
+        waterfallTooltip = {
+          left: tooltipLeft,
+          top: tooltipTop,
+          lines,
+        };
+      }
+    }
+  }
 
   const leftFreq = formatFrequency(frequencyRange.startFreq);
   const midFreq = formatFrequency(
@@ -234,6 +353,29 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         height={height}
         style={{ display: "block", width: "100%", height: "100%" }}
       />
+      {waterfallTooltip && (
+        <div
+          style={{
+            position: "absolute",
+            left: waterfallTooltip.left,
+            top: waterfallTooltip.top,
+            background: waterfallColors.scaleBackground,
+            color: waterfallColors.scaleText,
+            border: "1px solid rgba(0,0,0,0.2)",
+            borderRadius: 4,
+            padding: "4px 8px",
+            fontSize: 11,
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+            zIndex: 2,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+          }}
+        >
+          {waterfallTooltip.lines.map((line, idx) => (
+            <div key={idx}>{line}</div>
+          ))}
+        </div>
+      )}
       <div
         style={{
           position: "absolute",

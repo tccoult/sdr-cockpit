@@ -1,7 +1,19 @@
 import { AxisModel } from "../axes/AxisModel";
 import { createAxisLayer } from "../axes/AxisLayer";
 import type { AxisOptions } from "../axes/axisTypes";
-import { beginPan, createPanState, endPan, updatePan } from "../input/pointer";
+import {
+  beginPan,
+  cancelBoxInteraction,
+  createBoxInteraction,
+  createPanState,
+  endPan,
+  finishBoxInteraction,
+  startBoxInteraction,
+  type BoxFinalizeResult,
+  type SelectionMode,
+  updateBoxInteraction,
+  updatePan,
+} from "../input/pointer";
 import { applyWheel } from "../input/wheel";
 import { createAnnotationLayer } from "../layers/AnnotationLayer";
 import { createCursorLayer } from "../layers/CursorLayer";
@@ -15,6 +27,8 @@ import {
   type AxisRange,
   type CursorState,
   type CursorStyle,
+  type BoxZoomMode,
+  type BoxZoomModifier,
   type HeatmapLayerHandle,
   type HeatmapLayerOptions,
   type Layer,
@@ -68,6 +82,11 @@ type ResolvedInteractions = {
   zoomFactor: number;
   cursor: boolean;
   cursorStyle: CursorStyle;
+  boxZoom: {
+    enabled: boolean;
+    mode: BoxZoomMode;
+    modifier: BoxZoomModifier;
+  };
 };
 
 const now = () =>
@@ -125,7 +144,45 @@ function resolveInteractions(
     cursorStyle = "none";
   }
 
-  return { panX, panY, zoomX, zoomY, zoomFactor, cursor: cursorEnabled, cursorStyle };
+  const boxZoomOption = options?.boxZoom;
+  let boxZoomEnabled = false;
+  let boxZoomMode: BoxZoomMode = "auto";
+  let boxZoomModifier: BoxZoomModifier = "shift";
+  if (typeof boxZoomOption === "boolean") {
+    boxZoomEnabled = boxZoomOption;
+  } else if (boxZoomOption) {
+    boxZoomEnabled = true;
+    if (
+      boxZoomOption.mode === "x" ||
+      boxZoomOption.mode === "xy" ||
+      boxZoomOption.mode === "auto"
+    ) {
+      boxZoomMode = boxZoomOption.mode;
+    }
+    if (
+      boxZoomOption.modifier === "shift" ||
+      boxZoomOption.modifier === "ctrl" ||
+      boxZoomOption.modifier === "alt" ||
+      boxZoomOption.modifier === "meta"
+    ) {
+      boxZoomModifier = boxZoomOption.modifier;
+    }
+  }
+
+  return {
+    panX,
+    panY,
+    zoomX,
+    zoomY,
+    zoomFactor,
+    cursor: cursorEnabled,
+    cursorStyle,
+    boxZoom: {
+      enabled: boxZoomEnabled,
+      mode: boxZoomMode,
+      modifier: boxZoomModifier,
+    },
+  };
 }
 
 export function createPlot(
@@ -156,6 +213,7 @@ class PlotEngine implements PlotHandle {
   private readonly zoomListeners = new Set<(axis: "x" | "y", range: AxisRange) => void>();
   private readonly cursorListeners = new Set<(cursor: CursorState | null) => void>();
   private readonly panState = createPanState();
+  private readonly boxInteraction = createBoxInteraction();
   private axisModelX: AxisModel;
   private axisModelY: AxisModel;
   private axisConfig: PlotAxesConfig;
@@ -174,6 +232,14 @@ class PlotEngine implements PlotHandle {
     if (event.button !== 0) return;
     this.refreshCanvasRect();
     const coords = this.toCanvasCoordinates(event.clientX, event.clientY);
+    if (this.shouldStartBoxZoom(event)) {
+      this.beginBoxSelection(event.pointerId, coords.x, coords.y);
+      if (this.interactions.cursor) {
+        this.updateCursorPosition(coords.x, coords.y);
+      }
+      event.preventDefault();
+      return;
+    }
     if (this.interactions.panX || this.interactions.panY) {
       beginPan(
         this.panState,
@@ -199,6 +265,18 @@ class PlotEngine implements PlotHandle {
 
   private readonly handlePointerMove = (event: PointerEvent) => {
     const coords = this.toCanvasCoordinates(event.clientX, event.clientY);
+    if (
+      this.boxInteraction.pointerId === event.pointerId &&
+      this.boxInteraction.state.active
+    ) {
+      updateBoxInteraction(this.boxInteraction, coords.x, coords.y);
+      this.requestDraw();
+      if (this.interactions.cursor) {
+        this.updateCursorPosition(coords.x, coords.y);
+      }
+      event.preventDefault();
+      return;
+    }
     if (this.panState.active && event.pointerId === this.panState.pointerId) {
       const ranges = updatePan(this.panState, coords.x, coords.y, {
         allowX: this.interactions.panX,
@@ -217,6 +295,20 @@ class PlotEngine implements PlotHandle {
   };
 
   private readonly handlePointerUp = (event: PointerEvent) => {
+    const coords = this.toCanvasCoordinates(event.clientX, event.clientY);
+    if (
+      this.boxInteraction.pointerId === event.pointerId &&
+      this.boxInteraction.state.active
+    ) {
+      this.finishBoxSelection(event.pointerId, coords.x, coords.y);
+      if (this.interactions.cursor) {
+        this.updateCursorPosition(coords.x, coords.y);
+      } else {
+        this.clearCursor();
+      }
+      event.preventDefault();
+      return;
+    }
     if (this.panState.active && event.pointerId === this.panState.pointerId) {
       try {
         this.canvas.releasePointerCapture(event.pointerId);
@@ -228,7 +320,6 @@ class PlotEngine implements PlotHandle {
       endPan(this.panState);
     }
     if (this.interactions.cursor) {
-      const coords = this.toCanvasCoordinates(event.clientX, event.clientY);
       this.updateCursorPosition(coords.x, coords.y);
     } else {
       this.clearCursor();
@@ -236,10 +327,162 @@ class PlotEngine implements PlotHandle {
   };
 
   private readonly handlePointerLeave = () => {
+    if (this.boxInteraction.state.active) {
+      this.cancelBoxSelection();
+      this.requestDraw();
+    }
     if (this.interactions.cursor) {
       this.clearCursor();
     }
   };
+
+  private applyCanvasCursorStyle() {
+    if (!this.interactions.cursor || this.interactions.cursorStyle === "none") {
+      this.canvas.style.cursor = "default";
+      return;
+    }
+    if (this.interactions.cursorStyle === "crosshair") {
+      this.canvas.style.cursor = "none";
+    } else {
+      this.canvas.style.cursor = "default";
+    }
+  }
+
+  private getSelectionColors() {
+    const background = this.theme.background ?? "#000000";
+    const isDark = isDarkColor(background);
+    const fill = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
+    const stroke =
+      this.theme.cursorHighlightColor ??
+      (isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.4)");
+    return { fill, stroke };
+  }
+
+  private shouldStartBoxZoom(event: PointerEvent): boolean {
+    if (!this.interactions.boxZoom.enabled) return false;
+    if (!this.interactions.zoomX) return false;
+    if (this.boxInteraction.pointerId !== null) return false;
+    switch (this.interactions.boxZoom.modifier) {
+      case "shift":
+        return event.shiftKey;
+      case "ctrl":
+        return event.ctrlKey;
+      case "alt":
+        return event.altKey;
+      case "meta":
+        return event.metaKey;
+      default:
+        return false;
+    }
+  }
+
+  private getSelectionMode(): SelectionMode {
+    const configured = this.interactions.boxZoom.mode;
+    if (configured === "x") return "x";
+    if (configured === "xy") return "xy";
+    return this.interactions.zoomY ? "xy" : "x";
+  }
+
+  private beginBoxSelection(pointerId: number, x: number, y: number) {
+    const mode = this.getSelectionMode();
+    startBoxInteraction(this.boxInteraction, pointerId, x, y, mode);
+    try {
+      this.canvas.setPointerCapture(pointerId);
+    } catch (error) {
+      if (import.meta.env.MODE !== "production") {
+        console.warn("[plot] failed to set pointer capture", error);
+      }
+    }
+    this.requestDraw();
+  }
+
+  private finishBoxSelection(pointerId: number, x: number, y: number) {
+    updateBoxInteraction(this.boxInteraction, x, y);
+    const overlaySnapshot = { ...this.boxInteraction.overlay, x1: x, y1: y };
+    try {
+      this.canvas.releasePointerCapture(pointerId);
+    } catch (error) {
+      if (import.meta.env.MODE !== "production") {
+        console.warn("[plot] failed to release pointer capture", error);
+      }
+    }
+    const result = finishBoxInteraction(this.boxInteraction, this.viewport);
+    const widthPx = Math.abs(overlaySnapshot.x1 - overlaySnapshot.x0);
+    const heightPx = Math.abs(overlaySnapshot.y1 - overlaySnapshot.y0);
+    let selectionMode: SelectionMode = "x";
+    if (overlaySnapshot.mode === "xy" && this.interactions.zoomY) {
+      selectionMode = "xy";
+    }
+    const MIN_SIZE_PX = 3;
+    if (!result || widthPx < MIN_SIZE_PX) {
+      this.requestDraw();
+      return;
+    }
+    if (selectionMode === "xy" && heightPx < MIN_SIZE_PX) {
+      this.applyBoxZoom(result, "x");
+    } else {
+      this.applyBoxZoom(result, selectionMode);
+    }
+    this.requestDraw();
+  }
+
+  private cancelBoxSelection() {
+    if (this.boxInteraction.pointerId !== null) {
+      try {
+        this.canvas.releasePointerCapture(this.boxInteraction.pointerId);
+      } catch (error) {
+        if (import.meta.env.MODE !== "production") {
+          console.warn("[plot] failed to release pointer capture", error);
+        }
+      }
+    }
+    cancelBoxInteraction(this.boxInteraction);
+  }
+
+  private applyBoxZoom(result: BoxFinalizeResult, mode: SelectionMode) {
+    if (this.interactions.zoomX) {
+      this.applyRange("x", result.x, "zoom");
+    }
+    if (mode === "xy" && this.interactions.zoomY) {
+      this.applyRange("y", result.y, "zoom");
+    }
+  }
+
+  private drawSelectionOverlay(ctx: CanvasRenderingContext2D) {
+    const overlay = this.boxInteraction.overlay;
+    if (!overlay.active) {
+      return;
+    }
+    const { rect } = this.viewport;
+    const { x0, x1, y0, y1, mode } = overlay;
+    const left = Math.max(rect.left, Math.min(rect.right, Math.min(x0, x1)));
+    const right = Math.max(rect.left, Math.min(rect.right, Math.max(x0, x1)));
+    if (right - left < 1) {
+      return;
+    }
+    let top = Math.min(y0, y1);
+    let bottom = Math.max(y0, y1);
+    if (mode === "x") {
+      top = rect.top;
+      bottom = rect.bottom;
+    } else {
+      top = Math.max(rect.top, Math.min(rect.bottom, top));
+      bottom = Math.max(rect.top, Math.min(rect.bottom, bottom));
+    }
+    if (bottom - top < 1) {
+      return;
+    }
+    const { fill, stroke } = this.getSelectionColors();
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
 
   private readonly handleWheel = (event: WheelEvent) => {
     if (!this.interactions.zoomX && !this.interactions.zoomY) {
@@ -334,6 +577,7 @@ class PlotEngine implements PlotHandle {
     this.cursorLayer = createCursorLayer(this.theme, this.interactions.cursorStyle);
     this.cursorLayer.visible = this.interactions.cursor;
     this.cursorLayer.setStyle(this.interactions.cursorStyle);
+    this.applyCanvasCursorStyle();
     this.registerLayer(this.cursorLayer, []);
 
     this.initResizeObserver();
@@ -390,6 +634,10 @@ class PlotEngine implements PlotHandle {
       },
       setClip: (value) => {
         layer.setClip(value);
+        this.requestDraw();
+      },
+      setDomain: (domain) => {
+        layer.setDomain(domain);
         this.requestDraw();
       },
       setVisible: (visible) => {
@@ -703,6 +951,7 @@ class PlotEngine implements PlotHandle {
         }
       }
     }
+    this.drawSelectionOverlay(ctx);
     ctx.restore();
   }
 
@@ -1033,6 +1282,58 @@ function cursorEquals(a: CursorState | null, b: CursorState | null): boolean {
     Math.abs(a.dataY - b.dataY) < RANGE_EPSILON &&
     arraysEqual(a.values ?? null, b.values ?? null)
   );
+}
+
+function isDarkColor(color: string): boolean {
+  return estimateLuminance(color) < 0.5;
+}
+
+function estimateLuminance(color: string): number {
+  const rgb = parseColor(color);
+  if (!rgb) return 0.5;
+  const toLinear = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const r = toLinear(rgb.r);
+  const g = toLinear(rgb.g);
+  const b = toLinear(rgb.b);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function parseColor(color: string): { r: number; g: number; b: number } | null {
+  if (!color) return null;
+  const trimmed = color.trim();
+  const hexMatch = trimmed.match(/^#([0-9a-f]{3})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    const r = parseInt(hex[0] + hex[0], 16);
+    const g = parseInt(hex[1] + hex[1], 16);
+    const b = parseInt(hex[2] + hex[2], 16);
+    return { r, g, b };
+  }
+  const hex6Match = trimmed.match(/^#([0-9a-f]{6})$/i);
+  if (hex6Match) {
+    const hex = hex6Match[1];
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return { r, g, b };
+  }
+  const rgbMatch = trimmed.match(
+    /^rgba?\(\s*([0-9.+-]+)\s*,\s*([0-9.+-]+)\s*,\s*([0-9.+-]+)/
+  );
+  if (rgbMatch) {
+    const r = Number.parseFloat(rgbMatch[1]);
+    const g = Number.parseFloat(rgbMatch[2]);
+    const b = Number.parseFloat(rgbMatch[3]);
+    return {
+      r: Math.max(0, Math.min(255, r)),
+      g: Math.max(0, Math.min(255, g)),
+      b: Math.max(0, Math.min(255, b)),
+    };
+  }
+  return null;
 }
 
 function buildAxisOptions(

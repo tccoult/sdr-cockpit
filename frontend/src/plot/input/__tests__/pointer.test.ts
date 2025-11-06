@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  beginBox,
   beginPan,
+  createBoxState,
   createPanState,
   endPan,
+  finishBox,
+  updateBox,
   updatePan,
 } from "../../input/pointer";
 
@@ -60,5 +64,19 @@ describe("pointer pan helpers", () => {
     const state = createPanState();
     const result = updatePan(state, 10, 10, { allowX: true, allowY: true });
     expect(result).toEqual({});
+  });
+});
+
+describe("pointer box helpers", () => {
+  it("captures selection bounds", () => {
+    const state = createBoxState();
+    beginBox(state, 10, 10);
+    updateBox(state, 30, 40);
+    const result = finishBox(state, viewportStub);
+    expect(result).not.toBeNull();
+    expect(result?.x.min).toBeCloseTo(10);
+    expect(result?.x.max).toBeCloseTo(30);
+    expect(result?.y.min).toBeCloseTo(10);
+    expect(result?.y.max).toBeCloseTo(40);
   });
 });

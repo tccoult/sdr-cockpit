@@ -73,7 +73,8 @@ export const FFTDisplay = memo(function FFTDisplay({
       interactions: {
         pan: { x: true, y: false },
         zoom: { x: true, y: false, factor: 0.2 },
-        cursor: { enabled: true, style: "vertical" },
+        cursor: { enabled: true, style: "crosshair" },
+        boxZoom: { mode: "x", modifier: "shift" },
       },
       axes: {
         x: {
@@ -112,8 +113,7 @@ export const FFTDisplay = memo(function FFTDisplay({
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.style.touchAction = "none";
-    canvas.style.cursor = "crosshair";
-  }, [plotColors]);
+  }, []);
 
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;
@@ -270,21 +270,22 @@ export const FFTDisplay = memo(function FFTDisplay({
         <div
           style={{
             position: "absolute",
-            left: Math.min(Math.max(cursorInfo.canvasX + 16, 8), width - 150),
-            top: Math.min(Math.max(cursorInfo.canvasY - 40, 8), height - 60),
+            left: Math.min(Math.max(cursorInfo.canvasX + 16, 8), width - 140),
+            top: Math.min(Math.max(cursorInfo.canvasY - 32, 8), height - 48),
             background: plotColors.tooltipBackground,
             border: `1px solid ${plotColors.tooltipBorder}`,
             borderRadius: 4,
-            padding: "6px 10px",
+            padding: "4px 8px",
             color: plotColors.tooltipText,
-            fontSize: 12,
+            fontSize: 11,
             pointerEvents: "none",
             whiteSpace: "nowrap",
             zIndex: 2,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
           }}
         >
-          <div>Frequency: {formatFrequency(cursorInfo.dataX)}</div>
-          <div>Power: {cursorInfo.dataY.toFixed(1)} dB</div>
+          <div>{formatFrequency(cursorInfo.dataX)}</div>
+          <div>{cursorInfo.dataY.toFixed(1)}</div>
         </div>
       )}
     </div>
