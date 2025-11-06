@@ -328,12 +328,6 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     }
   }
 
-  const leftFreq = formatFrequency(frequencyRange.startFreq);
-  const midFreq = formatFrequency(
-    (frequencyRange.startFreq + frequencyRange.endFreq) / 2
-  );
-  const rightFreq = formatFrequency(frequencyRange.endFreq);
-
   return (
     <div
       style={{
@@ -374,27 +368,6 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
           ))}
         </div>
       )}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 24,
-          background: waterfallColors.scaleBackground,
-          color: waterfallColors.scaleText,
-          fontSize: 12,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "0 8px",
-          pointerEvents: "none",
-        }}
-      >
-        <span>{leftFreq}</span>
-        <span>{midFreq}</span>
-        <span>{rightFreq}</span>
-      </div>
     </div>
   );
 });
