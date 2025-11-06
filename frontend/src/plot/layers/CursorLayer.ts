@@ -67,16 +67,18 @@ export function createCursorLayer(
         ctx.stroke();
       }
 
-      const highlightColor =
-        theme.cursorHighlightColor ?? theme.textColor ?? "#ffffff";
-      ctx.strokeStyle = highlightColor;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x - CENTER_ARM, y);
-      ctx.lineTo(x + CENTER_ARM, y);
-      ctx.moveTo(x, y - CENTER_ARM);
-      ctx.lineTo(x, y + CENTER_ARM);
-      ctx.stroke();
+      if (currentStyle !== "crosshair") {
+        const highlightColor =
+          theme.cursorHighlightColor ?? theme.textColor ?? "#ffffff";
+        ctx.strokeStyle = highlightColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - CENTER_ARM, y);
+        ctx.lineTo(x + CENTER_ARM, y);
+        ctx.moveTo(x, y - CENTER_ARM);
+        ctx.lineTo(x, y + CENTER_ARM);
+        ctx.stroke();
+      }
 
       ctx.restore();
     },
