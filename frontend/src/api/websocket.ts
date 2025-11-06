@@ -127,6 +127,7 @@ class OfflineDataStream {
   private generator: MockFFTGenerator;
   private intervalId: number | null = null;
   private callbacks: DataStreamCallbacks;
+  private isPaused: boolean = false;
 
   constructor(
     _taskId: string,
@@ -145,8 +146,10 @@ class OfflineDataStream {
 
     // Generate and send FFT data at target FPS
     this.intervalId = window.setInterval(() => {
-      const fftData = this.generator.generateFFT();
-      this.callbacks.onData(fftData);
+      if (!this.isPaused) {
+        const fftData = this.generator.generateFFT();
+        this.callbacks.onData(fftData);
+      }
     }, 1000 / TARGET_FPS);
   }
 
@@ -156,6 +159,14 @@ class OfflineDataStream {
       this.intervalId = null;
     }
     this.callbacks.onStatusChange('disconnected');
+  }
+
+  pause(): void {
+    this.isPaused = true;
+  }
+
+  resume(): void {
+    this.isPaused = false;
   }
 
   updateFrequency(freq: number): void {
@@ -178,19 +189,24 @@ export function createDataStream(
     sampleRate?: number;
     fftSize?: number;
   }
-): { disconnect: () => void } {
+): { disconnect: () => void; pause?: () => void; resume?: () => void } {
   const mode = getApiMode();
 
   if (mode === 'online') {
     return new OnlineDataStream(taskId, callbacks);
   } else {
     // Offline mode - need frequency/sample rate for mock generator
-    return new OfflineDataStream(
+    const stream = new OfflineDataStream(
       taskId,
       callbacks,
       options?.centerFreq || 915e6,
       options?.sampleRate || 2.4e6,
       options?.fftSize || 2048
     );
+    return {
+      disconnect: () => stream.disconnect(),
+      pause: () => stream.pause(),
+      resume: () => stream.resume(),
+    };
   }
 }

@@ -23,7 +23,8 @@ export class MockFFTGenerator {
     this.fftSize = fftSize;
 
     // Generate unique signals based on seed (use frequency as seed if not provided)
-    const effectiveSeed = seed || centerFreq % 10000;
+    // Use a better hash of the frequency to ensure different frequencies produce different seeds
+    const effectiveSeed = seed || Math.floor((centerFreq / 1e6) * 1000);
     const random = (n: number) => {
       // Simple seeded random function
       const x = Math.sin(effectiveSeed * n + 12.9898) * 43758.5453123;
