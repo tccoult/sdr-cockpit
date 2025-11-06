@@ -33,7 +33,8 @@ export function CockpitLayout({
     <div
       className={cn(
         'min-h-screen w-full bg-slate-100 text-slate-900 dark:bg-cockpit-surface dark:text-slate-100',
-        'lg:h-screen lg:overflow-hidden',
+        'overflow-y-auto overflow-x-hidden',
+        'lg:h-screen lg:overflow-y-auto',
         'font-sans',
         className
       )}
