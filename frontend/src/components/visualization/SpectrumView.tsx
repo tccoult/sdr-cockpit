@@ -35,9 +35,8 @@ export const SpectrumView = memo(function SpectrumView({
   const containerRef = useRef<HTMLDivElement>(null);
   const fftContainerRef = useRef<HTMLDivElement>(null);
   const waterfallContainerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(1200);
-  const [fftHeight, setFftHeight] = useState(220);
-  const [waterfallHeight, setWaterfallHeight] = useState(320);
+  const [fftSize, setFftSize] = useState({ width: 0, height: 0 });
+  const [waterfallSize, setWaterfallSize] = useState({ width: 0, height: 0 });
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
 
@@ -97,28 +96,47 @@ export const SpectrumView = memo(function SpectrumView({
     setFrequencyRange(newRange);
   }, []);
 
-  // Measure container width and plot container heights
+  // Measure plot containers to derive usable content dimensions without hard-coding padding.
   useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.clientWidth);
-      }
+    const measureElement = (element: HTMLElement) => {
+      const style = window.getComputedStyle(element);
+      const paddingX =
+        parseFloat(style.paddingLeft || "0") +
+        parseFloat(style.paddingRight || "0");
+      const paddingY =
+        parseFloat(style.paddingTop || "0") +
+        parseFloat(style.paddingBottom || "0");
+      return {
+        width: Math.max(0, element.clientWidth - paddingX),
+        height: Math.max(0, element.clientHeight - paddingY),
+      };
+    };
+
+    const updateSizes = () => {
       if (fftContainerRef.current) {
-        setFftHeight(fftContainerRef.current.clientHeight);
+        const next = measureElement(fftContainerRef.current);
+        setFftSize((prev) =>
+          prev.width === next.width && prev.height === next.height ? prev : next
+        );
       }
       if (waterfallContainerRef.current) {
-        setWaterfallHeight(waterfallContainerRef.current.clientHeight);
+        const next = measureElement(waterfallContainerRef.current);
+        setWaterfallSize((prev) =>
+          prev.width === next.width && prev.height === next.height ? prev : next
+        );
       }
-    });
+    };
+
+    const observer = new ResizeObserver(updateSizes);
 
     if (containerRef.current) observer.observe(containerRef.current);
     if (fftContainerRef.current) observer.observe(fftContainerRef.current);
     if (waterfallContainerRef.current) observer.observe(waterfallContainerRef.current);
 
+    updateSizes();
+
     return () => observer.disconnect();
   }, []);
-
-  const plotWidth = Math.max(containerWidth - 32, 0); // 32 for padding (16*2)
 
   const containerClasses = [
     "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0",
@@ -207,8 +225,8 @@ export const SpectrumView = memo(function SpectrumView({
           </div>
         )}
         <FFTDisplay
-          width={plotWidth}
-          height={Math.max(fftHeight - 24, 180)}
+          width={Math.max(fftSize.width, 0)}
+          height={Math.max(fftSize.height, 180)}
           minDb={minDb}
           maxDb={maxDb}
           frequencyRange={frequencyRange}
@@ -248,8 +266,8 @@ export const SpectrumView = memo(function SpectrumView({
           </div>
         )}
         <WaterfallDisplay
-          width={plotWidth}
-          height={Math.max(waterfallHeight - 24, 240)}
+          width={Math.max(waterfallSize.width, 0)}
+          height={Math.max(waterfallSize.height, 240)}
           colorMap={colorMap}
           minDb={minDb}
           maxDb={maxDb}
