@@ -21,6 +21,8 @@ export type LayerPhase =
   | "cursor"
   | "debug";
 
+export type PlotSurface = "static" | "data" | "overlay";
+
 /** Dimensions of the canvas in CSS pixels and current DPR. */
 export interface PlotDimensions {
   /** Canvas width in CSS pixels. */
@@ -56,6 +58,7 @@ export interface Layer {
   visible: boolean;
   zIndex: number;
   readonly phase?: LayerPhase;
+  readonly surface?: PlotSurface;
   getExtents?(): { x?: AxisRange; y?: AxisRange } | null;
   draw(ctx: CanvasRenderingContext2D, context: LayerRenderContext): void;
   destroy?(): void;
@@ -182,6 +185,8 @@ export interface LayerCreateContext {
   readonly viewport: Viewport;
   readonly theme: PlotTheme;
   readonly requestDraw: () => void;
+  readonly invalidateLayer: (layerId: string) => void;
+  readonly invalidateSurface: (surface: PlotSurface) => void;
   readonly addDestroyCallback: (fn: () => void) => void;
   readonly formatAxisValue: (axis: "x" | "y", value: number) => string;
   readonly notifyLayerOrderChange: () => void;

@@ -17,10 +17,14 @@ const viewportStub = {
 
 function createContext() {
   const requestDraw = () => {};
+  const invalidateLayer = () => {};
+  const invalidateSurface = () => {};
   return {
     viewport: viewportStub,
     theme: defaultTheme,
     requestDraw,
+    invalidateLayer,
+    invalidateSurface,
     addDestroyCallback: () => {},
     formatAxisValue: (_axis: "x" | "y", value: number) => value.toString(),
     notifyLayerOrderChange: () => {},

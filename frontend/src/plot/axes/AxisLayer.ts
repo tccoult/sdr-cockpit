@@ -29,6 +29,7 @@ export function createAxisLayer(config: AxisLayerConfig): Layer {
   return {
     id,
     phase,
+    surface: "static",
     get visible() {
       return visible;
     },

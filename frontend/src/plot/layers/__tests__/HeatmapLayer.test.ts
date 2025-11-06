@@ -133,12 +133,18 @@ function createLayerContext(): {
   layerContext: LayerCreateContext;
   renderContext: LayerRenderContext;
   requestDraw: ReturnType<typeof vi.fn>;
+  invalidateLayer: ReturnType<typeof vi.fn>;
+  invalidateSurface: ReturnType<typeof vi.fn>;
 } {
   const requestDraw = vi.fn();
+  const invalidateLayer = vi.fn();
+  const invalidateSurface = vi.fn();
   const layerContext: LayerCreateContext = {
     viewport: createViewportStub(),
     theme: defaultTheme,
     requestDraw,
+    invalidateLayer,
+    invalidateSurface,
     addDestroyCallback: vi.fn(),
     formatAxisValue: (_axis, value) => value.toString(),
     notifyLayerOrderChange: vi.fn(),
@@ -148,7 +154,7 @@ function createLayerContext(): {
     dimensions,
     now: 0,
   };
-  return { layerContext, renderContext, requestDraw };
+  return { layerContext, renderContext, requestDraw, invalidateLayer, invalidateSurface };
 }
 
 function createDrawContext() {
@@ -191,7 +197,7 @@ function createColormap() {
 
 describe("HeatmapLayer", () => {
   it("colorizes streamed rows and schedules redraws", () => {
-    const { layerContext, renderContext, requestDraw } = createLayerContext();
+    const { layerContext, renderContext, invalidateLayer } = createLayerContext();
     const layer = createHeatmapLayer(layerContext, {
       width: 2,
       height: 2,
@@ -199,13 +205,13 @@ describe("HeatmapLayer", () => {
     });
 
     layer.pushRow(new Float32Array([-120, 0]));
-    expect(requestDraw).toHaveBeenCalledTimes(1);
+    expect(invalidateLayer).toHaveBeenCalledWith(layer.id);
     expect(bufferContexts).toHaveLength(1);
     const calls = bufferContexts[0].putImageDataCalls;
     expect(calls).toHaveLength(0);
 
     layer.pushRow(new Float32Array([-60, -60]));
-    expect(requestDraw).toHaveBeenCalledTimes(2);
+    expect(invalidateLayer).toHaveBeenCalledTimes(2);
 
     const { ctx, drawImageCalls, smoothingChanges } = createDrawContext();
     layer.draw(ctx, renderContext);
@@ -256,7 +262,7 @@ describe("HeatmapLayer", () => {
   });
 
   it("loads full images and redraws", () => {
-    const { layerContext, renderContext, requestDraw } = createLayerContext();
+    const { layerContext, renderContext, invalidateLayer } = createLayerContext();
     const layer = createHeatmapLayer(layerContext, {
       width: 2,
       height: 2,
@@ -269,7 +275,7 @@ describe("HeatmapLayer", () => {
       ],
       true
     );
-    expect(requestDraw).toHaveBeenCalledTimes(1);
+    expect(invalidateLayer).toHaveBeenCalledWith(layer.id);
     const calls = bufferContexts[0].putImageDataCalls;
     expect(calls.length).toBe(0);
 

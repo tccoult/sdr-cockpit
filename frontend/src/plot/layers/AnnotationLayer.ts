@@ -20,14 +20,14 @@ export function createAnnotationLayer(
   let visible = true;
   let zIndex = 900;
 
-  const requestDraw = context.requestDraw;
+  const invalidateLayer = () => context.invalidateLayer(id);
 
   const setAnnotations = (defs: AnnotationDefinition[]) => {
     annotations.clear();
     for (const def of defs) {
       annotations.set(def.id, def);
     }
-    requestDraw();
+    invalidateLayer();
   };
 
   if (Array.isArray(options.annotations)) {
@@ -36,12 +36,12 @@ export function createAnnotationLayer(
 
   const add = (annotation: AnnotationDefinition) => {
     annotations.set(annotation.id, annotation);
-    requestDraw();
+    invalidateLayer();
   };
 
   const remove = (annotationId: string) => {
     annotations.delete(annotationId);
-    requestDraw();
+    invalidateLayer();
   };
 
   const drawLine = (
@@ -117,7 +117,7 @@ export function createAnnotationLayer(
     },
     set visible(value: boolean) {
       visible = value;
-      requestDraw();
+      invalidateLayer();
     },
     get zIndex() {
       return zIndex;
@@ -125,7 +125,7 @@ export function createAnnotationLayer(
     set zIndex(value: number) {
       zIndex = value;
       context.notifyLayerOrderChange();
-      requestDraw();
+      invalidateLayer();
     },
     draw(ctx: CanvasRenderingContext2D, context: LayerRenderContext) {
       if (!visible) return;
@@ -148,11 +148,11 @@ export function createAnnotationLayer(
     },
     setVisible(value: boolean) {
       visible = value;
-      requestDraw();
+      invalidateLayer();
     },
     remove() {
       annotations.clear();
-      requestDraw();
+      invalidateLayer();
     },
     addAnnotation(annotation: AnnotationDefinition) {
       add(annotation);
