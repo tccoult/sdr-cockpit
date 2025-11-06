@@ -417,22 +417,34 @@ export function createHeatmapLayer(
       if (filled === 0) {
         return null;
       }
-      const rect = renderContext.viewport.rect;
-      const relativeX = (cursor.canvasX - rect.left) / rect.width;
-      const relativeY = (cursor.canvasY - rect.top) / rect.height;
-      if (Number.isNaN(relativeX) || Number.isNaN(relativeY)) {
+      const { viewport } = renderContext;
+      if (!viewport) {
         return null;
       }
-      if (relativeX < 0 || relativeX > 1 || relativeY < 0 || relativeY > 1) {
+      const dataX = viewport.invertX(cursor.canvasX);
+      const dataY = viewport.invertY(cursor.canvasY);
+      if (!Number.isFinite(dataX) || !Number.isFinite(dataY)) {
         return null;
       }
+      const domainXSpan = domainX.max - domainX.min || 1;
+      const domainYSpan = domainY.max - domainY.min || 1;
+      const normalizedX = (dataX - domainX.min) / domainXSpan;
+      const normalizedFromTop = (domainY.max - dataY) / domainYSpan;
+      if (Number.isNaN(normalizedX) || Number.isNaN(normalizedFromTop)) {
+        return null;
+      }
+      if (normalizedX < 0 || normalizedX > 1 || normalizedFromTop < 0 || normalizedFromTop > 1) {
+        return null;
+      }
+      const clampedX = Math.min(Math.max(normalizedX, 0), 0.999999);
+      const clampedY = Math.min(Math.max(normalizedFromTop, 0), 0.999999);
       const displayColumn = Math.min(
         width - 1,
-        Math.max(0, Math.floor(relativeX * width))
+        Math.max(0, Math.floor(clampedX * width))
       );
       const displayRow = Math.min(
         height - 1,
-        Math.max(0, Math.floor(relativeY * height))
+        Math.max(0, Math.floor(clampedY * height))
       );
       if (displayRow >= filled) {
         return null;

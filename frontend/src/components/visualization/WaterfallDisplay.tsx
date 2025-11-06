@@ -278,16 +278,23 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         rawValue !== undefined ? rawValue.match(/-?\d+(?:\.\d+)?/) : null;
       const intensity =
         intensityMatch !== null ? Number.parseFloat(intensityMatch[0]) : NaN;
-      const relativeY = (cursorInfo.canvasY - rect.top) / rect.height;
       const timestamps = rowTimestampsRef.current;
       const rowsFilled = rowsFilledRef.current;
       let timeLabel: string | null = null;
-      if (timestamps && rowsFilled > 0) {
-        const clampedRelY = Math.min(Math.max(relativeY, 0), 0.999999);
-        const displayRow = Math.min(
+      let displayRow: number | null = null;
+      if (Number.isFinite(cursorInfo.dataY)) {
+        const domainYMax = rowCount;
+        const domainYMin = 0;
+        const domainSpan = domainYMax - domainYMin || 1;
+        const normalizedFromTop =
+          (domainYMax - cursorInfo.dataY) / domainSpan;
+        const clamped = Math.min(Math.max(normalizedFromTop, 0), 0.999999);
+        displayRow = Math.min(
           rowCount - 1,
-          Math.max(0, Math.floor(clampedRelY * rowCount))
+          Math.max(0, Math.floor(clamped * rowCount))
         );
+      }
+      if (timestamps && rowsFilled > 0 && displayRow !== null) {
         if (displayRow < rowsFilled) {
           const bufferIndex =
             (rowHeadRef.current + displayRow) % rowCount;
