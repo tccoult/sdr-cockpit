@@ -36,12 +36,19 @@ export function createSurfaceManager(
   const rootParent = rootCanvas.parentNode;
   const nextSibling = rootCanvas.nextSibling as ChildNode | null;
   const previousStyle = rootCanvas.getAttribute("style");
+  const previousClass = rootCanvas.getAttribute("class");
 
   const container = document.createElement("div");
   container.style.position = "relative";
   container.style.width = "100%";
   container.style.height = "100%";
   container.style.display = "block";
+  container.style.flex = "1 1 auto";
+  container.style.minWidth = "0";
+  container.style.minHeight = "0";
+  if (previousClass) {
+    container.setAttribute("class", previousClass);
+  }
 
   const canvases: Record<PlotSurface, HTMLCanvasElement> = {
     static: document.createElement("canvas"),
@@ -124,8 +131,6 @@ export function createSurfaceManager(
         if (canvas.height !== pixelHeight) {
           canvas.height = pixelHeight;
         }
-        canvas.style.width = `${Math.max(1, Math.round(dims.width))}px`;
-        canvas.style.height = `${Math.max(1, Math.round(dims.height))}px`;
         ctx.setTransform(dims.devicePixelRatio, 0, 0, dims.devicePixelRatio, 0, 0);
         dirty = true;
       },
@@ -162,6 +167,11 @@ export function createSurfaceManager(
       canvases.data.removeAttribute("style");
     } else {
       canvases.data.setAttribute("style", previousStyle);
+    }
+    if (previousClass !== null) {
+      canvases.data.setAttribute("class", previousClass);
+    } else {
+      canvases.data.removeAttribute("class");
     }
     container.replaceWith(canvases.data);
     surfaceStates.clear();
