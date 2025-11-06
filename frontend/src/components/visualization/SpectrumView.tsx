@@ -39,6 +39,7 @@ export const SpectrumView = memo(function SpectrumView({
   const [waterfallSize, setWaterfallSize] = useState({ width: 0, height: 0 });
   const [minDb, setMinDb] = useState(-100);
   const [maxDb, setMaxDb] = useState(-20);
+  const [waterfallResetKey, setWaterfallResetKey] = useState(0);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
@@ -86,6 +87,7 @@ export const SpectrumView = memo(function SpectrumView({
         setMaxDb(Math.ceil(max + padding));
       }
     }
+    setWaterfallResetKey((value) => value + 1);
   }, [centerFreq, sampleRate]);
 
   useEffect(() => {
@@ -275,6 +277,7 @@ export const SpectrumView = memo(function SpectrumView({
           dataKey={taskId}
           onFrequencyRangeChange={handleFrequencyRangeChange}
           theme={theme}
+          resetYKey={waterfallResetKey}
         />
       </div>
 

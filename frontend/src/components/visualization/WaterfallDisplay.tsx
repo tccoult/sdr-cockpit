@@ -20,6 +20,7 @@ interface WaterfallDisplayProps {
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
   dataKey?: string;
   theme: Theme;
+  resetYKey?: number;
 }
 
 const MIN_ROWS = 64;
@@ -35,6 +36,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   onFrequencyRangeChange,
   dataKey,
   theme,
+  resetYKey,
 }: WaterfallDisplayProps) {
   const isDark = theme === "dark";
 
@@ -135,7 +137,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   useEffect(() => {
     if (!plot) return;
     plot.setYRange({ min: 0, max: rowCount });
-  }, [plot, rowCount]);
+  }, [plot, rowCount, resetYKey]);
 
   useEffect(() => {
     if (!plot || !onFrequencyRangeChange) {

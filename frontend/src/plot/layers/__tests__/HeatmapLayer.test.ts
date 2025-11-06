@@ -95,14 +95,34 @@ afterAll(() => {
 });
 
 function createViewportStub(): Viewport {
+  const rect = new DOMRect(0, 0, dimensions.width, dimensions.height);
+  const xRange = { min: 0, max: 10 };
+  const yRange = { min: 0, max: 10 };
+  const projectX = (value: number) => {
+    const span = xRange.max - xRange.min || 1;
+    return rect.left + ((value - xRange.min) / span) * rect.width;
+  };
+  const projectY = (value: number) => {
+    const span = yRange.max - yRange.min || 1;
+    return rect.top + rect.height - ((value - yRange.min) / span) * rect.height;
+  };
   return {
-    projectX: (value: number) => value,
-    projectY: (value: number) => value,
-    invertX: (pixel: number) => pixel,
-    invertY: (pixel: number) => pixel,
-    rect: new DOMRect(0, 0, dimensions.width, dimensions.height),
-    xRange: { min: 0, max: 10 },
-    yRange: { min: 0, max: 10 },
+    projectX,
+    projectY,
+    invertX: (pixel: number) => {
+      const span = xRange.max - xRange.min || 1;
+      return xRange.min + ((pixel - rect.left) / rect.width) * span;
+    },
+    invertY: (pixel: number) => {
+      const span = yRange.max - yRange.min || 1;
+      return (
+        yRange.max -
+        ((pixel - rect.top) / rect.height) * span
+      );
+    },
+    rect,
+    xRange,
+    yRange,
     updateDimensions: vi.fn(),
     setXRange: vi.fn(),
     setYRange: vi.fn(),
@@ -193,8 +213,17 @@ describe("HeatmapLayer", () => {
     expect(bufferContexts[0].putImageDataCalls.length).toBe(1);
     expect(drawImageCalls).toHaveLength(1);
     const [, , , , , , , destWidth, destHeight] = drawImageCalls[0];
-    expect(destWidth).toBe(dimensions.width);
-    expect(destHeight).toBe(dimensions.height);
+    const expectedWidth =
+      Math.abs(
+        renderContext.viewport.projectX(2) - renderContext.viewport.projectX(0)
+      );
+    const expectedHeight =
+      Math.abs(
+        renderContext.viewport.projectY(0) -
+          renderContext.viewport.projectY(2)
+      );
+    expect(destWidth).toBe(expectedWidth);
+    expect(destHeight).toBe(expectedHeight);
   });
 
   it("draws wrapped buffers with two blits", () => {

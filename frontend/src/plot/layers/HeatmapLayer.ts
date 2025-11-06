@@ -267,9 +267,35 @@ export function createHeatmapLayer(
     const rect = viewport.rect;
     if (rect.width <= 0 || rect.height <= 0) return;
 
+    const totalRows = height;
+    const domainXSpan = domainX.max - domainX.min || 1;
+    const domainYSpan = domainY.max - domainY.min || 1;
+    const viewX = viewport.xRange;
+    const viewY = viewport.yRange;
+
+    const visibleXMin = Math.max(viewX.min, domainX.min);
+    const visibleXMax = Math.min(viewX.max, domainX.max);
+    const visibleYMin = Math.max(viewY.min, domainY.min);
+    const visibleYMax = Math.min(viewY.max, domainY.max);
+
+    if (visibleXMin >= visibleXMax || visibleYMin >= visibleYMax) {
+      return;
+    }
+
     if (dirty) {
       bufferCtx.putImageData(fullImageData, 0, 0);
       dirty = false;
+    }
+
+    const destLeft = viewport.projectX(visibleXMin);
+    const destRight = viewport.projectX(visibleXMax);
+    const destTop = viewport.projectY(visibleYMax);
+    const destBottom = viewport.projectY(visibleYMin);
+    const destWidth = Math.abs(destRight - destLeft);
+    const destHeight = Math.abs(destBottom - destTop);
+
+    if (destWidth <= 0 || destHeight <= 0) {
+      return;
     }
 
     ctx.save();
@@ -277,19 +303,11 @@ export function createHeatmapLayer(
     const prevSmoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
 
-    const totalRows = height;
-    const domainXSpan = domainX.max - domainX.min || 1;
-    const domainYSpan = domainY.max - domainY.min || 1;
-    const viewX = viewport.xRange;
-    const viewY = viewport.yRange;
-
-    const viewXMin = clampNumber(viewX.min, domainX.min, domainX.max);
-    const viewXMax = clampNumber(viewX.max, domainX.min, domainX.max);
     let srcXStart = Math.floor(
-      ((viewXMin - domainX.min) / domainXSpan) * width
+      ((visibleXMin - domainX.min) / domainXSpan) * width
     );
     let srcXEnd = Math.ceil(
-      ((viewXMax - domainX.min) / domainXSpan) * width
+      ((visibleXMax - domainX.min) / domainXSpan) * width
     );
     srcXStart = clampInt(srcXStart, 0, Math.max(0, width - 1));
     srcXEnd = clampInt(srcXEnd, srcXStart + 1, width);
@@ -299,12 +317,10 @@ export function createHeatmapLayer(
       srcXEnd = Math.min(width, srcXStart + srcWidth);
     }
 
-    const viewYMin = clampNumber(viewY.min, domainY.min, domainY.max);
-    const viewYMax = clampNumber(viewY.max, domainY.min, domainY.max);
     const topRowFloat =
-      ((domainY.max - viewYMax) / domainYSpan) * totalRows;
+      ((domainY.max - visibleYMax) / domainYSpan) * totalRows;
     const bottomRowFloat =
-      ((domainY.max - viewYMin) / domainYSpan) * totalRows;
+      ((domainY.max - visibleYMin) / domainYSpan) * totalRows;
     const srcRowStart = clampInt(Math.floor(topRowFloat), 0, totalRows - 1);
     let srcRowEnd = clampInt(
       Math.ceil(bottomRowFloat),
@@ -319,9 +335,7 @@ export function createHeatmapLayer(
 
     let remainingRows = srcRowCount;
     let bufferRow = (top + srcRowStart) % totalRows;
-    const destTop = viewport.projectY(viewYMax);
-    const destBottom = viewport.projectY(viewYMin);
-    const destHeight = Math.abs(destBottom - destTop);
+    const destX = Math.min(destLeft, destRight);
     let destY = Math.min(destTop, destBottom);
 
     while (remainingRows > 0) {
@@ -333,9 +347,9 @@ export function createHeatmapLayer(
         bufferRow,
         srcWidth,
         run,
-        rect.left,
+        destX,
         destY,
-        rect.width,
+        destWidth,
         destRunHeight
       );
       destY += destRunHeight;
@@ -481,17 +495,6 @@ function normalizeDomainRange(range: AxisRange): AxisRange {
     max = min + MIN_CLIP_SPAN;
   }
   return { min, max };
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  if (min > max) {
-    const tmp = min;
-    min = max;
-    max = tmp;
-  }
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
 }
 
 function clampInt(value: number, min: number, max: number): number {
