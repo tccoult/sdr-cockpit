@@ -241,6 +241,7 @@ export const SpectrumView = memo(function SpectrumView({
       <div
         ref={waterfallContainerRef}
         className="flex-[65] min-h-0 rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative"
+        style={{ minHeight: "360px" }}
       >
         {(dataError || isConnecting) && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg z-10">
@@ -269,7 +270,7 @@ export const SpectrumView = memo(function SpectrumView({
         )}
         <WaterfallDisplay
           width={Math.max(waterfallSize.width, 0)}
-          height={Math.max(waterfallSize.height, 240)}
+          height={waterfallSize.height > 0 ? waterfallSize.height : 240}
           colorMap={colorMap}
           minDb={minDb}
           maxDb={maxDb}
