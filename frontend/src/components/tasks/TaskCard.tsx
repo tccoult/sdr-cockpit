@@ -61,17 +61,17 @@ export function TaskCard({
         }
       }}
       className={[
-        'group rounded-xl border px-3 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60',
+        'group rounded-lg border px-2.5 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60',
         'backdrop-blur-sm bg-white text-slate-900 hover:bg-cockpit-accent/5 dark:bg-slate-900/40 dark:text-slate-100 dark:hover:bg-slate-900/55',
         isSelected
           ? 'border-cockpit-accent/60 shadow-md shadow-cockpit-glow/40 ring-1 ring-cockpit-accent/40 dark:border-white/30 dark:shadow-lg dark:shadow-black/40 dark:ring-white/30'
           : 'border-slate-200 hover:border-cockpit-accent/40 dark:border-white/10 dark:hover:border-white/20',
       ].join(' ')}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <span
           className={[
-            'h-2.5 w-2.5 flex-shrink-0 rounded-full',
+            'h-2 w-2 flex-shrink-0 rounded-full',
             isRecording ? 'animate-pulse' : '',
             statusStyles.dot,
           ].join(' ')}
@@ -80,21 +80,21 @@ export function TaskCard({
           <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
             {task.name}
           </p>
-          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
             {formatFrequency(task.frequency)} · {task.type.toUpperCase()}
           </p>
         </div>
         <span
           className={[
-            'whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+            'whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
             statusStyles.badge,
           ].join(' ')}
         >
-          {isRecording ? 'Recording' : statusStyles.label}
+          {isRecording ? 'REC' : statusStyles.label}
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1">
           <span className="font-medium text-slate-600 dark:text-slate-400">Owner</span>
           <span className="text-slate-700 dark:text-slate-300">{task.ownerName}</span>
@@ -106,7 +106,7 @@ export function TaskCard({
         {task.recording && (
           <span
             className={[
-              'rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+              'rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
               RECORDING_BADGE,
             ].join(' ')}
           >
