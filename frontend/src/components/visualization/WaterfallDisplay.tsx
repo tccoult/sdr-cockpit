@@ -5,11 +5,12 @@ import type {
   PlotCreationOptions,
 } from "../../plot";
 import { usePlot } from "../../plot";
-import { FFTData, FrequencyRange } from "../../types/sdr";
+import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import { usePlotRenderFps } from "../../hooks";
+import type { InteractionMode } from "./VisualizationControls";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -23,6 +24,7 @@ interface WaterfallDisplayProps {
   theme: Theme;
   resetYKey?: number;
   onRenderFpsChange?: (fps: number) => void;
+  interactionMode: InteractionMode;
 }
 
 const MIN_ROWS = 64;
@@ -40,6 +42,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   theme,
   resetYKey,
   onRenderFpsChange,
+  interactionMode,
 }: WaterfallDisplayProps) {
   const isDark = theme === "dark";
 
@@ -101,9 +104,6 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const heatmapRef = useRef<HeatmapLayerHandle | null>(null);
   const heatmapInfoRef = useRef<{ width: number; height: number } | null>(null);
-  const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
-    null
-  );
   const rowTimestampsRef = useRef<Float64Array | null>(null);
   const rowHeadRef = useRef<number>(0);
   const rowsFilledRef = useRef<number>(0);
@@ -129,6 +129,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!canvas) return;
     canvas.style.touchAction = "none";
   }, []);
+
+  useEffect(() => {
+    if (!plot) return;
+    const modifier = interactionMode === "zoom" ? "none" : "shift";
+    plot.setBoxZoomModifier(modifier);
+  }, [plot, interactionMode]);
 
   useEffect(() => {
     if (!plot) return;
@@ -238,38 +244,40 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     };
 
     const handleFFTData = (event: Event) => {
-      const customEvent = event as CustomEvent<FFTData>;
-      const frame = customEvent.detail;
-      if (!frame || frame.bins.length === 0) {
+      const customEvent = event as CustomEvent<FFTDataBatch>;
+      const frames = customEvent.detail?.frames;
+      if (!frames || frames.length === 0) {
         return;
       }
-      fftMetaRef.current = {
-        centerFreq: frame.centerFreq,
-        sampleRate: frame.sampleRate,
-      };
-      const heatmap = ensureHeatmap(frame.bins.length);
-      heatmap.pushRow(frame.bins);
-      const halfSpan = frame.sampleRate / 2;
-      const dataMin = frame.centerFreq - halfSpan;
-      const dataMax = frame.centerFreq + halfSpan;
-      heatmap.setDomain({
-        x: { min: dataMin, max: dataMax },
-        y: { min: 0, max: rowCount },
-      });
-      if (
-        !rowTimestampsRef.current ||
-        rowTimestampsRef.current.length !== rowCount
-      ) {
-        rowTimestampsRef.current = new Float64Array(rowCount).fill(Number.NaN);
-        rowHeadRef.current = 0;
-        rowsFilledRef.current = 0;
-      }
-      rowHeadRef.current = (rowHeadRef.current - 1 + rowCount) % rowCount;
-      if (rowTimestampsRef.current) {
-        rowTimestampsRef.current[rowHeadRef.current] = frame.timestamp;
-      }
-      if (rowsFilledRef.current < rowCount) {
-        rowsFilledRef.current += 1;
+
+      for (const frame of frames) {
+        if (!frame || frame.bins.length === 0) {
+          continue;
+        }
+        const heatmap = ensureHeatmap(frame.bins.length);
+        heatmap.pushRow(frame.bins);
+        const halfSpan = frame.sampleRate / 2;
+        const dataMin = frame.centerFreq - halfSpan;
+        const dataMax = frame.centerFreq + halfSpan;
+        heatmap.setDomain({
+          x: { min: dataMin, max: dataMax },
+          y: { min: 0, max: rowCount },
+        });
+        if (
+          !rowTimestampsRef.current ||
+          rowTimestampsRef.current.length !== rowCount
+        ) {
+          rowTimestampsRef.current = new Float64Array(rowCount).fill(Number.NaN);
+          rowHeadRef.current = 0;
+          rowsFilledRef.current = 0;
+        }
+        rowHeadRef.current = (rowHeadRef.current - 1 + rowCount) % rowCount;
+        if (rowTimestampsRef.current) {
+          rowTimestampsRef.current[rowHeadRef.current] = frame.timestamp;
+        }
+        if (rowsFilledRef.current < rowCount) {
+          rowsFilledRef.current += 1;
+        }
       }
     };
 
@@ -277,7 +285,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     return () => {
       window.removeEventListener("fft-data", handleFFTData);
     };
-  }, [plot, colormap, minDb, maxDb, rowCount, frequencyRange.startFreq, frequencyRange.endFreq]);
+  }, [plot, colormap, minDb, maxDb, rowCount]);
 
   let waterfallTooltip: { left: number; top: number; lines: string[] } | null =
     null;

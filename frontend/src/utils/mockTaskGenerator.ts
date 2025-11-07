@@ -3,7 +3,7 @@
  * Creates realistic-looking SDR tasks with various states
  */
 
-import { Task } from '../types/sdr';
+import { Task, TaskType, TaskStatus, TaskOwner, VisualizationMode } from '../types/sdr';
 
 let taskIdCounter = 1;
 
@@ -18,49 +18,52 @@ export function generateDemoTasks(): Task[] {
     {
       id: `task-${taskIdCounter++}`,
       name: 'ISM Band Monitor',
-      type: 'rx',
+      type: TaskType.RX,
       frequency: 915e6, // 915 MHz
       sampleRate: 2.4e6, // 2.4 MSPS
       bandwidth: 2e6,
       fftSize: 2048,
-      owner: 'self',
+      owner: TaskOwner.SELF,
       ownerName: 'You',
-      status: 'live',
+      status: TaskStatus.LIVE,
       uptime: 923, // 15:23
       createdAt: now - 923000,
       fps: 30,
+      visualizationMode: VisualizationMode.FFT_WATERFALL,
     },
 
     // External RX task (ADS-B receiver)
     {
       id: `task-${taskIdCounter++}`,
       name: 'ADS-B Receiver',
-      type: 'rx',
+      type: TaskType.RX,
       frequency: 1090e6, // 1090 MHz
       sampleRate: 5e6, // 5 MSPS
       bandwidth: 2e6,
       fftSize: 4096,
-      owner: 'external',
+      owner: TaskOwner.EXTERNAL,
       ownerName: 'Python Script',
-      status: 'live',
+      status: TaskStatus.LIVE,
       uptime: 9910, // 02:45:10
       createdAt: now - 9910000,
       fps: 25,
+      visualizationMode: VisualizationMode.FFT_WATERFALL,
     },
 
     // TX task with playback
     {
       id: `task-${taskIdCounter++}`,
       name: 'Test Signal TX',
-      type: 'tx',
+      type: TaskType.TX,
       frequency: 433.92e6, // 433.92 MHz
       sampleRate: 1e6, // 1 MSPS
       bandwidth: 1e6,
-      owner: 'self',
+      owner: TaskOwner.SELF,
       ownerName: 'You',
-      status: 'transmitting',
+      status: TaskStatus.TRANSMITTING,
       uptime: 42,
       createdAt: now - 42000,
+      visualizationMode: VisualizationMode.FFT_ONLY,
       playback: {
         filename: 'recording_01.sigmf',
         progress: 0.65,
@@ -73,17 +76,18 @@ export function generateDemoTasks(): Task[] {
     {
       id: `task-${taskIdCounter++}`,
       name: 'Ham Radio Monitor',
-      type: 'rx',
+      type: TaskType.RX,
       frequency: 145.5e6, // 145.5 MHz
       sampleRate: 1e6, // 1 MSPS
       bandwidth: 1e6,
       fftSize: 2048,
-      owner: 'self',
+      owner: TaskOwner.SELF,
       ownerName: 'You',
-      status: 'live',
+      status: TaskStatus.LIVE,
       uptime: 245,
       createdAt: now - 245000,
       fps: 30,
+      visualizationMode: VisualizationMode.FFT_WATERFALL,
       recording: {
         filename: 'ham_recording_2025-10-27.sigmf',
         duration: 245,
@@ -96,17 +100,36 @@ export function generateDemoTasks(): Task[] {
     {
       id: `task-${taskIdCounter++}`,
       name: 'Weather Satellite',
-      type: 'rx',
+      type: TaskType.RX,
       frequency: 137.5e6, // 137.5 MHz
       sampleRate: 1e6,
       bandwidth: 500e3,
       fftSize: 2048,
-      owner: 'external',
+      owner: TaskOwner.EXTERNAL,
       ownerName: "John's Script",
-      status: 'paused',
+      status: TaskStatus.PAUSED,
       uptime: 135,
       createdAt: now - 135000,
       fps: 0,
+      visualizationMode: VisualizationMode.FFT_ONLY,
+    },
+
+    // Spectrogram test task
+    {
+      id: `task-${taskIdCounter++}`,
+      name: 'Spectrogram Test',
+      type: TaskType.RX,
+      frequency: 2.45e9, // 2.45 GHz
+      sampleRate: 10e6, // 10 MSPS
+      bandwidth: 10e6,
+      fftSize: 1024,
+      owner: TaskOwner.EXTERNAL,
+      ownerName: 'Test Generator',
+      status: TaskStatus.LIVE,
+      uptime: 60,
+      createdAt: now - 60000,
+      fps: 30,
+      visualizationMode: VisualizationMode.SPECTROGRAM,
     },
   ];
 }
@@ -124,17 +147,18 @@ export function createMockRxTask(params: {
   return {
     id: `task-${taskIdCounter++}`,
     name: params.name,
-    type: 'rx',
+    type: TaskType.RX,
     frequency: params.frequency,
     sampleRate: params.sampleRate,
     bandwidth: params.bandwidth,
     fftSize: params.fftSize,
-    owner: 'self',
+    owner: TaskOwner.SELF,
     ownerName: 'You',
-    status: 'live',
+    status: TaskStatus.LIVE,
     uptime: 0,
     createdAt: Date.now(),
     fps: 30,
+    visualizationMode: VisualizationMode.FFT_WATERFALL, // Default to fft-waterfall for new tasks
   };
 }
 
@@ -150,15 +174,16 @@ export function createMockTxTask(params: {
   return {
     id: `task-${taskIdCounter++}`,
     name: params.name,
-    type: 'tx',
+    type: TaskType.TX,
     frequency: params.frequency,
     sampleRate: 1e6,
     bandwidth: 1e6,
-    owner: 'self',
+    owner: TaskOwner.SELF,
     ownerName: 'You',
-    status: 'transmitting',
+    status: TaskStatus.TRANSMITTING,
     uptime: 0,
     createdAt: Date.now(),
+    visualizationMode: VisualizationMode.FFT_ONLY, // TX tasks default to fft-only
     playback: {
       filename: params.filename,
       progress: 0,
@@ -210,12 +235,12 @@ export function updateTxProgress(task: Task, deltaTime: number): Task {
  * Toggle task pause state
  */
 export function toggleTaskPause(task: Task): Task {
-  if (task.owner !== 'self') return task;
+  if (task.owner !== TaskOwner.SELF) return task;
 
   return {
     ...task,
-    status: task.status === 'paused' ? 'live' : 'paused',
-    fps: task.status === 'paused' ? 30 : 0,
+    status: task.status === TaskStatus.PAUSED ? TaskStatus.LIVE : TaskStatus.PAUSED,
+    fps: task.status === TaskStatus.PAUSED ? 30 : 0,
   };
 }
 
@@ -223,7 +248,7 @@ export function toggleTaskPause(task: Task): Task {
  * Start recording on a task
  */
 export function startRecording(task: Task): Task {
-  if (task.type !== 'rx' || task.owner !== 'self') return task;
+  if (task.type !== TaskType.RX || task.owner !== TaskOwner.SELF) return task;
 
   return {
     ...task,

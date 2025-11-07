@@ -59,6 +59,7 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
+            visualizationMode=None,
         )
     else:  # CreateTxTaskParams
         task = Task(
@@ -75,6 +76,7 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
+            visualizationMode=None,
             playback=PlaybackInfo(
                 filename=params.filename,
                 progress=0.0,

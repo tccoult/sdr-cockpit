@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FFTData, FrequencyRange } from "../../types/sdr";
+import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
 import {
   usePlot,
@@ -9,6 +9,7 @@ import {
 } from "../../plot";
 import { usePlotRenderFps } from "../../hooks";
 import type { Theme } from "../app/theme-context";
+import type { InteractionMode } from "./VisualizationControls";
 
 interface FFTDisplayProps {
   width: number;
@@ -20,6 +21,7 @@ interface FFTDisplayProps {
   dataKey?: string;
   theme: Theme;
   onRenderFpsChange?: (fps: number) => void;
+  interactionMode: InteractionMode;
 }
 
 const SMOOTHING_FACTOR = 0.95;
@@ -35,6 +37,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   dataKey,
   theme,
   onRenderFpsChange,
+  interactionMode,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
 
@@ -171,6 +174,12 @@ export const FFTDisplay = memo(function FFTDisplay({
 
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;
+    const modifier = interactionMode === "zoom" ? "none" : "shift";
+    plot.setBoxZoomModifier(modifier);
+  }, [plot, interactionMode]);
+
+  useEffect(() => {
+    if (!plot || plot.isDestroyed()) return;
     plot.setXRange({
       min: frequencyRange.startFreq,
       max: frequencyRange.endFreq,
@@ -195,8 +204,12 @@ export const FFTDisplay = memo(function FFTDisplay({
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;
     const handleFFTData = (event: Event) => {
-      const customEvent = event as CustomEvent<FFTData>;
-      const incomingFFT = customEvent.detail;
+      const customEvent = event as CustomEvent<FFTDataBatch>;
+      const frames = customEvent.detail?.frames;
+      if (!frames || frames.length === 0) {
+        return;
+      }
+      const incomingFFT = frames[frames.length - 1];
       const bins = incomingFFT.bins;
       if (!bins.length) {
         return;

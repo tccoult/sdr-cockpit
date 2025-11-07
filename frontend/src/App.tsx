@@ -6,9 +6,10 @@ import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPa
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useDataStream, useTasks } from "./hooks";
-import { SpectrumView } from "./components/visualization/SpectrumView";
+import { VisualizationView } from "./components/visualization/VisualizationView";
 import { Button } from "./components/common/Button";
 import { PLASMA } from "./utils/colorMaps";
+import { TaskStatus } from "./types/sdr";
 
 function App() {
   const colorMap = PLASMA;
@@ -43,7 +44,8 @@ function App() {
     sampleRate: selectedTask?.sampleRate,
     fftSize: selectedTask?.fftSize,
     enabled: !isWizardOpen, // Pause streaming when wizard is open
-    paused: selectedTask?.status === 'paused', // Pause when task is paused
+    paused: selectedTask?.status === TaskStatus.PAUSED, // Pause when task is paused
+    visualizationMode: selectedTask?.visualizationMode,
   });
 
   const totalTasks = tasks.length;
@@ -100,11 +102,12 @@ function App() {
         >
           {selectedTask ? (
             <div className="flex h-full w-full flex-col p-2">
-              <SpectrumView
+              <VisualizationView
                 taskId={selectedTask.id}
                 centerFreq={selectedTask.frequency}
                 sampleRate={selectedTask.sampleRate}
                 colorMap={colorMap}
+                visualizationMode={selectedTask.visualizationMode}
                 dataError={streamError || undefined}
                 isConnecting={streamStatus === "connecting"}
                 onRenderFpsChange={setRenderFps}

@@ -28,6 +28,14 @@ class TaskOwner(str, Enum):
     EXTERNAL = "external"
 
 
+class VisualizationMode(str, Enum):
+    """Visualization mode for task data"""
+
+    FFT_ONLY = "fft-only"
+    FFT_WATERFALL = "fft-waterfall"
+    SPECTROGRAM = "spectrogram"
+
+
 class RecordingInfo(BaseModel):
     """Recording information"""
 
@@ -70,6 +78,9 @@ class Task(BaseModel):
     playback: Optional[PlaybackInfo] = None
     created_at: int = Field(description="Unix timestamp in ms", alias="createdAt")
     fps: Optional[float] = Field(None, description="Current frame rate")
+    visualization_mode: Optional[VisualizationMode] = Field(
+        None, description="Visualization mode for task data", alias="visualizationMode"
+    )
 
 
 class CreateRxTaskParams(BaseModel):

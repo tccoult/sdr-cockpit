@@ -88,6 +88,7 @@ export type CursorStyle = "none" | "crosshair" | "vertical" | "horizontal";
 
 export type BoxZoomMode = "auto" | "x" | "xy";
 export type BoxZoomModifier = "shift" | "ctrl" | "alt" | "meta";
+export type BoxZoomModifierSetting = BoxZoomModifier | "none";
 
 /** Configuration for a single axis. */
 export interface PlotAxisOptions {
@@ -139,6 +140,8 @@ export interface PlotHandle {
   setXRange(range: AxisRange): void;
   /** Overrides the Y-axis domain. */
   setYRange(range: AxisRange): void;
+  /** Updates the modifier required to start box-zoom interactions. */
+  setBoxZoomModifier(modifier: BoxZoomModifierSetting): void;
   /** Requests that all layers recompute their extents and fit the viewport. */
   fit(): void;
   /** Schedules a new animation frame if one is not already pending. */
@@ -315,7 +318,7 @@ export interface PlotInteractionsOptions {
   pan?: boolean | { x?: boolean; y?: boolean };
   zoom?: boolean | { x?: boolean; y?: boolean; factor?: number };
   cursor?: boolean | { enabled?: boolean; style?: CursorStyle };
-  boxZoom?: boolean | { mode?: BoxZoomMode; modifier?: BoxZoomModifier };
+  boxZoom?: boolean | { mode?: BoxZoomMode; modifier?: BoxZoomModifierSetting };
 }
 
 export interface ReactPlotHandle {

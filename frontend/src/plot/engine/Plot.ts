@@ -28,7 +28,7 @@ import {
   type CursorState,
   type CursorStyle,
   type BoxZoomMode,
-  type BoxZoomModifier,
+  type BoxZoomModifierSetting,
   type HeatmapLayerHandle,
   type HeatmapLayerOptions,
   type Layer,
@@ -110,7 +110,7 @@ type ResolvedInteractions = {
   boxZoom: {
     enabled: boolean;
     mode: BoxZoomMode;
-    modifier: BoxZoomModifier;
+    modifier: BoxZoomModifierSetting;
   };
 };
 
@@ -172,7 +172,7 @@ function resolveInteractions(
   const boxZoomOption = options?.boxZoom;
   let boxZoomEnabled = false;
   let boxZoomMode: BoxZoomMode = "auto";
-  let boxZoomModifier: BoxZoomModifier = "shift";
+  let boxZoomModifier: BoxZoomModifierSetting = "shift";
   if (typeof boxZoomOption === "boolean") {
     boxZoomEnabled = boxZoomOption;
   } else if (boxZoomOption) {
@@ -188,7 +188,8 @@ function resolveInteractions(
       boxZoomOption.modifier === "shift" ||
       boxZoomOption.modifier === "ctrl" ||
       boxZoomOption.modifier === "alt" ||
-      boxZoomOption.modifier === "meta"
+      boxZoomOption.modifier === "meta" ||
+      boxZoomOption.modifier === "none"
     ) {
       boxZoomModifier = boxZoomOption.modifier;
     }
@@ -395,6 +396,8 @@ class PlotEngine implements PlotHandle {
         return event.altKey;
       case "meta":
         return event.metaKey;
+      case "none":
+        return true;
       default:
         return false;
     }
@@ -794,6 +797,10 @@ class PlotEngine implements PlotHandle {
 
   setYRange(range: AxisRange): void {
     this.applyRange("y", range, "manual");
+  }
+
+  setBoxZoomModifier(modifier: BoxZoomModifierSetting): void {
+    this.interactions.boxZoom.modifier = modifier;
   }
 
   fit(): void {

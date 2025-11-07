@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { FFTData } from '../types/sdr';
+import { FFTDataBatch, VisualizationMode } from '../types/sdr';
 import { createDataStream, DataStreamStatus } from '../api';
 import { dispatchFFTData } from '../utils/mockDataGenerator';
 
@@ -15,6 +15,7 @@ export interface UseDataStreamOptions {
   fftSize?: number;
   enabled?: boolean; // Whether to enable streaming (e.g., disabled when wizard is open)
   paused?: boolean; // Whether the task is paused
+  visualizationMode?: VisualizationMode;
 }
 
 export interface UseDataStreamResult {
@@ -24,7 +25,7 @@ export interface UseDataStreamResult {
 }
 
 export function useDataStream(options: UseDataStreamOptions): UseDataStreamResult {
-  const { taskId, centerFreq, sampleRate, fftSize, enabled = true, paused = false } = options;
+  const { taskId, centerFreq, sampleRate, fftSize, enabled = true, paused = false, visualizationMode } = options;
 
   const [fps, setFps] = useState(0);
   const [streamStatus, setStreamStatus] = useState<DataStreamStatus>('disconnected');
@@ -60,12 +61,12 @@ export function useDataStream(options: UseDataStreamOptions): UseDataStreamResul
     const stream = createDataStream(
       taskId,
       {
-        onData: (fftData: FFTData) => {
-          // Dispatch FFT data through custom event system
-          dispatchFFTData(fftData);
+        onData: (batch: FFTDataBatch) => {
+          // Dispatch FFT data batch through custom event system
+          dispatchFFTData(batch.frames);
 
-          // Update FPS counter
-          frameCountRef.current++;
+          // Update FPS counter (count frames in batch)
+          frameCountRef.current += batch.frames.length;
           const now = Date.now();
           if (now - lastFpsUpdateRef.current >= 1000) {
             setFps(frameCountRef.current);
@@ -84,6 +85,7 @@ export function useDataStream(options: UseDataStreamOptions): UseDataStreamResul
         centerFreq,
         sampleRate,
         fftSize: fftSize || 2048,
+        visualizationMode,
       }
     );
 
@@ -94,7 +96,7 @@ export function useDataStream(options: UseDataStreamOptions): UseDataStreamResul
       setFps(0);
       frameCountRef.current = 0;
     };
-  }, [taskId, centerFreq, sampleRate, fftSize, enabled]);
+  }, [taskId, centerFreq, sampleRate, fftSize, enabled, visualizationMode]);
 
   // Handle pause/resume
   useEffect(() => {

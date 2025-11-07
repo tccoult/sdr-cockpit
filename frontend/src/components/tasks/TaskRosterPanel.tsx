@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '../common/Button'
-import { Task } from '../../types/sdr'
+import { Task, TaskType } from '../../types/sdr'
 import { TaskCard } from './TaskCard'
 
-type FilterType = 'all' | 'rx' | 'tx'
+type FilterType = 'all' | TaskType
 
 export interface TaskRosterPanelProps {
   tasks: Task[]
@@ -14,7 +14,7 @@ export interface TaskRosterPanelProps {
   onCreateTask: () => void
 }
 
-const FILTER_OPTIONS: FilterType[] = ['all', 'rx', 'tx']
+const FILTER_OPTIONS: FilterType[] = ['all', TaskType.RX, TaskType.TX]
 
 export function TaskRosterPanel({
   tasks,
