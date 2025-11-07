@@ -10,6 +10,7 @@ import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import { usePlotRenderFps } from "../../hooks";
+import type { InteractionMode } from "./VisualizationControls";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -23,6 +24,7 @@ interface WaterfallDisplayProps {
   theme: Theme;
   resetYKey?: number;
   onRenderFpsChange?: (fps: number) => void;
+  interactionMode: InteractionMode;
 }
 
 const MIN_ROWS = 64;
@@ -40,6 +42,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   theme,
   resetYKey,
   onRenderFpsChange,
+  interactionMode,
 }: WaterfallDisplayProps) {
   const isDark = theme === "dark";
 
@@ -126,6 +129,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     if (!canvas) return;
     canvas.style.touchAction = "none";
   }, []);
+
+  useEffect(() => {
+    if (!plot) return;
+    const modifier = interactionMode === "zoom" ? "none" : "shift";
+    plot.setBoxZoomModifier(modifier);
+  }, [plot, interactionMode]);
 
   useEffect(() => {
     if (!plot) return;

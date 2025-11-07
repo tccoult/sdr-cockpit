@@ -9,6 +9,7 @@ import {
 } from "../../plot";
 import { usePlotRenderFps } from "../../hooks";
 import type { Theme } from "../app/theme-context";
+import type { InteractionMode } from "./VisualizationControls";
 
 interface FFTDisplayProps {
   width: number;
@@ -20,6 +21,7 @@ interface FFTDisplayProps {
   dataKey?: string;
   theme: Theme;
   onRenderFpsChange?: (fps: number) => void;
+  interactionMode: InteractionMode;
 }
 
 const SMOOTHING_FACTOR = 0.95;
@@ -35,6 +37,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   dataKey,
   theme,
   onRenderFpsChange,
+  interactionMode,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
 
@@ -168,6 +171,12 @@ export const FFTDisplay = memo(function FFTDisplay({
       onRenderFpsChange?.(0);
     };
   }, [onRenderFpsChange]);
+
+  useEffect(() => {
+    if (!plot || plot.isDestroyed()) return;
+    const modifier = interactionMode === "zoom" ? "none" : "shift";
+    plot.setBoxZoomModifier(modifier);
+  }, [plot, interactionMode]);
 
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;

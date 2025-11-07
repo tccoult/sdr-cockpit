@@ -274,6 +274,7 @@ export const VisualizationView = memo(function VisualizationView({
             onFrequencyRangeChange={handleFrequencyRangeChange}
             theme={theme}
             onRenderFpsChange={setFftRenderFps}
+            interactionMode={interactionMode}
           />
         </div>
       )}
@@ -297,6 +298,7 @@ export const VisualizationView = memo(function VisualizationView({
             theme={theme}
             resetYKey={waterfallResetKey}
             onRenderFpsChange={setWaterfallRenderFps}
+            interactionMode={interactionMode}
           />
         </div>
       )}
@@ -319,6 +321,7 @@ export const VisualizationView = memo(function VisualizationView({
             onFrequencyRangeChange={handleFrequencyRangeChange}
             theme={theme}
             onRenderFpsChange={setSpectrogramRenderFps}
+            interactionMode={interactionMode}
           />
         </div>
       )}
