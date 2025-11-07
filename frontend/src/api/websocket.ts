@@ -2,7 +2,7 @@
  * WebSocket client with auto-reconnection
  */
 
-import { FFTData, FFTDataBatch } from '../types/sdr';
+import { FFTData, FFTDataBatch, VisualizationMode } from '../types/sdr';
 import { getWsBaseUrl, getApiMode } from './config';
 import { MockFFTGenerator } from '../utils/mockDataGenerator';
 import { TARGET_FPS } from '../config/constants';
@@ -142,7 +142,7 @@ class OfflineDataStream {
   private intervalId: number | null = null;
   private callbacks: DataStreamCallbacks;
   private isPaused: boolean = false;
-  private visualizationMode: 'fft-only' | 'fft-waterfall' | 'spectrogram';
+  private visualizationMode: VisualizationMode;
 
   constructor(
     _taskId: string,
@@ -150,7 +150,7 @@ class OfflineDataStream {
     centerFreq: number,
     sampleRate: number,
     fftSize: number = 2048,
-    visualizationMode: 'fft-only' | 'fft-waterfall' | 'spectrogram' = 'fft-waterfall'
+    visualizationMode: VisualizationMode = VisualizationMode.FFT_WATERFALL
   ) {
     this.callbacks = callbacks;
     this.visualizationMode = visualizationMode;
@@ -161,7 +161,7 @@ class OfflineDataStream {
   private start(): void {
     this.callbacks.onStatusChange('connected');
 
-    if (this.visualizationMode === 'spectrogram') {
+    if (this.visualizationMode === VisualizationMode.SPECTROGRAM) {
       // For spectrogram mode, send batches of frames periodically
       this.intervalId = window.setInterval(() => {
         if (!this.isPaused) {
@@ -222,7 +222,7 @@ export function createDataStream(
     centerFreq?: number;
     sampleRate?: number;
     fftSize?: number;
-    visualizationMode?: 'fft-only' | 'fft-waterfall' | 'spectrogram';
+    visualizationMode?: VisualizationMode;
   }
 ): { disconnect: () => void; pause?: () => void; resume?: () => void } {
   const mode = getApiMode();
@@ -237,7 +237,7 @@ export function createDataStream(
       options?.centerFreq || 915e6,
       options?.sampleRate || 2.4e6,
       options?.fftSize || 2048,
-      options?.visualizationMode || 'fft-waterfall'
+      options?.visualizationMode || VisualizationMode.FFT_WATERFALL
     );
     return {
       disconnect: () => stream.disconnect(),

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { FFTDataBatch } from '../types/sdr';
+import { FFTDataBatch, VisualizationMode } from '../types/sdr';
 import { createDataStream, DataStreamStatus } from '../api';
 import { dispatchFFTData } from '../utils/mockDataGenerator';
 
@@ -15,7 +15,7 @@ export interface UseDataStreamOptions {
   fftSize?: number;
   enabled?: boolean; // Whether to enable streaming (e.g., disabled when wizard is open)
   paused?: boolean; // Whether the task is paused
-  visualizationMode?: 'fft-only' | 'fft-waterfall' | 'spectrogram';
+  visualizationMode?: VisualizationMode;
 }
 
 export interface UseDataStreamResult {

@@ -14,6 +14,7 @@ interface UseVisualizationManagerOptions {
   maxDb?: number;
   frequencyRange?: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
+  onRenderFpsChange?: (fps: number) => void;
 }
 
 export function useVisualizationManager(

@@ -9,6 +9,7 @@ import { useDataStream, useTasks } from "./hooks";
 import { VisualizationView } from "./components/visualization/VisualizationView";
 import { Button } from "./components/common/Button";
 import { PLASMA } from "./utils/colorMaps";
+import { TaskStatus } from "./types/sdr";
 
 function App() {
   const colorMap = PLASMA;
@@ -43,7 +44,7 @@ function App() {
     sampleRate: selectedTask?.sampleRate,
     fftSize: selectedTask?.fftSize,
     enabled: !isWizardOpen, // Pause streaming when wizard is open
-    paused: selectedTask?.status === 'paused', // Pause when task is paused
+    paused: selectedTask?.status === TaskStatus.PAUSED, // Pause when task is paused
     visualizationMode: selectedTask?.visualizationMode,
   });
 
@@ -106,7 +107,7 @@ function App() {
                 centerFreq={selectedTask.frequency}
                 sampleRate={selectedTask.sampleRate}
                 colorMap={colorMap}
-                visualizationMode={selectedTask.visualizationMode || "fft-waterfall"}
+                visualizationMode={selectedTask.visualizationMode}
                 dataError={streamError || undefined}
                 isConnecting={streamStatus === "connecting"}
                 onRenderFpsChange={setRenderFps}

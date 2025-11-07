@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Task } from '../../types/sdr'
+import { Task, TaskType, TaskStatus, TaskOwner } from '../../types/sdr'
 import { TaskRosterPanel } from './TaskRosterPanel'
 
 type MockTaskCardProps = {
@@ -26,12 +26,12 @@ vi.mock('./TaskCard', () => ({
 const baseTask: Task = {
   id: 'task-1',
   name: 'Example Task',
-  type: 'rx',
+  type: TaskType.RX,
   frequency: 100,
   sampleRate: 1_000,
-  owner: 'self',
+  owner: TaskOwner.SELF,
   ownerName: 'Operator',
-  status: 'live',
+  status: TaskStatus.LIVE,
   uptime: 0,
   createdAt: 0,
 }
@@ -75,7 +75,7 @@ describe('TaskRosterPanel', () => {
 
   it('filters tasks by type and shows empty state messaging', () => {
     const tasks = [
-      createTask({ id: 'rx-1', name: 'RX Task', type: 'rx', createdAt: 1_000 }),
+      createTask({ id: 'rx-1', name: 'RX Task', type: TaskType.RX, createdAt: 1_000 }),
     ]
 
     render(

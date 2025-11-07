@@ -31,10 +31,11 @@ interface VisualizationManagerOptions {
   maxDb?: number;
   frequencyRange?: FrequencyRange;
   onFrequencyRangeChange?: (range: FrequencyRange) => void;
+  onRenderFpsChange?: (fps: number) => void;
 }
 
 export class VisualizationManager {
-  private mode: VisualizationMode = "fft-waterfall";
+  private mode: VisualizationMode = VisualizationMode.FFT_WATERFALL;
   private plots = new Map<string, PlotHandle>();
   private layers = new Map<string, LineLayerHandle | HeatmapLayerHandle>();
 
@@ -50,8 +51,13 @@ export class VisualizationManager {
   // Waterfall state
   private waterfallRowCount = 0;
 
+  // FPS tracking
+  private onRenderFpsChange?: (fps: number) => void;
+  private frameUnsubscribers: Array<() => void> = [];
+
   constructor(options: VisualizationManagerOptions) {
     this.options = options;
+    this.onRenderFpsChange = options.onRenderFpsChange;
     if (options.frequencyRange) {
       this.frequencyRange = options.frequencyRange;
     }
@@ -81,13 +87,13 @@ export class VisualizationManager {
 
     // Create plots based on mode
     switch (mode) {
-      case "fft-only":
+      case VisualizationMode.FFT_ONLY:
         if (configs.fft) {
           this.createFFTPlot(configs.fft);
         }
         break;
 
-      case "fft-waterfall":
+      case VisualizationMode.FFT_WATERFALL:
         if (configs.fft) {
           this.createFFTPlot(configs.fft);
         }
@@ -96,12 +102,49 @@ export class VisualizationManager {
         }
         break;
 
-      case "spectrogram":
+      case VisualizationMode.SPECTROGRAM:
         if (configs.spectrogram) {
           this.createSpectrogramPlot(configs.spectrogram);
         }
         break;
     }
+
+    // Set up FPS tracking for all plots
+    this.setupFpsTracking();
+  }
+
+  /**
+   * Set up FPS tracking across all plots
+   */
+  private setupFpsTracking(): void {
+    // Clean up previous subscriptions
+    this.frameUnsubscribers.forEach((unsub) => unsub());
+    this.frameUnsubscribers = [];
+
+    if (!this.onRenderFpsChange) return;
+
+    const plotArray = Array.from(this.plots.values());
+    if (plotArray.length === 0) return;
+
+    // Track FPS from each plot
+    const fpsValues = new Map<string, number>();
+
+    plotArray.forEach((plot, index) => {
+      const plotId = `plot-${index}`;
+      fpsValues.set(plotId, 0);
+
+      const unsubscribe = plot.onFrame((stats) => {
+        fpsValues.set(plotId, stats.fps);
+
+        // Aggregate FPS: take minimum of all plots
+        const allFps = Array.from(fpsValues.values()).filter((fps) => fps > 0);
+        const aggregatedFps = allFps.length > 0 ? Math.min(...allFps) : 0;
+
+        this.onRenderFpsChange?.(aggregatedFps);
+      });
+
+      this.frameUnsubscribers.push(unsubscribe);
+    });
   }
 
   /**
@@ -113,12 +156,12 @@ export class VisualizationManager {
     }
 
     switch (this.mode) {
-      case "fft-only":
+      case VisualizationMode.FFT_ONLY:
         // Show only the latest frame
         this.updateFFT(batch.frames[batch.frames.length - 1]);
         break;
 
-      case "fft-waterfall":
+      case VisualizationMode.FFT_WATERFALL:
         // Update FFT with latest frame
         this.updateFFT(batch.frames[batch.frames.length - 1]);
         // Push all frames to waterfall
@@ -127,7 +170,7 @@ export class VisualizationManager {
         }
         break;
 
-      case "spectrogram":
+      case VisualizationMode.SPECTROGRAM:
         // Render entire batch as a static spectrogram
         this.updateSpectrogram(batch.frames);
         break;
@@ -185,6 +228,7 @@ export class VisualizationManager {
    */
   destroy(): void {
     this.destroyAllPlots();
+    this.onRenderFpsChange?.(0);
   }
 
   // Private methods
@@ -486,6 +530,10 @@ export class VisualizationManager {
   }
 
   private destroyAllPlots(): void {
+    // Clean up FPS tracking
+    this.frameUnsubscribers.forEach((unsub) => unsub());
+    this.frameUnsubscribers = [];
+
     // Clean up layers
     for (const layer of this.layers.values()) {
       layer.remove();

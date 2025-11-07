@@ -24,9 +24,10 @@ export const VisualizationView = memo(function VisualizationView({
   centerFreq,
   sampleRate,
   colorMap,
-  visualizationMode = "fft-waterfall",
+  visualizationMode = VisualizationMode.FFT_WATERFALL,
   dataError,
   isConnecting,
+  onRenderFpsChange,
 }: VisualizationViewProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -61,6 +62,7 @@ export const VisualizationView = memo(function VisualizationView({
     maxDb,
     frequencyRange,
     onFrequencyRangeChange: setFrequencyRange,
+    onRenderFpsChange,
   });
 
   // Update mode when visualization mode or canvases change
@@ -192,11 +194,11 @@ export const VisualizationView = memo(function VisualizationView({
   return (
     <div ref={containerRef} className={containerClasses}>
       {/* FFT Display (for fft-only and fft-waterfall modes) */}
-      {(visualizationMode === "fft-only" || visualizationMode === "fft-waterfall") && (
+      {(visualizationMode === VisualizationMode.FFT_ONLY || visualizationMode === VisualizationMode.FFT_WATERFALL) && (
         <div
           id="fft-container"
           className={`${plotContainerClasses} ${
-            visualizationMode === "fft-only" ? "flex-1" : "flex-[35]"
+            visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]"
           } min-h-0`}
           style={{ minHeight: "300px" }}
         >
@@ -235,7 +237,7 @@ export const VisualizationView = memo(function VisualizationView({
       )}
 
       {/* Waterfall Display (for fft-waterfall mode only) */}
-      {visualizationMode === "fft-waterfall" && (
+      {visualizationMode === VisualizationMode.FFT_WATERFALL && (
         <div
           id="waterfall-container"
           className={`${plotContainerClasses} flex-[65] min-h-0`}
@@ -276,7 +278,7 @@ export const VisualizationView = memo(function VisualizationView({
       )}
 
       {/* Spectrogram Display (for spectrogram mode only) */}
-      {visualizationMode === "spectrogram" && (
+      {visualizationMode === VisualizationMode.SPECTROGRAM && (
         <div
           id="spectrogram-container"
           className={`${plotContainerClasses} flex-1 min-h-0`}

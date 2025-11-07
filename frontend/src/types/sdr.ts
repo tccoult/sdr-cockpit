@@ -52,22 +52,37 @@ export interface VisualizationState {
 /**
  * Task types
  */
-export type TaskType = 'rx' | 'tx';
+export enum TaskType {
+  RX = 'rx',
+  TX = 'tx',
+}
 
 /**
  * Task status
  */
-export type TaskStatus = 'live' | 'paused' | 'transmitting' | 'stopped';
+export enum TaskStatus {
+  LIVE = 'live',
+  PAUSED = 'paused',
+  TRANSMITTING = 'transmitting',
+  STOPPED = 'stopped',
+}
 
 /**
  * Task owner type
  */
-export type TaskOwner = 'self' | 'external';
+export enum TaskOwner {
+  SELF = 'self',
+  EXTERNAL = 'external',
+}
 
 /**
  * Visualization mode determines how data is displayed
  */
-export type VisualizationMode = 'fft-only' | 'fft-waterfall' | 'spectrogram';
+export enum VisualizationMode {
+  FFT_ONLY = 'fft-only',
+  FFT_WATERFALL = 'fft-waterfall',
+  SPECTROGRAM = 'spectrogram',
+}
 
 /**
  * Recording information
