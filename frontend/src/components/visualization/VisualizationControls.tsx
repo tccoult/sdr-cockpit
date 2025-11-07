@@ -39,49 +39,58 @@ export function VisualizationControls({
   return (
     <div
       className={[
-        'flex items-center justify-between gap-4 rounded-lg border px-4 py-2',
+        'flex items-center justify-center gap-4 rounded-lg border px-4 py-2',
         isDark
           ? 'border-white/10 bg-slate-950/60'
           : 'border-slate-200 bg-white',
       ].join(' ')}
     >
-      {/* Left: Interaction Mode Toggle */}
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => onInteractionModeChange('pan')}
-          className={[
-            'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition',
-            interactionMode === 'pan'
-              ? 'border-cockpit-accent/50 bg-cockpit-accent/10 text-slate-900 shadow-sm dark:border-white/40 dark:bg-cockpit-accent/20 dark:text-white'
-              : 'border-slate-300 bg-slate-100 text-slate-600 hover:border-slate-400 hover:bg-slate-200 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800',
-          ].join(' ')}
-          title="Pan mode - Click and drag to pan"
-        >
-          <Hand size={14} />
-          <span>Pan</span>
-        </button>
+      {/* Action Buttons: Interaction Mode + Auto Range */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onInteractionModeChange('pan')}
+            className={[
+              'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition',
+              interactionMode === 'pan'
+                ? 'border-cockpit-accent/50 bg-cockpit-accent/10 text-slate-900 shadow-sm dark:border-white/40 dark:bg-cockpit-accent/20 dark:text-white'
+                : 'border-slate-300 bg-slate-100 text-slate-600 hover:border-slate-400 hover:bg-slate-200 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800',
+            ].join(' ')}
+            title="Pan mode - Click and drag to pan"
+          >
+            <Hand size={14} />
+            <span>Pan</span>
+          </button>
 
-        <div className="mx-1 h-4 w-px bg-slate-300 dark:bg-white/20" />
+          <div className="mx-1 h-4 w-px bg-slate-300 dark:bg-white/20" />
 
-        <button
-          type="button"
-          onClick={() => onInteractionModeChange('zoom')}
-          className={[
-            'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition',
-            interactionMode === 'zoom'
-              ? 'border-cockpit-accent/50 bg-cockpit-accent/10 text-slate-900 shadow-sm dark:border-white/40 dark:bg-cockpit-accent/20 dark:text-white'
-              : 'border-slate-300 bg-slate-100 text-slate-600 hover:border-slate-400 hover:bg-slate-200 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800',
-          ].join(' ')}
-          title="Zoom mode - Click and drag to zoom to range"
-        >
-          <ZoomIn size={14} />
-          <span>Zoom</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onInteractionModeChange('zoom')}
+            className={[
+              'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition',
+              interactionMode === 'zoom'
+                ? 'border-cockpit-accent/50 bg-cockpit-accent/10 text-slate-900 shadow-sm dark:border-white/40 dark:bg-cockpit-accent/20 dark:text-white'
+                : 'border-slate-300 bg-slate-100 text-slate-600 hover:border-slate-400 hover:bg-slate-200 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800',
+            ].join(' ')}
+            title="Zoom mode - Click and drag to zoom to range"
+          >
+            <ZoomIn size={14} />
+            <span>Zoom</span>
+          </button>
+        </div>
+
+        <Button size="sm" variant="subtle" onClick={onAutoRange}>
+          Auto Range
+        </Button>
       </div>
 
-      {/* Center/Right: dB Controls */}
-      <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+      {/* Divider */}
+      <div className="h-6 w-px bg-slate-300 dark:bg-white/20" />
+
+      {/* dB Input Controls */}
+      <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
         <div className="flex items-center gap-2">
           <label htmlFor="min-db-ctrl">Min dB:</label>
           <input
@@ -103,21 +112,20 @@ export function VisualizationControls({
             className={inputClasses}
           />
         </div>
-
-        <Button size="sm" variant="subtle" onClick={onAutoRange}>
-          Auto Range
-        </Button>
-
-        {/* Placeholder for future advanced settings */}
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-slate-600 transition hover:border-slate-400 hover:bg-slate-200 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800"
-          title="Display settings (coming soon)"
-          disabled
-        >
-          <Settings size={14} />
-        </button>
       </div>
+
+      {/* Divider */}
+      <div className="h-6 w-px bg-slate-300 dark:bg-white/20" />
+
+      {/* Placeholder for future advanced settings */}
+      <button
+        type="button"
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-slate-600 transition hover:border-slate-400 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800"
+        title="Display settings (coming soon)"
+        disabled
+      >
+        <Settings size={14} />
+      </button>
     </div>
   )
 }
