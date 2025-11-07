@@ -2,6 +2,8 @@
 
 A modern web application for controlling and monitoring Software Defined Radio (SDR) systems with real-time visualizations and multi-user support.
 
+![SDR Cockpit](docs/images/sdr_cockpit.png)
+
 ## Overview
 
 SDR Cockpit provides an intuitive interface for tasking SDR hardware, visualizing RF data in real-time, and managing multiple simultaneous receive/transmit operations. Built for both interactive exploration and programmatic control of SDR systems.
@@ -29,6 +31,7 @@ SDR Cockpit provides an intuitive interface for tasking SDR hardware, visualizin
 ### Development
 
 **Quick start:**
+
 ```bash
 ./scripts/setup.sh    # Install dependencies (first time only)
 ./scripts/dev.sh      # Start dev environment
@@ -37,6 +40,7 @@ SDR Cockpit provides an intuitive interface for tasking SDR hardware, visualizin
 This starts the frontend (http://localhost:5173) and backend (http://localhost:8000) with hot reload.
 
 **Run tests:**
+
 ```bash
 ./scripts/test.sh     # Run all test suites
 ./scripts/check.sh    # Run full CI checks (lint, type-check, test, build)
@@ -45,6 +49,7 @@ This starts the frontend (http://localhost:5173) and backend (http://localhost:8
 ### Production
 
 **Build and deploy:**
+
 ```bash
 ./scripts/build-prod.sh        # Build container
 ./scripts/run-prod-local.sh    # Test locally

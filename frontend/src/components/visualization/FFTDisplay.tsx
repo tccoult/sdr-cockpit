@@ -55,14 +55,14 @@ export const FFTDisplay = memo(function FFTDisplay({
       };
     }
     return {
-      background: "rgba(245, 245, 250, 0.95)",
-      gridColor: "rgba(0, 0, 0, 0.08)",
-      textColor: "#1e293b",
-      axisColor: "rgba(51, 65, 85, 0.8)",
-      traceColor: "#8b5cf6",
-      tooltipBackground: "rgba(255, 255, 255, 0.95)",
-      tooltipBorder: "rgba(0, 0, 0, 0.2)",
-      tooltipText: "#1e293b",
+      background: "rgba(248, 250, 252, 0.98)",
+      gridColor: "rgba(15, 23, 42, 0.12)",
+      textColor: "#0f172a",
+      axisColor: "rgba(15, 23, 42, 0.85)",
+      traceColor: "#7c3aed",
+      tooltipBackground: "rgba(255, 255, 255, 0.98)",
+      tooltipBorder: "rgba(15, 23, 42, 0.18)",
+      tooltipText: "#0f172a",
     };
   }, [isDark]);
 

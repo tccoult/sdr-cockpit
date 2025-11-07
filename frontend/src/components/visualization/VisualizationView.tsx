@@ -209,25 +209,25 @@ export const VisualizationView = memo(function VisualizationView({
     "flex flex-1 flex-col gap-3 rounded-xl border p-3 min-h-0 overflow-auto",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
-      : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-300/80",
+      : "border-slate-300 bg-slate-50 text-slate-900 shadow-2xl shadow-slate-400/60",
   ].join(" ");
 
   const plotContainerClasses =
-    "rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative";
+    "rounded-lg border border-slate-300 bg-slate-50 p-3 shadow-inner shadow-slate-300/70 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
       return null;
     }
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg z-10">
+      <div className="absolute inset-0 flex items-center justify-center bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 backdrop-blur-sm rounded-lg z-10">
         <div className="text-center px-4">
           {isConnecting ? (
             <>
-              <div className="text-lg font-medium text-slate-700 dark:text-slate-200">
+              <div className="text-lg font-medium text-slate-800 dark:text-slate-200">
                 Connecting to data stream...
               </div>
-              <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Please wait
               </div>
             </>
