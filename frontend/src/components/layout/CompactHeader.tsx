@@ -1,7 +1,7 @@
 import { Menu } from 'lucide-react'
 import { ThemeToggle } from '../app/ThemeToggle'
 import { Task } from '../../types/sdr'
-import { formatFrequency } from '../../utils/formatters'
+import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
@@ -61,7 +61,7 @@ export function CompactHeader({
                 </span>
                 <span className="text-slate-400 dark:text-slate-600">•</span>
                 <span className="whitespace-nowrap text-slate-600 dark:text-slate-400">
-                  {formatFrequency(selectedTask.frequency)}
+                  {formatFrequency(selectedTask.frequency)} @ {formatSampleRate(selectedTask.sampleRate)}
                 </span>
                 <span className="text-slate-400 dark:text-slate-600">•</span>
                 <span

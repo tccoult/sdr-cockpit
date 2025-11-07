@@ -73,8 +73,8 @@ function App() {
   };
 
   // Calculate main area margin based on pinned drawers
-  const mainMarginLeft = isTaskDrawerPinned && isTaskDrawerOpen ? "360px" : "0";
-  const mainMarginRight = isHealthDrawerPinned && isHealthDrawerOpen ? "360px" : "0";
+  const mainMarginLeft = isTaskDrawerPinned && isTaskDrawerOpen ? "300px" : "0";
+  const mainMarginRight = isHealthDrawerPinned && isHealthDrawerOpen ? "300px" : "0";
 
   return (
     <>
@@ -99,7 +99,7 @@ function App() {
           }}
         >
           {selectedTask ? (
-            <div className="h-full w-full p-6">
+            <div className="flex h-full w-full flex-col p-2">
               <SpectrumView
                 taskId={selectedTask.id}
                 centerFreq={selectedTask.frequency}

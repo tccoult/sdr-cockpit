@@ -6,11 +6,10 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { FFTData, FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
-import { formatFrequency } from "../../utils/formatters";
 import { FFTDisplay } from "./FFTDisplay";
 import { WaterfallDisplay } from "./WaterfallDisplay";
+import { VisualizationControls, InteractionMode } from "./VisualizationControls";
 import { useTheme } from "../app/useTheme";
-import { Button } from "../common/Button";
 
 interface SpectrumViewProps {
   taskId: string;
@@ -44,6 +43,7 @@ export const SpectrumView = memo(function SpectrumView({
   const [waterfallResetKey, setWaterfallResetKey] = useState(0);
   const [fftRenderFps, setFftRenderFps] = useState(0);
   const [waterfallRenderFps, setWaterfallRenderFps] = useState(0);
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>('pan');
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
@@ -165,16 +165,10 @@ export const SpectrumView = memo(function SpectrumView({
   }, []);
 
   const containerClasses = [
-    "flex flex-1 flex-col gap-4 rounded-xl border p-4 md:p-6 min-h-0",
+    "flex flex-1 flex-col gap-3 rounded-xl border p-3 min-h-0",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-200 bg-white text-slate-900 shadow-xl shadow-slate-300/80",
-  ].join(" ");
-
-  const controlInputClasses = [
-    "h-8 w-20 rounded-md border px-2 text-xs transition focus:outline-none focus-visible:ring-2",
-    "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-cockpit-accent focus-visible:ring-cockpit-accent/40",
-    "dark:border-white/20 dark:bg-slate-900/70 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-white/40 dark:focus-visible:ring-white/40",
   ].join(" ");
 
   return (
@@ -182,43 +176,6 @@ export const SpectrumView = memo(function SpectrumView({
       ref={containerRef}
       className={containerClasses}
     >
-      <div className="flex-none flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Spectrum Analyzer</h2>
-          <div className="text-sm text-slate-500 dark:text-slate-300">
-            Center: {formatFrequency(centerFreq)} · Sample Rate:{" "}
-            {formatFrequency(sampleRate)}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-          <div className="flex items-center gap-2">
-            <label htmlFor="min-db">Min dB:</label>
-            <input
-              id="min-db"
-              type="number"
-              value={minDb}
-              onChange={(event) => setMinDb(Number(event.target.value))}
-              className={controlInputClasses}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label htmlFor="max-db">Max dB:</label>
-            <input
-              id="max-db"
-              type="number"
-              value={maxDb}
-              onChange={(event) => setMaxDb(Number(event.target.value))}
-              className={controlInputClasses}
-            />
-          </div>
-
-          <Button size="sm" variant="subtle" onClick={autoRange}>
-            Auto Range
-          </Button>
-        </div>
-      </div>
 
       <div
         ref={fftContainerRef}
@@ -308,18 +265,15 @@ export const SpectrumView = memo(function SpectrumView({
         />
       </div>
 
-      <div
-        className={[
-          "flex-none rounded-lg border p-3 text-xs",
-          isDark
-            ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
-            : "border-cyan-500/30 bg-cyan-50 text-cyan-800",
-        ].join(" ")}
-      >
-        <strong className="font-semibold">Controls:</strong> Mouse wheel to zoom ·
-        Click and drag to pan ·{" "}
-        <strong className="font-semibold">Shift+Drag</strong> on FFT to zoom to range
-      </div>
+      <VisualizationControls
+        interactionMode={interactionMode}
+        onInteractionModeChange={setInteractionMode}
+        minDb={minDb}
+        maxDb={maxDb}
+        onMinDbChange={setMinDb}
+        onMaxDbChange={setMaxDb}
+        onAutoRange={autoRange}
+      />
     </div>
   );
 });

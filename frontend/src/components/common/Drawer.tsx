@@ -24,7 +24,7 @@ export function Drawer({
   children,
   isPinned,
   onTogglePin,
-  width = '360px',
+  width = '300px',
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
 

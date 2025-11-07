@@ -15,8 +15,8 @@ export const DEFAULT_PLOT_MARGINS = {
   right: 15,
   // Top: small padding for aesthetics
   top: 15,
-  // Bottom: tick size (6px) + tick label height (14px) + padding (6px) + label padding (18px) + label height (14px) + extra (10px) = ~68px
-  bottom: 70,
+  // Bottom: tick size (6px) + tick label height (14px) + padding (6px) + label padding (17px) + label height (14px) = ~57px
+  bottom: 50,
 } as const;
 
 export function createViewport(options: ViewportOptions): Viewport {

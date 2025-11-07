@@ -9,7 +9,7 @@ export function ThemeToggle() {
   return (
     <Button
       variant="icon"
-      size="md"
+      size="sm"
       onClick={toggleTheme}
       aria-label={`Switch to ${isDark ? 'day' : 'night'} mode`}
       title={isDark ? 'Switch to day mode' : 'Switch to night mode'}
