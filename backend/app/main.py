@@ -1,5 +1,6 @@
 """FastAPI application entry point"""
 
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -9,6 +10,8 @@ from fastapi.responses import FileResponse
 
 from app.api.routes import tasks
 from app.api import websocket
+from app.models.task import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
+from app.config.constants import TARGET_FPS
 
 app = FastAPI(
     title="SDR Cockpit API",
@@ -28,6 +31,67 @@ app.add_middleware(
 # Include API routes
 app.include_router(tasks.router)
 app.include_router(websocket.router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize test tasks on startup"""
+    now = int(time.time() * 1000)
+
+    # Create test tasks with different visualization modes
+    test_tasks = [
+        Task(
+            id="test-fft-only",
+            name="FFT Only (Sparse Updates)",
+            type=TaskType.RX,
+            frequency=915e6,
+            sampleRate=2.4e6,
+            bandwidth=2.4e6,
+            fftSize=2048,
+            owner=TaskOwner.EXTERNAL,
+            ownerName="Test Generator",
+            status=TaskStatus.LIVE,
+            uptime=0,
+            createdAt=now,
+            fps=TARGET_FPS,
+            visualizationMode=VisualizationMode.FFT_ONLY,
+        ),
+        Task(
+            id="test-fft-waterfall",
+            name="FFT + Waterfall (Continuous)",
+            type=TaskType.RX,
+            frequency=433.92e6,
+            sampleRate=1e6,
+            bandwidth=1e6,
+            fftSize=2048,
+            owner=TaskOwner.EXTERNAL,
+            ownerName="Test Generator",
+            status=TaskStatus.LIVE,
+            uptime=0,
+            createdAt=now,
+            fps=TARGET_FPS,
+            visualizationMode=VisualizationMode.FFT_WATERFALL,
+        ),
+        Task(
+            id="test-spectrogram",
+            name="Spectrogram (Batch Updates)",
+            type=TaskType.RX,
+            frequency=2.45e9,
+            sampleRate=10e6,
+            bandwidth=10e6,
+            fftSize=1024,
+            owner=TaskOwner.EXTERNAL,
+            ownerName="Test Generator",
+            status=TaskStatus.LIVE,
+            uptime=0,
+            createdAt=now,
+            fps=TARGET_FPS,
+            visualizationMode=VisualizationMode.SPECTROGRAM,
+        ),
+    ]
+
+    for task in test_tasks:
+        tasks.tasks[task.id] = task
 
 
 @app.get("/api/")

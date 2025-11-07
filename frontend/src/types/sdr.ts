@@ -13,6 +13,16 @@ export interface FFTData {
 }
 
 /**
+ * Batched FFT data (for spectrograms or grouped frames)
+ */
+export interface FFTDataBatch {
+  frames: FFTData[];        // Array of FFT frames
+  timestamp?: number;       // Batch timestamp in ms (optional)
+  centerFreq?: number;      // Center frequency in Hz (optional, can be derived from frames)
+  sampleRate?: number;      // Sample rate in Hz (optional, can be derived from frames)
+}
+
+/**
  * Frequency range for zoom/pan
  */
 export interface FrequencyRange {
@@ -55,6 +65,11 @@ export type TaskStatus = 'live' | 'paused' | 'transmitting' | 'stopped';
 export type TaskOwner = 'self' | 'external';
 
 /**
+ * Visualization mode determines how data is displayed
+ */
+export type VisualizationMode = 'fft-only' | 'fft-waterfall' | 'spectrogram';
+
+/**
  * Recording information
  */
 export interface RecordingInfo {
@@ -93,6 +108,7 @@ export interface Task {
   playback?: PlaybackInfo;
   createdAt: number;        // Unix timestamp in ms
   fps?: number;             // Current frame rate
+  visualizationMode?: VisualizationMode; // How to visualize the data
 }
 
 /**

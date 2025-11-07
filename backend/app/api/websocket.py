@@ -6,6 +6,7 @@ from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from app.utils.fft_generator import MockFFTGenerator
 from app.api.routes.tasks import tasks
 from app.config.constants import TARGET_FPS
+from app.models.task import VisualizationMode
 
 router = APIRouter()
 
@@ -53,11 +54,20 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
             # Only send data if task is live/transmitting
             if task.status in ["live", "transmitting"]:
-                fft_data = generator.generate_fft()
-                await websocket.send_json(fft_data)
-
-                # Target FPS
-                await asyncio.sleep(1.0 / TARGET_FPS)
+                # Send batches for spectrogram mode, single frames for others
+                if task.visualization_mode == VisualizationMode.SPECTROGRAM:
+                    # Generate a batch of frames (simulate capturing multiple FFTs at once)
+                    batch_size = 50  # Send 50 frames at once for spectrogram
+                    frames = [generator.generate_fft() for _ in range(batch_size)]
+                    await websocket.send_json({"frames": frames})
+                    # Wait longer between batches
+                    await asyncio.sleep(2.0)
+                else:
+                    # Regular streaming - send single frames
+                    fft_data = generator.generate_fft()
+                    await websocket.send_json(fft_data)
+                    # Target FPS
+                    await asyncio.sleep(1.0 / TARGET_FPS)
             else:
                 # If paused, just wait a bit
                 await asyncio.sleep(0.1)

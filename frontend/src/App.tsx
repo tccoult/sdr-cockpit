@@ -6,7 +6,7 @@ import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPa
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { useDataStream, useTasks } from "./hooks";
-import { SpectrumView } from "./components/visualization/SpectrumView";
+import { VisualizationView } from "./components/visualization/VisualizationView";
 import { Button } from "./components/common/Button";
 import { PLASMA } from "./utils/colorMaps";
 
@@ -100,11 +100,12 @@ function App() {
         >
           {selectedTask ? (
             <div className="flex h-full w-full flex-col p-2">
-              <SpectrumView
+              <VisualizationView
                 taskId={selectedTask.id}
                 centerFreq={selectedTask.frequency}
                 sampleRate={selectedTask.sampleRate}
                 colorMap={colorMap}
+                visualizationMode={selectedTask.visualizationMode || "fft-waterfall"}
                 dataError={streamError || undefined}
                 isConnecting={streamStatus === "connecting"}
                 onRenderFpsChange={setRenderFps}

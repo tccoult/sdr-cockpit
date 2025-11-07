@@ -2,7 +2,7 @@
  * WebSocket client with auto-reconnection
  */
 
-import { FFTData } from '../types/sdr';
+import { FFTData, FFTDataBatch } from '../types/sdr';
 import { getWsBaseUrl, getApiMode } from './config';
 import { MockFFTGenerator } from '../utils/mockDataGenerator';
 import { TARGET_FPS } from '../config/constants';
@@ -10,7 +10,7 @@ import { TARGET_FPS } from '../config/constants';
 export type DataStreamStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface DataStreamCallbacks {
-  onData: (data: FFTData) => void;
+  onData: (data: FFTDataBatch) => void;
   onStatusChange: (status: DataStreamStatus) => void;
   onError?: (error: string) => void;
 }
@@ -56,12 +56,26 @@ class OnlineDataStream {
             return;
           }
 
-          // Convert bins array to Float32Array if needed
-          if (Array.isArray(data.bins)) {
-            data.bins = new Float32Array(data.bins);
+          // Convert to batch format
+          let batch: FFTDataBatch;
+
+          if (data.frames && Array.isArray(data.frames)) {
+            // Already a batch
+            batch = {
+              frames: data.frames.map((frame: FFTData) => ({
+                ...frame,
+                bins: Array.isArray(frame.bins) ? new Float32Array(frame.bins) : frame.bins,
+              })),
+            };
+          } else {
+            // Single frame - convert to batch
+            if (Array.isArray(data.bins)) {
+              data.bins = new Float32Array(data.bins);
+            }
+            batch = { frames: [data as FFTData] };
           }
 
-          this.callbacks.onData(data as FFTData);
+          this.callbacks.onData(batch);
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error);
         }
@@ -148,7 +162,9 @@ class OfflineDataStream {
     this.intervalId = window.setInterval(() => {
       if (!this.isPaused) {
         const fftData = this.generator.generateFFT();
-        this.callbacks.onData(fftData);
+        // Convert to batch format
+        const batch: FFTDataBatch = { frames: [fftData] };
+        this.callbacks.onData(batch);
       }
     }, 1000 / TARGET_FPS);
   }
