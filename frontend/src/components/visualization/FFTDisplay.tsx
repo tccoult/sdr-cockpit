@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FFTData, FrequencyRange } from "../../types/sdr";
+import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
 import {
   usePlot,
@@ -195,8 +195,12 @@ export const FFTDisplay = memo(function FFTDisplay({
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;
     const handleFFTData = (event: Event) => {
-      const customEvent = event as CustomEvent<FFTData>;
-      const incomingFFT = customEvent.detail;
+      const customEvent = event as CustomEvent<FFTDataBatch>;
+      const frames = customEvent.detail?.frames;
+      if (!frames || frames.length === 0) {
+        return;
+      }
+      const incomingFFT = frames[frames.length - 1];
       const bins = incomingFFT.bins;
       if (!bins.length) {
         return;
