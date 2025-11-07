@@ -106,7 +106,7 @@ export function CompactHeader({
         <button
           type="button"
           onClick={onToggleHealthDrawer}
-          className="flex h-8 w-8 items-center justify-center rounded-md border transition hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="flex h-8 w-8 items-center justify-center rounded-md border transition-all hover:scale-110 hover:brightness-125"
           style={{
             borderColor: healthIndicator.borderColor,
             backgroundColor: healthIndicator.bgColor,
