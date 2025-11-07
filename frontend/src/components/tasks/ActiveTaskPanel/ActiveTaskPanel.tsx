@@ -1,5 +1,5 @@
 import { CircleDot, Pause, Play, Square } from "lucide-react";
-import { Task } from "../../../types/sdr";
+import { Task, TaskType, TaskStatus } from "../../../types/sdr";
 import { formatFrequency } from "../../../utils/formatters";
 import { Button } from "../../common/Button";
 import { getTaskStatusLabel } from "./taskStatus";
@@ -22,7 +22,7 @@ export function ActiveTaskPanel({
   const statusLabel = getTaskStatusLabel(task);
 
   const { badgeClass, dotClass } = (() => {
-    if (task?.status === "live" || task?.status === "transmitting") {
+    if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
       return {
         badgeClass:
           "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-200",
@@ -30,7 +30,7 @@ export function ActiveTaskPanel({
       };
     }
 
-    if (task?.status === "paused") {
+    if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
           "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200",
@@ -112,7 +112,7 @@ export function ActiveTaskPanel({
               size="sm"
               variant="secondary"
             >
-              {task.status === "paused" ? (
+              {task.status === TaskStatus.PAUSED ? (
                 <>
                   <Play aria-hidden className="mr-2 h-4 w-4" />
                   Resume
@@ -134,7 +134,7 @@ export function ActiveTaskPanel({
               Stop
             </Button>
 
-            {task.type === "rx" && (
+            {task.type === TaskType.RX && (
               <Button
                 onClick={() =>
                   task.recording?.isRecording

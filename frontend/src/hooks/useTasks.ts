@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, CreateRxTaskParams, CreateTxTaskParams } from '../types/sdr';
+import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../types/sdr';
 import { getTaskApi } from '../api';
 import { updateRecording, updateTaskUptime, updateTxProgress } from '../utils/mockTaskGenerator';
 
@@ -61,7 +61,7 @@ export function useTasks(): UseTasksResult {
           let updatedTask = updateTaskUptime(task);
 
           // Update TX progress
-          if (task.type === 'tx' && task.status === 'transmitting') {
+          if (task.type === TaskType.TX && task.status === TaskStatus.TRANSMITTING) {
             updatedTask = updateTxProgress(updatedTask, 1); // 1 second
           }
 
@@ -118,7 +118,7 @@ export function useTasks(): UseTasksResult {
         if (!task) return;
 
         const updatedTask =
-          task.status === 'paused'
+          task.status === TaskStatus.PAUSED
             ? await taskApi.resumeTask(taskId)
             : await taskApi.pauseTask(taskId);
 
