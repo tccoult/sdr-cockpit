@@ -142,15 +142,18 @@ class OfflineDataStream {
   private intervalId: number | null = null;
   private callbacks: DataStreamCallbacks;
   private isPaused: boolean = false;
+  private visualizationMode: 'fft-only' | 'fft-waterfall' | 'spectrogram';
 
   constructor(
     _taskId: string,
     callbacks: DataStreamCallbacks,
     centerFreq: number,
     sampleRate: number,
-    fftSize: number = 2048
+    fftSize: number = 2048,
+    visualizationMode: 'fft-only' | 'fft-waterfall' | 'spectrogram' = 'fft-waterfall'
   ) {
     this.callbacks = callbacks;
+    this.visualizationMode = visualizationMode;
     this.generator = new MockFFTGenerator(centerFreq, sampleRate, fftSize);
     this.start();
   }
@@ -158,15 +161,30 @@ class OfflineDataStream {
   private start(): void {
     this.callbacks.onStatusChange('connected');
 
-    // Generate and send FFT data at target FPS
-    this.intervalId = window.setInterval(() => {
-      if (!this.isPaused) {
-        const fftData = this.generator.generateFFT();
-        // Convert to batch format
-        const batch: FFTDataBatch = { frames: [fftData] };
-        this.callbacks.onData(batch);
-      }
-    }, 1000 / TARGET_FPS);
+    if (this.visualizationMode === 'spectrogram') {
+      // For spectrogram mode, send batches of frames periodically
+      this.intervalId = window.setInterval(() => {
+        if (!this.isPaused) {
+          const batchSize = 50; // Generate 50 frames at once
+          const frames = [];
+          for (let i = 0; i < batchSize; i++) {
+            frames.push(this.generator.generateFFT());
+          }
+          const batch: FFTDataBatch = { frames };
+          this.callbacks.onData(batch);
+        }
+      }, 2000); // Send batches every 2 seconds
+    } else {
+      // For fft-only and fft-waterfall modes, send single frames at target FPS
+      this.intervalId = window.setInterval(() => {
+        if (!this.isPaused) {
+          const fftData = this.generator.generateFFT();
+          // Convert to batch format
+          const batch: FFTDataBatch = { frames: [fftData] };
+          this.callbacks.onData(batch);
+        }
+      }, 1000 / TARGET_FPS);
+    }
   }
 
   disconnect(): void {
@@ -204,6 +222,7 @@ export function createDataStream(
     centerFreq?: number;
     sampleRate?: number;
     fftSize?: number;
+    visualizationMode?: 'fft-only' | 'fft-waterfall' | 'spectrogram';
   }
 ): { disconnect: () => void; pause?: () => void; resume?: () => void } {
   const mode = getApiMode();
@@ -217,7 +236,8 @@ export function createDataStream(
       callbacks,
       options?.centerFreq || 915e6,
       options?.sampleRate || 2.4e6,
-      options?.fftSize || 2048
+      options?.fftSize || 2048,
+      options?.visualizationMode || 'fft-waterfall'
     );
     return {
       disconnect: () => stream.disconnect(),

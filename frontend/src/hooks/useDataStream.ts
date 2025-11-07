@@ -15,6 +15,7 @@ export interface UseDataStreamOptions {
   fftSize?: number;
   enabled?: boolean; // Whether to enable streaming (e.g., disabled when wizard is open)
   paused?: boolean; // Whether the task is paused
+  visualizationMode?: 'fft-only' | 'fft-waterfall' | 'spectrogram';
 }
 
 export interface UseDataStreamResult {
@@ -24,7 +25,7 @@ export interface UseDataStreamResult {
 }
 
 export function useDataStream(options: UseDataStreamOptions): UseDataStreamResult {
-  const { taskId, centerFreq, sampleRate, fftSize, enabled = true, paused = false } = options;
+  const { taskId, centerFreq, sampleRate, fftSize, enabled = true, paused = false, visualizationMode } = options;
 
   const [fps, setFps] = useState(0);
   const [streamStatus, setStreamStatus] = useState<DataStreamStatus>('disconnected');
@@ -84,6 +85,7 @@ export function useDataStream(options: UseDataStreamOptions): UseDataStreamResul
         centerFreq,
         sampleRate,
         fftSize: fftSize || 2048,
+        visualizationMode,
       }
     );
 
@@ -94,7 +96,7 @@ export function useDataStream(options: UseDataStreamOptions): UseDataStreamResul
       setFps(0);
       frameCountRef.current = 0;
     };
-  }, [taskId, centerFreq, sampleRate, fftSize, enabled]);
+  }, [taskId, centerFreq, sampleRate, fftSize, enabled, visualizationMode]);
 
   // Handle pause/resume
   useEffect(() => {

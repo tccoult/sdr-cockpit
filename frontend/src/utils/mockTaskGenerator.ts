@@ -29,6 +29,7 @@ export function generateDemoTasks(): Task[] {
       uptime: 923, // 15:23
       createdAt: now - 923000,
       fps: 30,
+      visualizationMode: 'fft-waterfall',
     },
 
     // External RX task (ADS-B receiver)
@@ -46,6 +47,7 @@ export function generateDemoTasks(): Task[] {
       uptime: 9910, // 02:45:10
       createdAt: now - 9910000,
       fps: 25,
+      visualizationMode: 'fft-waterfall',
     },
 
     // TX task with playback
@@ -61,6 +63,7 @@ export function generateDemoTasks(): Task[] {
       status: 'transmitting',
       uptime: 42,
       createdAt: now - 42000,
+      visualizationMode: 'fft-only',
       playback: {
         filename: 'recording_01.sigmf',
         progress: 0.65,
@@ -84,6 +87,7 @@ export function generateDemoTasks(): Task[] {
       uptime: 245,
       createdAt: now - 245000,
       fps: 30,
+      visualizationMode: 'fft-waterfall',
       recording: {
         filename: 'ham_recording_2025-10-27.sigmf',
         duration: 245,
@@ -107,6 +111,25 @@ export function generateDemoTasks(): Task[] {
       uptime: 135,
       createdAt: now - 135000,
       fps: 0,
+      visualizationMode: 'fft-only',
+    },
+
+    // Spectrogram test task
+    {
+      id: `task-${taskIdCounter++}`,
+      name: 'Spectrogram Test',
+      type: 'rx',
+      frequency: 2.45e9, // 2.45 GHz
+      sampleRate: 10e6, // 10 MSPS
+      bandwidth: 10e6,
+      fftSize: 1024,
+      owner: 'external',
+      ownerName: 'Test Generator',
+      status: 'live',
+      uptime: 60,
+      createdAt: now - 60000,
+      fps: 30,
+      visualizationMode: 'spectrogram',
     },
   ];
 }
@@ -135,6 +158,7 @@ export function createMockRxTask(params: {
     uptime: 0,
     createdAt: Date.now(),
     fps: 30,
+    visualizationMode: 'fft-waterfall', // Default to fft-waterfall for new tasks
   };
 }
 
@@ -159,6 +183,7 @@ export function createMockTxTask(params: {
     status: 'transmitting',
     uptime: 0,
     createdAt: Date.now(),
+    visualizationMode: 'fft-only', // TX tasks default to fft-only
     playback: {
       filename: params.filename,
       progress: 0,

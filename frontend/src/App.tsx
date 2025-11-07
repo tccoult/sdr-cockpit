@@ -44,6 +44,7 @@ function App() {
     fftSize: selectedTask?.fftSize,
     enabled: !isWizardOpen, // Pause streaming when wizard is open
     paused: selectedTask?.status === 'paused', // Pause when task is paused
+    visualizationMode: selectedTask?.visualizationMode,
   });
 
   const totalTasks = tasks.length;
