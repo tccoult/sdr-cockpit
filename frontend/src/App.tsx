@@ -22,7 +22,7 @@ function App() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
   const [isHealthDrawerOpen, setIsHealthDrawerOpen] = useState(false);
-  const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(false);
+  const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
   const [isHealthDrawerPinned, setIsHealthDrawerPinned] = useState(false);
   const [renderFps, setRenderFps] = useState(0);
 
