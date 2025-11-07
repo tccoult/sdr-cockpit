@@ -4,57 +4,27 @@ A modern web application for controlling and monitoring Software Defined Radio (
 
 ## Overview
 
-SDR Cockpit provides a sleek, intuitive interface for tasking SDR hardware, visualizing RF data in real-time, and managing multiple simultaneous receive/transmit operations. Inspired by OpenWebRx, this tool is designed for both interactive exploration and programmatic control of SDR systems.
+SDR Cockpit provides an intuitive interface for tasking SDR hardware, visualizing RF data in real-time, and managing multiple simultaneous receive/transmit operations. Built for both interactive exploration and programmatic control of SDR systems.
 
 ## Key Features
 
-### Current Goals (v0.1)
 - **Real-time Visualizations**: Spectrograms, waterfalls, and signal detections
 - **Multi-tasking Support**: Handle multiple simultaneous receive tasks
-- **Task Attachment**: Connect to existing data streams, even those not created by the web app
+- **Task Attachment**: Connect to existing data streams
 - **SigMF Integration**: Record and playback using the Signal Metadata Format standard
-- **Transmit Capability**: Upload and transmit SigMF files with frequency override
+- **Transmit Capability**: Upload and transmit SigMF files
 - **Multi-user Support**: Collaborative SDR operations
 - **Modern UI**: Clean, responsive React-based interface
-
-### Future Enhancements
-- Health monitoring and telemetry (potential Prometheus integration)
-- Advanced signal processing and analysis
-- Task scheduling and automation
-- Recording management and library
 
 ## Technology Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
-- **Backend**: Python 3.11 + FastAPI (serves both API and built frontend)
+- **Backend**: Python 3.11 + FastAPI
 - **Simulator**: Python 3.11 + NumPy (mock SDR data generator)
 - **Development**: VSCode Dev Container (Alma Linux 9)
-- **Deployment**: Single Docker container + systemd service
-
-## Project Structure
-
-```
-sdr-cockpit/
-├── frontend/          # React + TypeScript + Vite
-├── backend/           # FastAPI server (serves API + built frontend)
-├── simulator/         # Mock SDR data generator
-├── docker/            # Container definitions
-├── scripts/           # Development and deployment scripts
-├── .github/workflows/ # CI/CD pipelines
-└── .devcontainer/     # VSCode dev container
-```
+- **Deployment**: Docker container + systemd service
 
 ## Getting Started
-
-### Prerequisites
-- **Docker and VSCode** with Remote-Containers extension (recommended)
-- OR **Node.js 20+** and **Python 3.11+** for local development
-
-### Quick Start (Dev Container)
-1. Open this folder in VSCode
-2. Click "Reopen in Container" when prompted
-3. Wait for container to build (first time only)
-4. You now have a full Alma Linux 9 environment with Node 20 + Python 3.11
 
 ### Development
 
@@ -64,121 +34,36 @@ sdr-cockpit/
 ./scripts/dev.sh      # Start dev environment
 ```
 
-This starts both the frontend dev server (with hot reload) and the backend API:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:8000
+This starts the frontend (http://localhost:5173) and backend (http://localhost:8000) with hot reload.
 
 **Run tests:**
 ```bash
-./scripts/test.sh     # Run all test suites (frontend, backend, simulator)
+./scripts/test.sh     # Run all test suites
+./scripts/check.sh    # Run full CI checks (lint, type-check, test, build)
 ```
 
 ### Production
 
-**Build and test:**
+**Build and deploy:**
 ```bash
 ./scripts/build-prod.sh        # Build container
-./scripts/run-prod-local.sh    # Test locally at http://localhost:8000
+./scripts/run-prod-local.sh    # Test locally
+sudo ./scripts/deploy-systemd.sh  # Deploy as systemd service
 ```
 
-**Deploy (Internet-connected):**
-```bash
-sudo ./scripts/deploy-systemd.sh
-sudo systemctl start sdr-cockpit
-# Pulls latest image from registry and starts service
+For air-gapped deployments, use `./scripts/build-rpm.sh` to create a bundled RPM package.
+
+## Project Structure
+
 ```
-
-**Deploy (Air-gapped):**
-```bash
-./scripts/build-rpm.sh         # Build RPM with bundled container
-# Transfer .rpm to target system
-sudo dnf install sdr-cockpit-*.rpm
-sudo systemctl start sdr-cockpit
+sdr-cockpit/
+├── frontend/          # React + TypeScript + Vite
+├── backend/           # FastAPI server
+├── simulator/         # Mock SDR data generator
+├── docker/            # Container definitions
+├── scripts/           # Development and deployment scripts
+└── .devcontainer/     # VSCode dev container
 ```
-
-Both deployment methods:
-- Automatically restart on failure
-- Integrate with systemd logging
-- Require podman and redis
-
-## Development & Testing
-
-### Quick Tests (Tests Only)
-
-**Run all tests:**
-```bash
-./scripts/test.sh     # Fast: runs tests only
-```
-
-### Full Checks (Same as CI)
-
-**Run all checks (lint, type-check, test, build):**
-```bash
-./scripts/check.sh    # Runs exactly what CI runs
-```
-
-This runs the same checks that CI runs:
-- Frontend: lint + type-check + test + build
-- Backend: lint + format check + type-check + test
-- Simulator: test
-
-### Pre-Commit Checklist
-
-**IMPORTANT:** Before every commit, run:
-```bash
-./scripts/check.sh    # Ensure all CI checks pass locally
-```
-
-This runs the same checks that CI runs:
-- Frontend: lint + type-check + test + build
-- Backend: lint + format check + type-check + test
-- Simulator: test
-
-**Claude Code Agents:** Always run `./scripts/check.sh` before committing any changes.
-
-### CI/CD Pipeline
-
-GitHub Actions automatically runs on every PR and merge:
-
-1. **PR Checks** (`pr-checks.yml`)
-   - Lint, type-check, test all components
-   - Build Docker images
-   - All checks must pass to merge
-
-2. **Integration Tests** (`integration-tests.yml`)
-   - Start full stack with docker-compose
-   - Verify all services are healthy
-   - Check frontend and backend endpoints
-
-3. **CI/CD on Trunk** (`ci.yml`)
-   - Run all checks + integration tests
-   - Build and publish Docker images to `ghcr.io`
-   - Tagged with commit SHA and `latest`
-
-4. **Manual Workflow** (`manual-ci.yml`)
-   - Trigger manually from any branch
-   - Optionally publish images to registry
-
-## Documentation
-
-- **[DESIGN.md](./DESIGN.md)** - Architecture, design decisions, and requirements
-- **[TECHNICAL_NOTES.md](./TECHNICAL_NOTES.md)** - Implementation details, protocols, and technical deep-dives
-- **[ROADMAP.md](./ROADMAP.md)** - Phased development plan and milestones
-
-### Doc Purpose Guide
-
-- **DESIGN.md**: *What* we're building and *why* (architecture, requirements, decisions)
-- **TECHNICAL_NOTES.md**: *How* we're building it (protocols, algorithms, data formats)
-- **ROADMAP.md**: *When* we're building it (phases, priorities, timeline)
-
-## Development Principles
-
-- **Start Simple**: Build incrementally with clean abstractions
-- **Maintainability**: Clear code structure, well-documented
-- **Separation of Concerns**: Modular architecture with single responsibility
-- **Type Safety**: TypeScript frontend, Python type hints
-- **Real-time First**: Design for low-latency streaming data
-- **Test Before Merge**: All tests must pass in CI
 
 ## Contributing
 
@@ -190,6 +75,4 @@ TBD
 
 ---
 
-**Status**: 🚧 Phase 1 - CI/CD Infrastructure Complete
-
-**Last Updated**: 2025-10-26
+**Status**: 🚧 Active Development
