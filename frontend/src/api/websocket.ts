@@ -2,12 +2,16 @@
  * WebSocket client with auto-reconnection
  */
 
-import { FFTData, FFTDataBatch, VisualizationMode } from '../types/sdr';
-import { getWsBaseUrl, getApiMode } from './config';
-import { MockFFTGenerator } from '../utils/mockDataGenerator';
-import { TARGET_FPS } from '../config/constants';
+import { TARGET_FPS } from "../config/constants";
+import { FFTData, FFTDataBatch, VisualizationMode } from "../types/sdr";
+import { MockFFTGenerator } from "../utils/mockDataGenerator";
+import { getApiMode, getWsBaseUrl } from "./config";
 
-export type DataStreamStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type DataStreamStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
 
 export interface DataStreamCallbacks {
   onData: (data: FFTDataBatch) => void;
@@ -34,7 +38,7 @@ class OnlineDataStream {
   }
 
   private connect(): void {
-    this.callbacks.onStatusChange('connecting');
+    this.callbacks.onStatusChange("connecting");
     const wsUrl = `${getWsBaseUrl()}/ws/tasks/${this.taskId}/data`;
 
     try {
@@ -42,7 +46,7 @@ class OnlineDataStream {
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
-        this.callbacks.onStatusChange('connected');
+        this.callbacks.onStatusChange("connected");
       };
 
       this.ws.onmessage = (event) => {
@@ -51,7 +55,7 @@ class OnlineDataStream {
 
           // Check for error messages from server
           if (data.error) {
-            this.callbacks.onStatusChange('error');
+            this.callbacks.onStatusChange("error");
             this.callbacks.onError?.(data.error);
             return;
           }
@@ -64,7 +68,9 @@ class OnlineDataStream {
             batch = {
               frames: data.frames.map((frame: FFTData) => ({
                 ...frame,
-                bins: Array.isArray(frame.bins) ? new Float32Array(frame.bins) : frame.bins,
+                bins: Array.isArray(frame.bins)
+                  ? new Float32Array(frame.bins)
+                  : frame.bins,
               })),
             };
           } else {
@@ -77,13 +83,13 @@ class OnlineDataStream {
 
           this.callbacks.onData(batch);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          console.error("Failed to parse WebSocket message:", error);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.callbacks.onStatusChange('error');
+        console.error("WebSocket error:", error);
+        this.callbacks.onStatusChange("error");
       };
 
       this.ws.onclose = () => {
@@ -91,29 +97,34 @@ class OnlineDataStream {
 
         // Don't reconnect if manually closed
         if (this.isManualClose) {
-          this.callbacks.onStatusChange('disconnected');
+          this.callbacks.onStatusChange("disconnected");
           return;
         }
 
         // Attempt to reconnect
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.callbacks.onStatusChange('connecting');
+          this.callbacks.onStatusChange("connecting");
           this.reconnectAttempts++;
-          const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+          const delay = Math.min(
+            1000 * Math.pow(2, this.reconnectAttempts),
+            10000
+          );
 
           this.reconnectTimeout = window.setTimeout(() => {
             this.connect();
           }, delay);
         } else {
           // Max reconnect attempts reached
-          this.callbacks.onStatusChange('error');
-          this.callbacks.onError?.('Failed to connect to data stream after multiple attempts');
+          this.callbacks.onStatusChange("error");
+          this.callbacks.onError?.(
+            "Failed to connect to data stream after multiple attempts"
+          );
         }
       };
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
-      this.callbacks.onStatusChange('error');
-      this.callbacks.onError?.('Failed to create WebSocket connection');
+      console.error("Failed to create WebSocket:", error);
+      this.callbacks.onStatusChange("error");
+      this.callbacks.onError?.("Failed to create WebSocket connection");
     }
   }
 
@@ -130,7 +141,7 @@ class OnlineDataStream {
       this.ws = null;
     }
 
-    this.callbacks.onStatusChange('disconnected');
+    this.callbacks.onStatusChange("disconnected");
   }
 }
 
@@ -159,13 +170,13 @@ class OfflineDataStream {
   }
 
   private start(): void {
-    this.callbacks.onStatusChange('connected');
+    this.callbacks.onStatusChange("connected");
 
     if (this.visualizationMode === VisualizationMode.SPECTROGRAM) {
       // For spectrogram mode, send batches of frames periodically
       this.intervalId = window.setInterval(() => {
         if (!this.isPaused) {
-          const batchSize = 50; // Generate 50 frames at once
+          const batchSize = 128; // Generate 128 frames at once
           const frames = [];
           for (let i = 0; i < batchSize; i++) {
             frames.push(this.generator.generateFFT());
@@ -173,7 +184,7 @@ class OfflineDataStream {
           const batch: FFTDataBatch = { frames };
           this.callbacks.onData(batch);
         }
-      }, 2000); // Send batches every 2 seconds
+      }, 250); // Send batches every 250 milliseconds
     } else {
       // For fft-only and fft-waterfall modes, send single frames at target FPS
       this.intervalId = window.setInterval(() => {
@@ -192,7 +203,7 @@ class OfflineDataStream {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    this.callbacks.onStatusChange('disconnected');
+    this.callbacks.onStatusChange("disconnected");
   }
 
   pause(): void {
@@ -227,7 +238,7 @@ export function createDataStream(
 ): { disconnect: () => void; pause?: () => void; resume?: () => void } {
   const mode = getApiMode();
 
-  if (mode === 'online') {
+  if (mode === "online") {
     return new OnlineDataStream(taskId, callbacks);
   } else {
     // Offline mode - need frequency/sample rate for mock generator
