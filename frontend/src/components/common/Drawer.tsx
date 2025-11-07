@@ -10,6 +10,7 @@ export interface DrawerProps {
   isPinned: boolean
   onTogglePin: () => void
   width?: string
+  offsetTop?: number
 }
 
 /**
@@ -25,6 +26,7 @@ export function Drawer({
   isPinned,
   onTogglePin,
   width = '300px',
+  offsetTop = 0,
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
 
@@ -65,6 +67,9 @@ export function Drawer({
 
   if (!isOpen) return null
 
+  const appliedTopOffset = isPinned ? offsetTop : 0
+  const appliedHeight = appliedTopOffset > 0 ? `calc(100vh - ${appliedTopOffset}px)` : '100vh'
+
   const slideAnimation = position === 'left'
     ? 'animate-in slide-in-from-left duration-200'
     : 'animate-in slide-in-from-right duration-200'
@@ -87,7 +92,7 @@ export function Drawer({
       <div
         ref={drawerRef}
         className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/60`}
-        style={{ width }}
+        style={{ width, top: appliedTopOffset, height: appliedHeight }}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/50">

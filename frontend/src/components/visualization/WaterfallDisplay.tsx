@@ -58,12 +58,12 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       };
     }
     return {
-      background: "rgba(245, 245, 250, 0.95)",
-      axisColor: "rgba(51, 65, 85, 0.6)",
-      textColor: "#1e293b",
-      gridColor: "rgba(15, 23, 42, 0.08)",
-      scaleBackground: "rgba(255, 255, 255, 0.7)",
-      scaleText: "#1e293b",
+      background: "rgba(247, 249, 255, 0.98)",
+      axisColor: "rgba(15, 23, 42, 0.75)",
+      textColor: "#0f172a",
+      gridColor: "rgba(15, 23, 42, 0.12)",
+      scaleBackground: "rgba(255, 255, 255, 0.92)",
+      scaleText: "#0f172a",
     };
   }, [isDark]);
 
@@ -383,7 +383,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
             top: waterfallTooltip.top,
             background: waterfallColors.scaleBackground,
             color: waterfallColors.scaleText,
-            border: "1px solid rgba(0,0,0,0.2)",
+            border: "1px solid rgba(15,23,42,0.2)",
             borderRadius: 4,
             padding: "4px 8px",
             fontSize: 11,

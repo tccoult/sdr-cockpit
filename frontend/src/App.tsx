@@ -11,6 +11,10 @@ import { Button } from "./components/common/Button";
 import { PLASMA } from "./utils/colorMaps";
 import { TaskStatus } from "./types/sdr";
 
+const TASK_DRAWER_WIDTH = 300;
+const HEALTH_DRAWER_WIDTH = 300;
+const HEADER_HEIGHT = 48;
+
 function App() {
   const colorMap = PLASMA;
 
@@ -18,7 +22,7 @@ function App() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
   const [isHealthDrawerOpen, setIsHealthDrawerOpen] = useState(false);
-  const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(false);
+  const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
   const [isHealthDrawerPinned, setIsHealthDrawerPinned] = useState(false);
   const [renderFps, setRenderFps] = useState(0);
 
@@ -75,8 +79,10 @@ function App() {
   };
 
   // Calculate main area margin based on pinned drawers
-  const mainMarginLeft = isTaskDrawerPinned && isTaskDrawerOpen ? "300px" : "0";
-  const mainMarginRight = isHealthDrawerPinned && isHealthDrawerOpen ? "300px" : "0";
+  const mainMarginLeft =
+    isTaskDrawerPinned && isTaskDrawerOpen ? `${TASK_DRAWER_WIDTH}px` : "0";
+  const mainMarginRight =
+    isHealthDrawerPinned && isHealthDrawerOpen ? `${HEALTH_DRAWER_WIDTH}px` : "0";
 
   return (
     <>
@@ -144,6 +150,8 @@ function App() {
         title="Tasks"
         isPinned={isTaskDrawerPinned}
         onTogglePin={() => setIsTaskDrawerPinned((prev) => !prev)}
+        width={`${TASK_DRAWER_WIDTH}px`}
+        offsetTop={HEADER_HEIGHT}
       >
         <div className="p-4">
           <ActiveTaskPanel
@@ -174,6 +182,8 @@ function App() {
         title="System Health & Telemetry"
         isPinned={isHealthDrawerPinned}
         onTogglePin={() => setIsHealthDrawerPinned((prev) => !prev)}
+        width={`${HEALTH_DRAWER_WIDTH}px`}
+        offsetTop={HEADER_HEIGHT}
       >
         <HealthDrawer
           dataFps={fps}

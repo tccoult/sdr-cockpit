@@ -34,7 +34,7 @@ export function CompactHeader({
   const healthIndicator = getHealthIndicator(healthStatus)
 
   return (
-    <header className="flex h-12 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95">
+    <header className="relative z-40 flex h-12 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95">
       {/* Left: Menu + Title + Task Info */}
       <div className="flex items-center gap-3 overflow-hidden">
         <button
