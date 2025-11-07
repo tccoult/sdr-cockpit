@@ -193,12 +193,11 @@ export const VisualizationView = memo(function VisualizationView({
     };
 
     const observer = new ResizeObserver(updateSizes);
-    const targets = [
-      containerRef.current,
-      fftContainerRef.current,
-      waterfallContainerRef.current,
-      spectrogramContainerRef.current,
-    ].filter((element): element is HTMLElement => Boolean(element));
+    const targets: Element[] = [];
+    if (containerRef.current) targets.push(containerRef.current);
+    if (fftContainerRef.current) targets.push(fftContainerRef.current);
+    if (waterfallContainerRef.current) targets.push(waterfallContainerRef.current);
+    if (spectrogramContainerRef.current) targets.push(spectrogramContainerRef.current);
 
     targets.forEach((element) => observer.observe(element));
     updateSizes();
