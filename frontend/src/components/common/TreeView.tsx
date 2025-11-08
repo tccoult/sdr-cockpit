@@ -33,10 +33,22 @@ export function TreeView<T extends TreeNodeData>({
   const [isExpanded, setIsExpanded] = useState(shouldAutoExpand)
 
   const hasChildren = data.children && data.children.length > 0
-  const indent = level * 16 // 16px per level for better spacing with connectors
+  const indent = level * 8 // 8px per level
 
   return (
-    <div className={className}>
+    <div className={`relative ${className}`}>
+      {/* Vertical line continuing from this node to next sibling (if not last child) */}
+      {level > 0 && !isLastChild && (
+        <div
+          className="absolute w-px bg-slate-300 dark:bg-slate-600"
+          style={{
+            left: `${indent - 8}px`,
+            top: '0',
+            bottom: '0',
+          }}
+        />
+      )}
+
       {/* Node Row */}
       <div className="relative flex items-start gap-2 py-1.5 transition-colors duration-150 ease-in-out hover:bg-slate-50 dark:hover:bg-slate-800/50"
         style={{ paddingLeft: `${indent}px` }}>
@@ -48,24 +60,8 @@ export function TreeView<T extends TreeNodeData>({
             <div
               className="absolute top-3 h-px bg-slate-300 dark:bg-slate-600"
               style={{
-                left: `${indent - 16}px`,
-                width: '12px',
-              }}
-            />
-            {/* Vertical line (only if not last child) */}
-            {!isLastChild && (
-              <div
-                className="absolute bottom-0 top-0 w-px bg-slate-300 dark:bg-slate-600"
-                style={{
-                  left: `${indent - 16}px`,
-                }}
-              />
-            )}
-            {/* Vertical line to connect to siblings above */}
-            <div
-              className="absolute top-0 h-3 w-px bg-slate-300 dark:bg-slate-600"
-              style={{
-                left: `${indent - 16}px`,
+                left: `${indent - 8}px`,
+                width: '16px',
               }}
             />
           </>
