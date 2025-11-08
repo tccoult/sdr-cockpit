@@ -37,5 +37,6 @@
     }
   },
   "forwardPorts": [3000, 8000, 6379],
-  "postCreateCommand": "echo 'Dev container ready! Run docker-compose up to start services.'",
+  "postCreateCommand": "./scripts/setup.sh",
+  "postStartCommand": "./scripts/dev.sh"
 }
