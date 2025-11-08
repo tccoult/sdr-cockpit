@@ -19,7 +19,7 @@ import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
 import { X } from "lucide-react";
 
 const TASK_DRAWER_WIDTH = 300;
-const HEALTH_DRAWER_WIDTH = 300;
+const STATUS_PANEL_WIDTH = 300;
 const HEADER_HEIGHT = 48;
 
 function App() {
@@ -85,6 +85,26 @@ function App() {
     }
   }, [isWizardOpen, selectedTaskId]);
 
+  // ESC key handling for modals
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeSettingsPanel) {
+          setActiveSettingsPanel(null);
+        } else if (isUpdateWizardOpen) {
+          setIsUpdateWizardOpen(false);
+        } else if (!isStatusPanelPinned && isStatusPanelOpen) {
+          setIsStatusPanelOpen(false);
+        } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
+          setIsTaskDrawerOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [activeSettingsPanel, isUpdateWizardOpen, isStatusPanelOpen, isStatusPanelPinned, isTaskDrawerOpen, isTaskDrawerPinned]);
+
   // Close unpinned drawers when selecting a task
   const handleSelectTask = (taskId: string) => {
     selectTask(taskId);
@@ -106,7 +126,7 @@ function App() {
   const mainMarginLeft =
     isTaskDrawerPinned && isTaskDrawerOpen ? `${TASK_DRAWER_WIDTH}px` : "0";
   const mainMarginRight =
-    isStatusPanelPinned && isStatusPanelOpen ? `${HEALTH_DRAWER_WIDTH}px` : "0";
+    isStatusPanelPinned && isStatusPanelOpen ? `${STATUS_PANEL_WIDTH}px` : "0";
 
   return (
     <>
@@ -118,6 +138,7 @@ function App() {
           renderFps={renderFps}
           totalTasks={totalTasks}
           healthStatus={healthStatus}
+          isStatusPanelOpen={isStatusPanelOpen}
           onToggleTaskDrawer={() => setIsTaskDrawerOpen((prev) => !prev)}
           onToggleStatusPanel={() => setIsStatusPanelOpen((prev) => !prev)}
           onOpenSettings={handleSettingsSelect}
@@ -207,7 +228,7 @@ function App() {
         title="System Status"
         isPinned={isStatusPanelPinned}
         onTogglePin={() => setIsStatusPanelPinned((prev) => !prev)}
-        width={`${HEALTH_DRAWER_WIDTH}px`}
+        width={`${STATUS_PANEL_WIDTH}px`}
         offsetTop={HEADER_HEIGHT}
       >
         <StatusPanel
@@ -241,7 +262,7 @@ function App() {
           />
 
           {/* Modal */}
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">

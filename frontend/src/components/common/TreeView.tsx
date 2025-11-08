@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 export interface TreeNodeData {
   id: string
@@ -31,13 +31,13 @@ export function TreeView<T extends TreeNodeData>({
   const [isExpanded, setIsExpanded] = useState(shouldAutoExpand)
 
   const hasChildren = data.children && data.children.length > 0
-  const indent = level * 20 // 20px per level
+  const indent = level * 8 // 8px per level
 
   return (
     <div className={className}>
       {/* Node Row */}
       <div
-        className="group flex items-start gap-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        className="group flex items-start gap-2 py-1.5 transition-colors duration-150 ease-in-out hover:bg-slate-50 dark:hover:bg-slate-800/50"
         style={{ paddingLeft: `${indent}px` }}
       >
         {/* Expand/Collapse Button */}
@@ -45,10 +45,12 @@ export function TreeView<T extends TreeNodeData>({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-slate-500 transition-all duration-150 ease-in-out hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
-            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            <div className={`transition-transform duration-150 ease-in-out ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
+              <ChevronDown size={14} />
+            </div>
           </button>
         ) : (
           <div className="h-4 w-4 flex-shrink-0" />
@@ -60,11 +62,11 @@ export function TreeView<T extends TreeNodeData>({
 
       {/* Children */}
       {hasChildren && isExpanded && (
-        <div className="relative">
+        <div className="relative animate-in fade-in slide-in-from-top-1 duration-150">
           {/* Vertical line */}
           <div
-            className="absolute top-0 h-full w-px bg-slate-200 dark:bg-slate-700"
-            style={{ left: `${indent + 8}px` }}
+            className="absolute top-0 h-full w-px bg-slate-200 transition-opacity duration-150 dark:bg-slate-700 group-hover:opacity-70"
+            style={{ left: `${indent + 4}px` }}
           />
           {data.children!.map((child) => (
             <TreeView

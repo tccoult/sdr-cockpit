@@ -39,8 +39,8 @@ export function StatusPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200 dark:border-white/10">
+      {/* Tab Navigation - Sticky */}
+      <div className="sticky top-0 z-10 flex border-b border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900">
         <TabButton
           active={activeTab === 'overview'}
           onClick={() => setActiveTab('overview')}
@@ -58,19 +58,23 @@ export function StatusPanel({
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'overview' && (
-          <OverviewTab
-            dataFps={dataFps}
-            renderFps={renderFps}
-            totalTasks={totalTasks}
-            operatorTasks={operatorTasks}
-            selectedTask={selectedTask}
-            streamStatus={streamStatus}
-            streamError={streamError}
-            healthStatus={healthStatus}
-          />
+          <div className="animate-in fade-in slide-in-from-right-2 duration-150">
+            <OverviewTab
+              dataFps={dataFps}
+              renderFps={renderFps}
+              totalTasks={totalTasks}
+              operatorTasks={operatorTasks}
+              selectedTask={selectedTask}
+              streamStatus={streamStatus}
+              streamError={streamError}
+              healthStatus={healthStatus}
+            />
+          </div>
         )}
         {activeTab === 'diagnostics' && (
-          <DiagnosticsTab bistResult={bistResult} />
+          <div className="animate-in fade-in slide-in-from-right-2 duration-150">
+            <DiagnosticsTab bistResult={bistResult} />
+          </div>
         )}
       </div>
     </div>
@@ -88,7 +92,7 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition ${
+      className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-all duration-150 ease-in-out ${
         active
           ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
           : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'

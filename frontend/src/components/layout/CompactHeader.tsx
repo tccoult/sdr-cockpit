@@ -13,6 +13,7 @@ export interface CompactHeaderProps {
   renderFps: number
   totalTasks: number
   healthStatus: HealthStatus
+  isStatusPanelOpen?: boolean
   onToggleTaskDrawer: () => void
   onToggleStatusPanel: () => void
   onOpenSettings: (item: SettingsMenuItem) => void
@@ -28,6 +29,7 @@ export function CompactHeader({
   renderFps,
   totalTasks,
   healthStatus,
+  isStatusPanelOpen = false,
   onToggleTaskDrawer,
   onToggleStatusPanel,
   onOpenSettings,
@@ -118,10 +120,15 @@ export function CompactHeader({
         <button
           type="button"
           onClick={onToggleStatusPanel}
-          className="flex h-8 items-center gap-2 rounded-md border px-3 transition-all hover:brightness-110"
+          className={`flex h-8 items-center gap-1 rounded-md border px-3 transition-all duration-150 ease-in-out hover:brightness-110`}
           style={{
-            borderColor: healthIndicator.borderColor,
+            borderColor: isStatusPanelOpen
+              ? healthIndicator.dotColor
+              : healthIndicator.borderColor,
             backgroundColor: healthIndicator.bgColor,
+            boxShadow: isStatusPanelOpen
+              ? `0 0 0 2px ${healthIndicator.dotColor}40`
+              : undefined,
           }}
           title={`System status: ${healthStatus}`}
           aria-label={`System status: ${healthStatus}`}
@@ -129,9 +136,14 @@ export function CompactHeader({
           <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
             Status
           </span>
-          <ChevronDown size={12} className="text-slate-500 dark:text-slate-400" />
+          <ChevronDown
+            size={12}
+            className={`text-slate-500 transition-transform duration-150 ease-in-out dark:text-slate-400 ${
+              isStatusPanelOpen ? 'rotate-180' : ''
+            }`}
+          />
           <span
-            className="h-2.5 w-2.5 rounded-full"
+            className="h-2.5 w-2.5 rounded-full transition-all duration-150"
             style={{
               backgroundColor: healthIndicator.dotColor,
               boxShadow: healthIndicator.glow,
