@@ -1,4 +1,4 @@
-import { Menu, ChevronDown, Upload } from 'lucide-react'
+import { Menu, ChevronDown } from 'lucide-react'
 import { ThemeToggle } from '../app/ThemeToggle'
 import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { Task } from '../../types/sdr'
@@ -115,17 +115,6 @@ export function CompactHeader({
 
         {/* Divider */}
         <div className="h-6 w-px bg-slate-300 dark:bg-white/20" />
-
-        {/* System Update Button */}
-        <button
-          type="button"
-          onClick={() => onOpenSettings('update')}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-          aria-label="System update"
-          title="System update"
-        >
-          <Upload size={16} />
-        </button>
 
         {/* Status Panel Button (wider with label) */}
         <button

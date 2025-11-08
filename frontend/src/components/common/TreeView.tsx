@@ -13,6 +13,7 @@ export interface TreeViewProps<T extends TreeNodeData> {
   autoExpandCondition?: (node: T) => boolean
   level?: number
   className?: string
+  isLastChild?: boolean
 }
 
 /**
@@ -26,26 +27,56 @@ export function TreeView<T extends TreeNodeData>({
   autoExpandCondition,
   level = 0,
   className = '',
+  isLastChild = false,
 }: TreeViewProps<T>) {
   const shouldAutoExpand = autoExpandCondition?.(data) ?? defaultExpanded
   const [isExpanded, setIsExpanded] = useState(shouldAutoExpand)
 
   const hasChildren = data.children && data.children.length > 0
-  const indent = level * 8 // 8px per level
+  const indent = level * 16 // 16px per level for better spacing with connectors
 
   return (
     <div className={className}>
       {/* Node Row */}
-      <div
-        className="group flex items-start gap-2 py-1.5 transition-colors duration-150 ease-in-out hover:bg-slate-50 dark:hover:bg-slate-800/50"
-        style={{ paddingLeft: `${indent}px` }}
-      >
+      <div className="relative flex items-start gap-2 py-1.5 transition-colors duration-150 ease-in-out hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        style={{ paddingLeft: `${indent}px` }}>
+
+        {/* Tree connectors (L-shaped lines) */}
+        {level > 0 && (
+          <>
+            {/* Horizontal line */}
+            <div
+              className="absolute top-3 h-px bg-slate-300 dark:bg-slate-600"
+              style={{
+                left: `${indent - 16}px`,
+                width: '12px',
+              }}
+            />
+            {/* Vertical line (only if not last child) */}
+            {!isLastChild && (
+              <div
+                className="absolute bottom-0 top-0 w-px bg-slate-300 dark:bg-slate-600"
+                style={{
+                  left: `${indent - 16}px`,
+                }}
+              />
+            )}
+            {/* Vertical line to connect to siblings above */}
+            <div
+              className="absolute top-0 h-3 w-px bg-slate-300 dark:bg-slate-600"
+              style={{
+                left: `${indent - 16}px`,
+              }}
+            />
+          </>
+        )}
+
         {/* Expand/Collapse Button */}
         {hasChildren ? (
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-slate-500 transition-all duration-150 ease-in-out hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="relative z-10 mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-slate-500 transition-all duration-150 ease-in-out hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
             <div className={`transition-transform duration-150 ease-in-out ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
@@ -62,13 +93,8 @@ export function TreeView<T extends TreeNodeData>({
 
       {/* Children */}
       {hasChildren && isExpanded && (
-        <div className="relative animate-in fade-in slide-in-from-top-1 duration-150">
-          {/* Vertical line */}
-          <div
-            className="absolute top-0 h-full w-px bg-slate-200 transition-opacity duration-150 dark:bg-slate-700 group-hover:opacity-70"
-            style={{ left: `${indent + 4}px` }}
-          />
-          {data.children!.map((child) => (
+        <div className="animate-in fade-in slide-in-from-top-1 duration-150">
+          {data.children!.map((child, index) => (
             <TreeView
               key={child.id}
               data={child as T}
@@ -76,6 +102,7 @@ export function TreeView<T extends TreeNodeData>({
               defaultExpanded={defaultExpanded}
               autoExpandCondition={autoExpandCondition}
               level={level + 1}
+              isLastChild={index === data.children!.length - 1}
             />
           ))}
         </div>

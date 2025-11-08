@@ -1,7 +1,7 @@
 import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 import { BistResult, BistNode, BistStatus } from '../../types/diagnostics'
 import { TreeView } from '../common/TreeView'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Button } from '../common/Button'
 
 export interface DiagnosticsTabProps {
@@ -12,17 +12,7 @@ export interface DiagnosticsTabProps {
  * Diagnostics tab showing BIST (Built-In Self Test) results in a tree view.
  */
 export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
-  const [expandAll, setExpandAll] = useState(false)
-  const firstFailRef = useRef<HTMLDivElement>(null)
-
-  // Auto-scroll to first failing node on mount
-  useEffect(() => {
-    if (bistResult && firstFailRef.current) {
-      setTimeout(() => {
-        firstFailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 300)
-    }
-  }, [bistResult])
+  const [expandAll, setExpandAll] = useState<boolean | null>(null) // null = auto, true = expand all, false = collapse all
 
   if (!bistResult) {
     return (
@@ -104,14 +94,16 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
         <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900/50">
           <TreeView<BistNode>
-            key={expandAll ? 'expanded' : 'collapsed'}
+            key={expandAll === null ? 'auto' : expandAll ? 'expanded' : 'collapsed'}
             data={tree}
             renderNode={(node) => (
-              <BistNodeContent node={node} firstFailRef={firstFailRef} />
+              <BistNodeContent node={node} />
             )}
-            defaultExpanded={expandAll}
-            autoExpandCondition={(node) =>
-              expandAll || node.status === BistStatus.FAIL || node.status === BistStatus.WARN
+            defaultExpanded={expandAll === true}
+            autoExpandCondition={
+              expandAll === null
+                ? (node) => node.status === BistStatus.FAIL || node.status === BistStatus.WARN
+                : undefined
             }
           />
         </div>
@@ -122,14 +114,12 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
 interface BistNodeContentProps {
   node: BistNode
-  firstFailRef?: React.RefObject<HTMLDivElement>
 }
 
-function BistNodeContent({ node, firstFailRef }: BistNodeContentProps) {
+function BistNodeContent({ node }: BistNodeContentProps) {
   const [showDetails, setShowDetails] = useState(false)
   const hasDetails = !!(node.details || node.metrics)
   const hasChildren = node.children && node.children.length > 0
-  const isFirstFail = node.status === BistStatus.FAIL && firstFailRef
 
   // Background tint based on status
   const getBgTint = () => {
@@ -145,7 +135,6 @@ function BistNodeContent({ node, firstFailRef }: BistNodeContentProps) {
 
   return (
     <div
-      ref={isFirstFail ? firstFailRef : undefined}
       className={`flex-1 space-y-2 -mx-2 px-2 py-1 rounded transition-colors duration-150 ease-in-out ${getBgTint()}`}
     >
       {/* Node Label and Status */}
