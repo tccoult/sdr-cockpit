@@ -38,5 +38,5 @@
   },
   "forwardPorts": [3000, 8000, 6379],
   "postCreateCommand": "./scripts/setup.sh",
-  "postStartCommand": "./scripts/dev.sh"
+  "postAttachCommand": "./scripts/dev.sh"
 }
