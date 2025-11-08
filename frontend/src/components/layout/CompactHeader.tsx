@@ -1,5 +1,6 @@
-import { Menu } from 'lucide-react'
+import { Menu, ChevronDown } from 'lucide-react'
 import { ThemeToggle } from '../app/ThemeToggle'
+import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { Task } from '../../types/sdr'
 import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
@@ -13,7 +14,8 @@ export interface CompactHeaderProps {
   totalTasks: number
   healthStatus: HealthStatus
   onToggleTaskDrawer: () => void
-  onToggleHealthDrawer: () => void
+  onToggleStatusPanel: () => void
+  onOpenSettings: (item: SettingsMenuItem) => void
 }
 
 /**
@@ -27,7 +29,8 @@ export function CompactHeader({
   totalTasks,
   healthStatus,
   onToggleTaskDrawer,
-  onToggleHealthDrawer,
+  onToggleStatusPanel,
+  onOpenSettings,
 }: CompactHeaderProps) {
   const taskStatusLabel = getTaskStatusLabel(selectedTask)
 
@@ -75,7 +78,7 @@ export function CompactHeader({
         </div>
       </div>
 
-      {/* Right: Telemetry + Health + Theme */}
+      {/* Right: Telemetry + Settings + Theme + Divider + Status */}
       <div className="flex items-center gap-3">
         {/* FPS Badge */}
         <div className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs dark:border-white/10 dark:bg-slate-800/50 sm:flex">
@@ -102,18 +105,31 @@ export function CompactHeader({
           <span className="text-slate-500 dark:text-slate-400">Tasks</span>
         </button>
 
-        {/* Health Indicator */}
+        {/* Settings Menu */}
+        <SettingsMenu onSelectItem={onOpenSettings} />
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
+        {/* Divider */}
+        <div className="h-6 w-px bg-slate-300 dark:bg-white/20" />
+
+        {/* Status Panel Button (wider with label) */}
         <button
           type="button"
-          onClick={onToggleHealthDrawer}
-          className="flex h-8 w-8 items-center justify-center rounded-md border transition-all hover:scale-110 hover:brightness-125"
+          onClick={onToggleStatusPanel}
+          className="flex h-8 items-center gap-2 rounded-md border px-3 transition-all hover:brightness-110"
           style={{
             borderColor: healthIndicator.borderColor,
             backgroundColor: healthIndicator.bgColor,
           }}
-          title={`System health: ${healthStatus}`}
-          aria-label={`System health: ${healthStatus}`}
+          title={`System status: ${healthStatus}`}
+          aria-label={`System status: ${healthStatus}`}
         >
+          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+            Status
+          </span>
+          <ChevronDown size={12} className="text-slate-500 dark:text-slate-400" />
           <span
             className="h-2.5 w-2.5 rounded-full"
             style={{
@@ -122,9 +138,6 @@ export function CompactHeader({
             }}
           />
         </button>
-
-        {/* Theme Toggle */}
-        <ThemeToggle />
       </div>
     </header>
   )
