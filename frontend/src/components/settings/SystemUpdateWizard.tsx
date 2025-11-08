@@ -111,13 +111,27 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
     onClose()
   }
 
+  // Prevent close during active update or reboot
+  const isUpdateInProgress = step === 'install' || rebootCountdown !== null
+  const handleBackdropClick = () => {
+    if (!isUpdateInProgress) {
+      handleCancel()
+    }
+  }
+
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={handleCancel} />
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        onClick={handleBackdropClick}
+      />
 
       {/* Modal */}
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
+      <div
+        className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -126,7 +140,8 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
           <button
             type="button"
             onClick={handleCancel}
-            className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            disabled={isUpdateInProgress}
+            className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <X size={20} />
           </button>
@@ -135,44 +150,54 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
         {/* Content */}
         <div className="p-6">
           {step === 'upload' && (
-            <UploadStep
-              onFileSelect={() => fileInputRef.current?.click()}
-              fileInputRef={fileInputRef}
-              onFileChange={handleFileSelect}
-            />
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <UploadStep
+                onFileSelect={() => fileInputRef.current?.click()}
+                fileInputRef={fileInputRef}
+                onFileChange={handleFileSelect}
+              />
+            </div>
           )}
 
           {step === 'validate' && (
-            <ValidateStep
-              fileName={selectedFile?.name || ''}
-              fileSize={selectedFile?.size || 0}
-              progress={updateState.progress}
-              message={updateState.message}
-            />
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <ValidateStep
+                fileName={selectedFile?.name || ''}
+                fileSize={selectedFile?.size || 0}
+                progress={updateState.progress}
+                message={updateState.message}
+              />
+            </div>
           )}
 
           {step === 'confirm' && (
-            <ConfirmStep
-              fileName={selectedFile?.name || ''}
-              fileSize={selectedFile?.size || 0}
-              onConfirm={handleStartUpdate}
-              onCancel={handleCancel}
-            />
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <ConfirmStep
+                fileName={selectedFile?.name || ''}
+                fileSize={selectedFile?.size || 0}
+                onConfirm={handleStartUpdate}
+                onCancel={handleCancel}
+              />
+            </div>
           )}
 
           {step === 'install' && (
-            <InstallStep
-              progress={updateState.progress}
-              message={updateState.message}
-            />
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <InstallStep
+                progress={updateState.progress}
+                message={updateState.message}
+              />
+            </div>
           )}
 
           {step === 'complete' && (
-            <CompleteStep
-              onReboot={handleReboot}
-              onClose={handleCancel}
-              rebootCountdown={rebootCountdown}
-            />
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <CompleteStep
+                onReboot={handleReboot}
+                onClose={handleCancel}
+                rebootCountdown={rebootCountdown}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -360,10 +385,24 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
       </div>
 
       {rebootCountdown !== null ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-900/20">
-          <p className="text-sm font-medium text-amber-900 dark:text-amber-300">
-            System rebooting in {rebootCountdown} seconds...
-          </p>
+        <div className="space-y-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-900/20">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-300">
+              System rebooting in {rebootCountdown} seconds...
+            </p>
+          </div>
+          {/* Progress bar showing countdown */}
+          <div className="space-y-2">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+              <div
+                className="h-full bg-amber-500 transition-all duration-1000 ease-linear dark:bg-amber-400"
+                style={{ width: `${(rebootCountdown / 10) * 100}%` }}
+              />
+            </div>
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+              Rebooting system...
+            </p>
+          </div>
         </div>
       ) : (
         <>

@@ -1,7 +1,8 @@
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, ChevronRight } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 import { BistResult, BistNode, BistStatus } from '../../types/diagnostics'
 import { TreeView } from '../common/TreeView'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Button } from '../common/Button'
 
 export interface DiagnosticsTabProps {
   bistResult: BistResult | null
@@ -11,6 +12,18 @@ export interface DiagnosticsTabProps {
  * Diagnostics tab showing BIST (Built-In Self Test) results in a tree view.
  */
 export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
+  const [expandAll, setExpandAll] = useState(false)
+  const firstFailRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to first failing node on mount
+  useEffect(() => {
+    if (bistResult && firstFailRef.current) {
+      setTimeout(() => {
+        firstFailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+    }
+  }, [bistResult])
+
   if (!bistResult) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
@@ -67,14 +80,38 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
       {/* BIST Tree */}
       <section>
+        {/* Expand/Collapse Controls */}
+        <div className="mb-2 flex items-center justify-end gap-2">
+          <Button
+            size="sm"
+            variant="subtle"
+            onClick={() => setExpandAll(true)}
+            className="flex items-center gap-1.5"
+          >
+            <Maximize2 size={12} />
+            Expand All
+          </Button>
+          <Button
+            size="sm"
+            variant="subtle"
+            onClick={() => setExpandAll(false)}
+            className="flex items-center gap-1.5"
+          >
+            <Minimize2 size={12} />
+            Collapse All
+          </Button>
+        </div>
+
         <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900/50">
           <TreeView<BistNode>
+            key={expandAll ? 'expanded' : 'collapsed'}
             data={tree}
             renderNode={(node) => (
-              <BistNodeContent node={node} />
+              <BistNodeContent node={node} firstFailRef={firstFailRef} />
             )}
+            defaultExpanded={expandAll}
             autoExpandCondition={(node) =>
-              node.status === BistStatus.FAIL || node.status === BistStatus.WARN
+              expandAll || node.status === BistStatus.FAIL || node.status === BistStatus.WARN
             }
           />
         </div>
@@ -85,15 +122,32 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
 interface BistNodeContentProps {
   node: BistNode
+  firstFailRef?: React.RefObject<HTMLDivElement>
 }
 
-function BistNodeContent({ node }: BistNodeContentProps) {
+function BistNodeContent({ node, firstFailRef }: BistNodeContentProps) {
   const [showDetails, setShowDetails] = useState(false)
   const hasDetails = !!(node.details || node.metrics)
   const hasChildren = node.children && node.children.length > 0
+  const isFirstFail = node.status === BistStatus.FAIL && firstFailRef
+
+  // Background tint based on status
+  const getBgTint = () => {
+    switch (node.status) {
+      case BistStatus.FAIL:
+        return 'bg-red-50/50 dark:bg-red-950/20'
+      case BistStatus.WARN:
+        return 'bg-amber-50/50 dark:bg-amber-950/20'
+      default:
+        return ''
+    }
+  }
 
   return (
-    <div className="flex-1 space-y-2">
+    <div
+      ref={isFirstFail ? firstFailRef : undefined}
+      className={`flex-1 space-y-2 -mx-2 px-2 py-1 rounded transition-colors duration-150 ease-in-out ${getBgTint()}`}
+    >
       {/* Node Label and Status */}
       <div className="flex items-center gap-2">
         <StatusIcon status={node.status} />
@@ -139,7 +193,7 @@ function BistNodeContent({ node }: BistNodeContentProps) {
           </button>
 
           {showDetails && (
-            <div className="rounded-md border border-slate-200 bg-white p-2 text-[10px] text-slate-700 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300">
+            <div className="animate-in fade-in slide-in-from-top-1 duration-150 rounded-md border border-slate-200 bg-white p-2 text-[10px] text-slate-700 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300">
               <p className="font-semibold">Additional diagnostic information:</p>
               <p className="mt-1">Timestamp: {new Date().toISOString()}</p>
               <p>Node ID: {node.id}</p>

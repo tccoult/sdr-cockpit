@@ -69,11 +69,23 @@ export function OverviewTab({
       <section>
         <SectionHeader icon={<Activity size={16} />} title="Performance" />
         <div className="space-y-2">
-          <MetricRow label="Data Rate" value={`${dataFps} FPS`} status="healthy" />
+          <MetricRow
+            label="Data Rate"
+            value={`${dataFps} FPS`}
+            status={dataFps === 0 ? 'error' : dataFps < 30 ? 'warning' : 'healthy'}
+          />
           <MetricRow
             label="Render Rate"
             value={renderFps > 0 ? `${renderFps.toFixed(1)} FPS` : '—'}
-            status={renderFps > 0 && renderFps < 30 ? 'warning' : 'healthy'}
+            status={
+              renderFps === 0
+                ? 'unknown'
+                : renderFps < 30
+                ? 'warning'
+                : renderFps < 45
+                ? 'healthy'
+                : 'healthy'
+            }
           />
           <MetricRow label="Latency" value="—" status="unknown" note="Not implemented" />
         </div>
