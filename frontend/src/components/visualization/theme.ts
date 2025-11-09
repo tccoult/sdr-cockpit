@@ -20,11 +20,20 @@ export interface VisualizationTheme {
 }
 
 /**
- * Get CSS custom property value
+ * Get CSS custom property value (returns RGB string like "124 131 255")
  */
 function getCSSVariable(name: string): string {
-  if (typeof document === 'undefined') return '#7c83ff';
+  if (typeof document === 'undefined') return '';
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/**
+ * Convert RGB string (e.g., "124 131 255") to hex color (e.g., "#7c83ff")
+ */
+function rgbStringToHex(rgb: string): string {
+  const [r, g, b] = rgb.split(' ').map(Number);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return '#7c83ff'; // fallback
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -32,7 +41,7 @@ function getCSSVariable(name: string): string {
  * Values match Tailwind config (viz.* colors)
  */
 export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
-  const accentColor = getCSSVariable('--color-cockpit-accent') || '#7c83ff';
+  const accentColor = rgbStringToHex(getCSSVariable('--color-cockpit-accent') || '124 131 255');
 
   if (isDark) {
     return {

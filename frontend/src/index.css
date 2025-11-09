@@ -13,18 +13,18 @@ html {
   --scroll-track: #e2e8f0;
   --scroll-thumb: #cbd5f5;
 
-  /* Status colors - light mode */
-  --color-status-success: #00B77A;
-  --color-status-warning: #E0B500;
-  --color-status-error: #E53935;
-  --color-status-info: #2979FF;
-  --color-status-transmit: #2979FF;
-  --color-status-recording: #E53935;
-  --color-status-stopped: #5E6270;
+  /* Status colors - light mode (RGB format for Tailwind opacity support) */
+  --color-status-success: 0 183 122;
+  --color-status-warning: 224 181 0;
+  --color-status-error: 229 57 53;
+  --color-status-info: 41 121 255;
+  --color-status-transmit: 41 121 255;
+  --color-status-recording: 229 57 53;
+  --color-status-stopped: 94 98 112;
 
-  /* Cockpit accent - light mode */
-  --color-cockpit-accent: #7C83FF;
-  --color-cockpit-accent-hover: #6870FF;
+  /* Cockpit accent - light mode (RGB format for Tailwind opacity support) */
+  --color-cockpit-accent: 124 131 255;
+  --color-cockpit-accent-hover: 104 112 255;
 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -43,18 +43,18 @@ html {
   --scroll-track: #1f2937;
   --scroll-thumb: #334155;
 
-  /* Status colors - dark mode */
-  --color-status-success: #4CE4B3;
-  --color-status-warning: #E2C15A;
-  --color-status-error: #FF4C4C;
-  --color-status-info: #A1A6FF;
-  --color-status-transmit: #6EC9FF;
-  --color-status-recording: #FF6B9D;
-  --color-status-stopped: #64748b;
+  /* Status colors - dark mode (RGB format for Tailwind opacity support) */
+  --color-status-success: 76 228 179;
+  --color-status-warning: 226 193 90;
+  --color-status-error: 255 76 76;
+  --color-status-info: 161 166 255;
+  --color-status-transmit: 110 201 255;
+  --color-status-recording: 255 107 157;
+  --color-status-stopped: 100 116 139;
 
-  /* Cockpit accent - dark mode */
-  --color-cockpit-accent: #7c83ff;
-  --color-cockpit-accent-hover: #9DA2FF;
+  /* Cockpit accent - dark mode (RGB format for Tailwind opacity support) */
+  --color-cockpit-accent: 124 131 255;
+  --color-cockpit-accent-hover: 157 162 255;
 }
 
 * {

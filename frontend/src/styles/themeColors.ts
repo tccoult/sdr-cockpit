@@ -1,13 +1,13 @@
 /**
  * Theme color utilities for inline styles and dynamic state-based styling.
  *
- * IMPORTANT: Colors are defined via CSS custom properties in index.css.
+ * IMPORTANT: Colors are defined via CSS custom properties in index.css as RGB values.
  * Use Tailwind classes (bg-status-success, text-status-error, etc.) whenever possible.
  * Only use these utilities when inline styles or dynamic class construction is required.
  */
 
 /**
- * Get a CSS custom property value from the current theme
+ * Get a CSS custom property value from the current theme (returns RGB string like "124 131 255")
  */
 function getCSSVariable(name: string): string {
   if (typeof document === 'undefined') return '';
@@ -15,21 +15,30 @@ function getCSSVariable(name: string): string {
 }
 
 /**
- * Get current theme color values (automatically adapts to light/dark mode)
+ * Convert RGB string (e.g., "124 131 255") to hex color (e.g., "#7c83ff")
+ */
+function rgbStringToHex(rgb: string): string {
+  const [r, g, b] = rgb.split(' ').map(Number);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return '#7c83ff'; // fallback
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Get current theme color values as hex (automatically adapts to light/dark mode)
  */
 export const themeColors = {
   status: {
-    get success() { return getCSSVariable('--color-status-success'); },
-    get warning() { return getCSSVariable('--color-status-warning'); },
-    get error() { return getCSSVariable('--color-status-error'); },
-    get info() { return getCSSVariable('--color-status-info'); },
-    get transmit() { return getCSSVariable('--color-status-transmit'); },
-    get recording() { return getCSSVariable('--color-status-recording'); },
-    get stopped() { return getCSSVariable('--color-status-stopped'); },
+    get success() { return rgbStringToHex(getCSSVariable('--color-status-success')); },
+    get warning() { return rgbStringToHex(getCSSVariable('--color-status-warning')); },
+    get error() { return rgbStringToHex(getCSSVariable('--color-status-error')); },
+    get info() { return rgbStringToHex(getCSSVariable('--color-status-info')); },
+    get transmit() { return rgbStringToHex(getCSSVariable('--color-status-transmit')); },
+    get recording() { return rgbStringToHex(getCSSVariable('--color-status-recording')); },
+    get stopped() { return rgbStringToHex(getCSSVariable('--color-status-stopped')); },
   },
   cockpit: {
-    get accent() { return getCSSVariable('--color-cockpit-accent'); },
-    get accentHover() { return getCSSVariable('--color-cockpit-accent-hover'); },
+    get accent() { return rgbStringToHex(getCSSVariable('--color-cockpit-accent')); },
+    get accentHover() { return rgbStringToHex(getCSSVariable('--color-cockpit-accent-hover')); },
   },
 };
 
