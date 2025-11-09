@@ -258,11 +258,9 @@ export const VisualizationView = memo(function VisualizationView({
       {showFFT && (
         <div
           ref={fftContainerRef}
-          className={`${plotContainerClasses} min-h-[200px] sm:min-h-[300px] ${
-            visualizationMode === VisualizationMode.FFT_ONLY
-              ? "flex-none sm:flex-1"
-              : "flex-none sm:flex-[35]"
-          }`}
+          className={`${plotContainerClasses} ${
+            visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]"
+          } sm:min-h-[300px]`}
         >
           {renderStatusOverlay()}
           <FFTDisplay
@@ -283,7 +281,7 @@ export const VisualizationView = memo(function VisualizationView({
       {showWaterfall && (
         <div
           ref={waterfallContainerRef}
-          className={`${plotContainerClasses} flex-none min-h-[240px] sm:flex-[65] sm:min-h-[360px]`}
+          className={`${plotContainerClasses} flex-[65] sm:min-h-[360px]`}
         >
           {renderStatusOverlay()}
           <WaterfallDisplay
@@ -306,7 +304,7 @@ export const VisualizationView = memo(function VisualizationView({
       {showSpectrogram && (
         <div
           ref={spectrogramContainerRef}
-          className={`${plotContainerClasses} flex-none min-h-[400px] sm:flex-1 sm:min-h-[600px]`}
+          className={`${plotContainerClasses} flex-1 sm:min-h-[600px]`}
         >
           {renderStatusOverlay()}
           <SpectrogramDisplay
