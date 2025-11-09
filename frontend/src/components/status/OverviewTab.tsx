@@ -40,11 +40,11 @@ export function OverviewTab({
       <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
         <div className="flex items-center gap-3">
           {healthStatus === 'healthy' ? (
-            <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            <CheckCircle2 className="h-6 w-6 text-status-success" />
           ) : healthStatus === 'warning' ? (
-            <AlertTriangle className="h-6 w-6 text-amber-500" />
+            <AlertTriangle className="h-6 w-6 text-status-warning" />
           ) : healthStatus === 'error' ? (
-            <AlertTriangle className="h-6 w-6 text-red-500" />
+            <AlertTriangle className="h-6 w-6 text-status-error" />
           ) : (
             <Activity className="h-6 w-6 text-slate-500" />
           )}
@@ -117,7 +117,7 @@ export function OverviewTab({
             }
           />
           {streamError && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-300">
+            <div className="rounded-md border border-status-error bg-red-50 p-2 text-xs text-status-error dark:border-status-error/30 dark:bg-status-error/20 dark:text-status-error">
               {streamError}
             </div>
           )}
@@ -178,9 +178,9 @@ interface MetricRowProps {
 
 function MetricRow({ label, value, status, note }: MetricRowProps) {
   const statusColor = {
-    healthy: 'text-emerald-600 dark:text-emerald-400',
-    warning: 'text-amber-600 dark:text-amber-400',
-    error: 'text-red-600 dark:text-red-400',
+    healthy: 'text-status-success dark:text-status-success',
+    warning: 'text-status-warning dark:text-status-warning',
+    error: 'text-status-error dark:text-status-error',
     unknown: 'text-slate-500 dark:text-slate-400',
   }[status]
 

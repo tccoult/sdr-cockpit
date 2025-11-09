@@ -66,7 +66,7 @@ function InfoRow({ label, value, highlight }: InfoRowProps) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      <span className={`text-xs font-semibold ${highlight ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+      <span className={`text-xs font-semibold ${highlight ? 'text-status-success dark:text-status-success' : 'text-slate-900 dark:text-white'}`}>
         {value}
       </span>
     </div>

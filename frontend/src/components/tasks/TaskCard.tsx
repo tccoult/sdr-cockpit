@@ -9,33 +9,33 @@ type TaskCardProps = {
 
 const STATUS_STYLES: Record<Task['status'], { dot: string; badge: string; label: string }> = {
   live: {
-    dot: 'bg-emerald-500 shadow-[0_0_10px_rgba(52,211,153,0.35)] dark:bg-emerald-400',
+    dot: 'bg-status-success shadow-[0_0_10px_rgba(76,228,179,0.35)]',
     badge:
-      'border border-emerald-300 bg-emerald-100 text-emerald-700 shadow-inner shadow-emerald-200/40 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200 dark:shadow-inner dark:shadow-emerald-500/20',
+      'border border-status-success/30 bg-status-success/10 text-status-success shadow-inner shadow-status-success/10 dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success dark:shadow-inner dark:shadow-status-success/20',
     label: 'Live',
   },
   transmitting: {
-    dot: 'bg-sky-500 shadow-[0_0_10px_rgba(56,189,248,0.35)] dark:bg-sky-400',
+    dot: 'bg-status-transmit shadow-[0_0_10px_rgba(110,201,255,0.35)]',
     badge:
-      'border border-sky-300 bg-sky-100 text-sky-700 shadow-inner shadow-sky-200/40 dark:border-sky-400/40 dark:bg-sky-500/10 dark:text-sky-200 dark:shadow-inner dark:shadow-sky-500/20',
+      'border border-status-transmit/30 bg-status-transmit/10 text-status-transmit shadow-inner shadow-status-transmit/10 dark:border-status-transmit/40 dark:bg-status-transmit/15 dark:text-status-transmit dark:shadow-inner dark:shadow-status-transmit/20',
     label: 'Transmitting',
   },
   paused: {
-    dot: 'bg-amber-400',
+    dot: 'bg-status-warning',
     badge:
-      'border border-amber-300 bg-amber-100 text-amber-700 shadow-inner shadow-amber-200/40 dark:border-amber-300/40 dark:bg-amber-200/10 dark:text-amber-100 dark:shadow-inner dark:shadow-amber-200/20',
+      'border border-status-warning/30 bg-status-warning/10 text-status-warning shadow-inner shadow-status-warning/10 dark:border-status-warning/30 dark:bg-status-warning/15 dark:text-status-warning dark:shadow-inner dark:shadow-status-warning/20',
     label: 'Paused',
   },
   stopped: {
-    dot: 'bg-slate-500',
+    dot: 'bg-status-stopped',
     badge:
-      'border border-slate-300 bg-slate-100 text-slate-600 shadow-inner shadow-slate-200/40 dark:border-slate-500/40 dark:bg-slate-600/10 dark:text-slate-200 dark:shadow-inner dark:shadow-slate-900/10',
+      'border border-status-stopped/30 bg-status-stopped/10 text-status-stopped shadow-inner shadow-status-stopped/10 dark:border-status-stopped/40 dark:bg-status-stopped/15 dark:text-status-stopped dark:shadow-inner dark:shadow-slate-900/10',
     label: 'Stopped',
   },
 }
 
 const RECORDING_BADGE =
-  'border border-rose-300 bg-rose-100 text-rose-700 shadow-inner shadow-rose-200/40 dark:border-rose-400/50 dark:bg-rose-500/10 dark:text-rose-100 dark:shadow-inner dark:shadow-rose-500/25'
+  'border border-status-recording/30 bg-status-recording/10 text-status-recording shadow-inner shadow-status-recording/10 dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording dark:shadow-inner dark:shadow-status-recording/25'
 
 export function TaskCard({
   task,

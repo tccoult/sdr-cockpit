@@ -4,7 +4,7 @@ import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { Task } from '../../types/sdr'
 import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
-import { getHealthIndicator } from '../../utils/statusColors'
+import { getHealthIndicator } from '../../styles/themeColors'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 
@@ -159,12 +159,13 @@ export function CompactHeader({
 function getStatusColor(status: Task['status']): string {
   switch (status) {
     case 'live':
+      return 'text-status-success dark:text-status-success'
     case 'transmitting':
-      return 'text-emerald-600 dark:text-emerald-400'
+      return 'text-status-transmit dark:text-status-transmit'
     case 'paused':
-      return 'text-amber-600 dark:text-amber-400'
+      return 'text-status-warning dark:text-status-warning'
     case 'stopped':
-      return 'text-slate-500 dark:text-slate-400'
+      return 'text-status-stopped dark:text-status-stopped'
     default:
       return 'text-slate-600 dark:text-slate-400'
   }
