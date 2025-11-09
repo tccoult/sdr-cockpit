@@ -1,18 +1,26 @@
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
-import { BistResult, BistNode, BistStatus } from '../../types/diagnostics'
-import { TreeView } from '../common/TreeView'
-import { useState } from 'react'
-import { Button } from '../common/Button'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  HelpCircle,
+  Maximize2,
+  Minimize2,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { BistNode, BistResult, BistStatus } from "../../types/diagnostics";
+import { Button } from "../common/Button";
+import { TreeView } from "../common/TreeView";
 
 export interface DiagnosticsTabProps {
-  bistResult: BistResult | null
+  bistResult: BistResult | null;
 }
 
 /**
  * Diagnostics tab showing BIST (Built-In Self Test) results in a tree view.
  */
 export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
-  const [expandAll, setExpandAll] = useState<boolean | null>(null) // null = auto, true = expand all, false = collapse all
+  const [expandAll, setExpandAll] = useState<boolean | null>(null); // null = auto, true = expand all, false = collapse all
 
   if (!bistResult) {
     return (
@@ -27,10 +35,10 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
           </p>
         </div>
       </div>
-    )
+    );
   }
 
-  const { summary, tree } = bistResult
+  const { summary, tree } = bistResult;
 
   return (
     <div className="p-4">
@@ -40,14 +48,16 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
           <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
             Diagnostics Summary
           </h3>
-          <div className="flex flex-wrap items-center gap-8 text-xs">
+          <div className="flex flex-wrap items-center gap-6 text-xs">
             {summary.fail > 0 && (
               <div className="flex items-center gap-1.5">
                 <XCircle size={14} className="text-red-500" />
                 <span className="font-semibold text-red-600 dark:text-red-400">
                   {summary.fail}
                 </span>
-                <span className="font-semibold text-red-600 dark:text-red-400 ml-0.5">FAIL</span>
+                <span className="font-semibold text-red-600 dark:text-red-400 ml-0.5">
+                  FAIL
+                </span>
               </div>
             )}
             {summary.warn > 0 && (
@@ -56,7 +66,9 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
                 <span className="font-semibold text-amber-600 dark:text-amber-400">
                   {summary.warn}
                 </span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400 ml-0.5">WARN</span>
+                <span className="font-semibold text-amber-600 dark:text-amber-400 ml-0.5">
+                  WARN
+                </span>
               </div>
             )}
             <div className="flex items-center gap-1.5">
@@ -64,7 +76,9 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {summary.ok}
               </span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400 ml-0.5">OK</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400 ml-0.5">
+                OK
+              </span>
             </div>
           </div>
         </div>
@@ -97,44 +111,46 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
         {/* BIST Tree */}
         <div className="p-3">
           <TreeView<BistNode>
-            key={expandAll === null ? 'auto' : expandAll ? 'expanded' : 'collapsed'}
+            key={
+              expandAll === null ? "auto" : expandAll ? "expanded" : "collapsed"
+            }
             data={tree}
-            renderNode={(node) => (
-              <BistNodeContent node={node} />
-            )}
+            renderNode={(node) => <BistNodeContent node={node} />}
             defaultExpanded={expandAll === true}
             autoExpandCondition={
               expandAll === null
-                ? (node) => node.status === BistStatus.FAIL || node.status === BistStatus.WARN
+                ? (node) =>
+                    node.status === BistStatus.FAIL ||
+                    node.status === BistStatus.WARN
                 : undefined
             }
           />
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface BistNodeContentProps {
-  node: BistNode
+  node: BistNode;
 }
 
 function BistNodeContent({ node }: BistNodeContentProps) {
-  const [showDetails, setShowDetails] = useState(false)
-  const hasDetails = !!(node.details || node.metrics)
-  const hasChildren = node.children && node.children.length > 0
+  const [showDetails, setShowDetails] = useState(false);
+  const hasDetails = !!(node.details || node.metrics);
+  const hasChildren = node.children && node.children.length > 0;
 
   // Background tint based on status
   const getBgTint = () => {
     switch (node.status) {
       case BistStatus.FAIL:
-        return 'bg-red-50/50 dark:bg-red-950/20'
+        return "bg-red-50/50 dark:bg-red-950/20";
       case BistStatus.WARN:
-        return 'bg-amber-50/50 dark:bg-amber-950/20'
+        return "bg-amber-50/50 dark:bg-amber-950/20";
       default:
-        return ''
+        return "";
     }
-  }
+  };
 
   return (
     <div
@@ -163,13 +179,19 @@ function BistNodeContent({ node }: BistNodeContentProps) {
           {node.metrics && (
             <div className="rounded-md bg-slate-50 p-2 font-mono text-[10px] text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
               {node.metrics.expected && (
-                <div>Expected: {node.metrics.expected} {node.metrics.unit || ''}</div>
+                <div>
+                  Expected: {node.metrics.expected} {node.metrics.unit || ""}
+                </div>
               )}
               {node.metrics.actual && (
-                <div>Actual: {node.metrics.actual} {node.metrics.unit || ''}</div>
+                <div>
+                  Actual: {node.metrics.actual} {node.metrics.unit || ""}
+                </div>
               )}
               {node.metrics.threshold && (
-                <div>Threshold: {node.metrics.threshold} {node.metrics.unit || ''}</div>
+                <div>
+                  Threshold: {node.metrics.threshold} {node.metrics.unit || ""}
+                </div>
               )}
             </div>
           )}
@@ -180,13 +202,18 @@ function BistNodeContent({ node }: BistNodeContentProps) {
             onClick={() => setShowDetails(!showDetails)}
             className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
           >
-            <ChevronRight size={10} className={`transition ${showDetails ? 'rotate-90' : ''}`} />
-            {showDetails ? 'Hide' : 'View'} full detail
+            <ChevronRight
+              size={10}
+              className={`transition ${showDetails ? "rotate-90" : ""}`}
+            />
+            {showDetails ? "Hide" : "View"} full detail
           </button>
 
           {showDetails && (
             <div className="animate-in fade-in slide-in-from-top-1 duration-150 rounded-md border border-slate-200 bg-white p-2 text-[10px] text-slate-700 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300">
-              <p className="font-semibold">Additional diagnostic information:</p>
+              <p className="font-semibold">
+                Additional diagnostic information:
+              </p>
               <p className="mt-1">Timestamp: {new Date().toISOString()}</p>
               <p>Node ID: {node.id}</p>
               <p>Status: {node.status}</p>
@@ -195,33 +222,35 @@ function BistNodeContent({ node }: BistNodeContentProps) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function StatusIcon({ status }: { status: BistStatus }) {
   switch (status) {
     case BistStatus.OK:
-      return <CheckCircle2 size={14} className="text-emerald-500" />
+      return <CheckCircle2 size={14} className="text-emerald-500" />;
     case BistStatus.WARN:
-      return <AlertTriangle size={14} className="text-amber-500" />
+      return <AlertTriangle size={14} className="text-amber-500" />;
     case BistStatus.FAIL:
-      return <XCircle size={14} className="text-red-500" />
+      return <XCircle size={14} className="text-red-500" />;
     case BistStatus.UNKNOWN:
     default:
-      return <HelpCircle size={14} className="text-slate-400" />
+      return <HelpCircle size={14} className="text-slate-400" />;
   }
 }
 
 function getStatusBadge(status: BistStatus) {
   switch (status) {
     case BistStatus.OK:
-      return <span className="text-emerald-600 dark:text-emerald-400">[OK]</span>
+      return (
+        <span className="text-emerald-600 dark:text-emerald-400">[OK]</span>
+      );
     case BistStatus.WARN:
-      return <span className="text-amber-600 dark:text-amber-400">[WARN]</span>
+      return <span className="text-amber-600 dark:text-amber-400">[WARN]</span>;
     case BistStatus.FAIL:
-      return <span className="text-red-600 dark:text-red-400">[FAIL]</span>
+      return <span className="text-red-600 dark:text-red-400">[FAIL]</span>;
     case BistStatus.UNKNOWN:
     default:
-      return <span className="text-slate-500 dark:text-slate-400">[?]</span>
+      return <span className="text-slate-500 dark:text-slate-400">[?]</span>;
   }
 }
