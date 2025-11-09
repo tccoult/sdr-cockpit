@@ -67,8 +67,8 @@ export function Drawer({
 
   if (!isOpen) return null
 
-  const appliedTopOffset = isPinned ? offsetTop : 0
-  const appliedHeight = appliedTopOffset > 0 ? `calc(100vh - ${appliedTopOffset}px)` : '100vh'
+  // Always apply offsetTop so drawer starts below header whether pinned or unpinned
+  const appliedHeight = offsetTop > 0 ? `calc(100vh - ${offsetTop}px)` : '100vh'
 
   const slideAnimation = position === 'left'
     ? 'animate-in slide-in-from-left duration-200'
@@ -92,7 +92,7 @@ export function Drawer({
       <div
         ref={drawerRef}
         className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/20 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/60`}
-        style={{ width, top: appliedTopOffset, height: appliedHeight }}
+        style={{ width, top: offsetTop, height: appliedHeight }}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/50">
