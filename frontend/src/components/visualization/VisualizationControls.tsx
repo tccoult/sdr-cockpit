@@ -39,7 +39,7 @@ export function VisualizationControls({
   return (
     <div
       className={[
-        'flex items-center justify-center gap-4 rounded-lg border px-4 py-2 shadow-inner shadow-white/40',
+        'flex flex-wrap items-center justify-center gap-3 rounded-lg border px-3 py-2 shadow-inner shadow-white/40 sm:gap-4 sm:px-4',
         isDark
           ? 'border-white/10 bg-slate-950/60'
           : 'border-slate-300 bg-slate-50',
@@ -47,7 +47,8 @@ export function VisualizationControls({
     >
       {/* Action Buttons: Interaction Mode + Auto Range */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1">
+        {/* Pan/Zoom toggle - hidden on mobile (touch controls work natively) */}
+        <div className="hidden items-center gap-1 lg:flex">
           <button
             type="button"
             onClick={() => onInteractionModeChange('pan')}
@@ -86,11 +87,11 @@ export function VisualizationControls({
         </Button>
       </div>
 
-      {/* Divider */}
-      <div className="h-6 w-px bg-slate-200 dark:bg-white/20" />
+      {/* Divider - hidden on mobile */}
+      <div className="hidden h-6 w-px bg-slate-200 dark:bg-white/20 lg:block" />
 
       {/* dB Input Controls */}
-      <div className="flex items-center gap-4 text-xs font-medium text-slate-700 dark:text-slate-300">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 sm:gap-4">
         <div className="flex items-center gap-2">
           <label htmlFor="min-db-ctrl">Min dB:</label>
           <input

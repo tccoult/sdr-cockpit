@@ -206,7 +206,7 @@ export const VisualizationView = memo(function VisualizationView({
   }, [visualizationMode]);
 
   const containerClasses = [
-    "flex flex-1 flex-col gap-3 rounded-xl border p-3 min-h-0 overflow-auto",
+    "flex flex-1 flex-col gap-3 rounded-xl border p-3 min-h-0 overflow-hidden",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-300 bg-slate-50 text-slate-900 shadow-2xl shadow-slate-400/60",
