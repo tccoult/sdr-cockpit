@@ -40,31 +40,31 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
           <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
             Diagnostics Summary
           </h3>
-          <div className="flex flex-wrap items-center gap-5 text-xs">
+          <div className="flex flex-wrap items-center gap-8 text-xs">
             {summary.fail > 0 && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <XCircle size={14} className="text-red-500" />
                 <span className="font-semibold text-red-600 dark:text-red-400">
                   {summary.fail}
                 </span>
-                <span className="font-semibold text-red-600 dark:text-red-400">FAIL</span>
+                <span className="font-semibold text-red-600 dark:text-red-400 ml-0.5">FAIL</span>
               </div>
             )}
             {summary.warn > 0 && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <AlertTriangle size={14} className="text-amber-500" />
                 <span className="font-semibold text-amber-600 dark:text-amber-400">
                   {summary.warn}
                 </span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">WARN</span>
+                <span className="font-semibold text-amber-600 dark:text-amber-400 ml-0.5">WARN</span>
               </div>
             )}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <CheckCircle2 size={14} className="text-emerald-500" />
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {summary.ok}
               </span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">OK</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400 ml-0.5">OK</span>
             </div>
           </div>
         </div>
