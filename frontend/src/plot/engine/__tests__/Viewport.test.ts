@@ -20,10 +20,10 @@ describe("createViewport", () => {
 
     viewport.updateDimensions(canvas, 1);
 
-    // Viewport applies margins for axes: left=95, right=15, top=15, bottom=50
-    expect(viewport.rect.width).toBeCloseTo(210); // 320 - 95 - 15
+    // Viewport applies margins for axes: left=85, right=15, top=15, bottom=50
+    expect(viewport.rect.width).toBeCloseTo(220); // 320 - 85 - 15
     expect(viewport.rect.height).toBeCloseTo(115); // 180 - 15 - 50
-    expect(viewport.rect.left).toBeCloseTo(95); // MARGIN_LEFT
+    expect(viewport.rect.left).toBeCloseTo(85); // MARGIN_LEFT
     expect(viewport.rect.top).toBeCloseTo(15); // MARGIN_TOP
   });
 });

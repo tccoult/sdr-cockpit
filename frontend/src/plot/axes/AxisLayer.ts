@@ -165,10 +165,8 @@ function drawAxis(
         const width = ctx.measureText(tick.label).width;
         maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
       }
-      // Reduce padding to bring label closer to graph
-      const reducedPadding = Math.max(4, padding - 4);
       ctx.translate(
-        rect.left - (tickSize + tickLabelPadding) - maxTickLabelWidth - reducedPadding,
+        rect.left - (tickSize + tickLabelPadding) - maxTickLabelWidth - padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(-Math.PI / 2);
@@ -182,9 +180,8 @@ function drawAxis(
         const width = ctx.measureText(tick.label).width;
         maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
       }
-      const reducedPadding = Math.max(4, padding - 4);
       ctx.translate(
-        rect.right + (tickSize + tickLabelPadding) + maxTickLabelWidth + reducedPadding,
+        rect.right + (tickSize + tickLabelPadding) + maxTickLabelWidth + padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(Math.PI / 2);
