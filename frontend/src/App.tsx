@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
 import { Drawer } from "./components/common/Drawer";
+import { MobileNav, MobileView } from "./components/layout/MobileNav";
 import { StatusPanel } from "./components/status/StatusPanel";
 import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
@@ -17,6 +18,8 @@ import { PLASMA } from "./utils/colorMaps";
 import { TaskStatus } from "./types/sdr";
 import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
 import { X } from "lucide-react";
+import { useTheme } from "./components/app/useTheme";
+import { getHealthIndicator } from "./styles/themeColors";
 
 const TASK_DRAWER_WIDTH = 300;
 const STATUS_PANEL_WIDTH = 300;
@@ -24,6 +27,7 @@ const HEADER_HEIGHT = 48;
 
 function App() {
   const colorMap = PLASMA;
+  const { theme, toggleTheme } = useTheme();
 
   // UI state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -32,6 +36,11 @@ function App() {
   const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
   const [isStatusPanelPinned, setIsStatusPanelPinned] = useState(false);
   const [renderFps, setRenderFps] = useState(0);
+
+  // Mobile navigation state
+  const [mobileView, setMobileView] = useState<MobileView>('visualization');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Settings modal state
   const [activeSettingsPanel, setActiveSettingsPanel] = useState<SettingsMenuItem | null>(null);
@@ -85,6 +94,22 @@ function App() {
     }
   }, [isWizardOpen, selectedTaskId]);
 
+  // Detect mobile screen size (< 1024px)
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(e.matches);
+    };
+
+    // Set initial value
+    handleMediaChange(mediaQuery);
+
+    // Listen for changes
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+
   // ESC key handling for modals
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -93,6 +118,8 @@ function App() {
           setActiveSettingsPanel(null);
         } else if (isUpdateWizardOpen) {
           setIsUpdateWizardOpen(false);
+        } else if (isMobileNavOpen) {
+          setIsMobileNavOpen(false);
         } else if (!isStatusPanelPinned && isStatusPanelOpen) {
           setIsStatusPanelOpen(false);
         } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
@@ -103,7 +130,7 @@ function App() {
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [activeSettingsPanel, isUpdateWizardOpen, isStatusPanelOpen, isStatusPanelPinned, isTaskDrawerOpen, isTaskDrawerPinned]);
+  }, [activeSettingsPanel, isUpdateWizardOpen, isMobileNavOpen, isStatusPanelOpen, isStatusPanelPinned, isTaskDrawerOpen, isTaskDrawerPinned]);
 
   // Close unpinned drawers when selecting a task
   const handleSelectTask = (taskId: string) => {
@@ -122,11 +149,29 @@ function App() {
     }
   };
 
-  // Calculate main area margin based on pinned drawers
-  const mainMarginLeft =
-    isTaskDrawerPinned && isTaskDrawerOpen ? `${TASK_DRAWER_WIDTH}px` : "0";
-  const mainMarginRight =
-    isStatusPanelPinned && isStatusPanelOpen ? `${STATUS_PANEL_WIDTH}px` : "0";
+  // Handle hamburger button click (mobile nav or task drawer based on screen size)
+  const handleToggleMenu = () => {
+    if (isMobile) {
+      setIsMobileNavOpen((prev) => !prev);
+    } else {
+      setIsTaskDrawerOpen((prev) => !prev);
+    }
+  };
+
+  // Calculate main area margin based on pinned drawers (desktop only)
+  const mainMarginLeft = isMobile
+    ? "0"
+    : isTaskDrawerPinned && isTaskDrawerOpen
+    ? `${TASK_DRAWER_WIDTH}px`
+    : "0";
+  const mainMarginRight = isMobile
+    ? "0"
+    : isStatusPanelPinned && isStatusPanelOpen
+    ? `${STATUS_PANEL_WIDTH}px`
+    : "0";
+
+  // Get health indicator for mobile nav
+  const healthIndicator = getHealthIndicator(healthStatus);
 
   return (
     <>
@@ -139,7 +184,8 @@ function App() {
           totalTasks={totalTasks}
           healthStatus={healthStatus}
           isStatusPanelOpen={isStatusPanelOpen}
-          onToggleTaskDrawer={() => setIsTaskDrawerOpen((prev) => !prev)}
+          isMobile={isMobile}
+          onToggleTaskDrawer={handleToggleMenu}
           onToggleStatusPanel={() => setIsStatusPanelOpen((prev) => !prev)}
           onOpenSettings={handleSettingsSelect}
         />
@@ -152,97 +198,188 @@ function App() {
             marginRight: mainMarginRight,
           }}
         >
-          {selectedTask ? (
-            <div className="flex h-full w-full flex-col p-2">
-              <VisualizationView
-                taskId={selectedTask.id}
-                centerFreq={selectedTask.frequency}
-                sampleRate={selectedTask.sampleRate}
-                colorMap={colorMap}
-                visualizationMode={selectedTask.visualizationMode}
-                dataError={streamError || undefined}
-                isConnecting={streamStatus === "connecting"}
-                onRenderFpsChange={setRenderFps}
-              />
-            </div>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
-              <div className="text-6xl">📡</div>
-              <div>
-                <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                  No Task Selected
-                </p>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  Select a task from the roster to view spectrum activity.
-                </p>
+          {/* Desktop View: Visualization only */}
+          <div className="hidden h-full lg:block">
+            {selectedTask ? (
+              <div className="flex h-full w-full flex-col p-2">
+                <VisualizationView
+                  taskId={selectedTask.id}
+                  centerFreq={selectedTask.frequency}
+                  sampleRate={selectedTask.sampleRate}
+                  colorMap={colorMap}
+                  visualizationMode={selectedTask.visualizationMode}
+                  dataError={streamError || undefined}
+                  isConnecting={streamStatus === "connecting"}
+                  onRenderFpsChange={setRenderFps}
+                />
               </div>
-              <Button
-                onClick={() => setIsWizardOpen(true)}
-                variant="secondary"
-                size="lg"
-              >
-                + Create New Task
-              </Button>
-            </div>
-          )}
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+                <div className="text-6xl">📡</div>
+                <div>
+                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                    No Task Selected
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Select a task from the roster to view spectrum activity.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setIsWizardOpen(true)}
+                  variant="secondary"
+                  size="lg"
+                >
+                  + Create New Task
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile View: Selected panel only */}
+          <div className="h-full lg:hidden">
+            {mobileView === 'visualization' && (
+              <>
+                {selectedTask ? (
+                  <div className="flex h-full w-full flex-col p-2">
+                    <VisualizationView
+                      taskId={selectedTask.id}
+                      centerFreq={selectedTask.frequency}
+                      sampleRate={selectedTask.sampleRate}
+                      colorMap={colorMap}
+                      visualizationMode={selectedTask.visualizationMode}
+                      dataError={streamError || undefined}
+                      isConnecting={streamStatus === "connecting"}
+                      onRenderFpsChange={setRenderFps}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+                    <div className="text-6xl">📡</div>
+                    <div>
+                      <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                        No Task Selected
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                        Select a task from the Tasks view.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {mobileView === 'tasks' && (
+              <div className="flex h-full flex-col overflow-hidden bg-white dark:bg-slate-900">
+                <div className="border-b border-slate-200 p-4 dark:border-white/10">
+                  <ActiveTaskPanel
+                    task={selectedTask}
+                    onPauseTask={pauseTask}
+                    onStopTask={stopTask}
+                    onRecordTask={startRecording}
+                    onStopRecording={stopRecording}
+                  />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <TaskRosterPanel
+                    tasks={tasks}
+                    selectedTaskId={selectedTaskId}
+                    isDiscovering={isDiscovering}
+                    onSelectTask={selectTask}
+                    onCreateTask={() => setIsWizardOpen(true)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {mobileView === 'status' && (
+              <div className="h-full overflow-auto bg-white dark:bg-slate-900">
+                <StatusPanel
+                  dataFps={fps}
+                  renderFps={renderFps}
+                  totalTasks={totalTasks}
+                  operatorTasks={operatorTasks}
+                  selectedTask={selectedTask}
+                  streamStatus={streamStatus}
+                  streamError={streamError}
+                  healthStatus={healthStatus}
+                  bistResult={bistResult}
+                />
+              </div>
+            )}
+          </div>
         </main>
       </div>
 
-      {/* Task Drawer */}
-      <Drawer
-        isOpen={isTaskDrawerOpen}
-        onClose={() => setIsTaskDrawerOpen(false)}
-        position="left"
-        title="Tasks"
-        isPinned={isTaskDrawerPinned}
-        onTogglePin={() => setIsTaskDrawerPinned((prev) => !prev)}
-        width={`${TASK_DRAWER_WIDTH}px`}
-        offsetTop={HEADER_HEIGHT}
-      >
-        <div className="p-4">
-          <ActiveTaskPanel
-            task={selectedTask}
-            onPauseTask={pauseTask}
-            onStopTask={stopTask}
-            onRecordTask={startRecording}
-            onStopRecording={stopRecording}
-          />
-        </div>
+      {/* Desktop Drawers - hidden on mobile */}
+      <div className="hidden lg:block">
+        {/* Task Drawer */}
+        <Drawer
+          isOpen={isTaskDrawerOpen}
+          onClose={() => setIsTaskDrawerOpen(false)}
+          position="left"
+          title="Tasks"
+          isPinned={isTaskDrawerPinned}
+          onTogglePin={() => setIsTaskDrawerPinned((prev) => !prev)}
+          width={`${TASK_DRAWER_WIDTH}px`}
+          offsetTop={HEADER_HEIGHT}
+        >
+          <div className="p-4">
+            <ActiveTaskPanel
+              task={selectedTask}
+              onPauseTask={pauseTask}
+              onStopTask={stopTask}
+              onRecordTask={startRecording}
+              onStopRecording={stopRecording}
+            />
+          </div>
 
-        <div className="border-t border-slate-200 dark:border-white/10">
-          <TaskRosterPanel
-            tasks={tasks}
-            selectedTaskId={selectedTaskId}
-            isDiscovering={isDiscovering}
-            onSelectTask={handleSelectTask}
-            onCreateTask={() => setIsWizardOpen(true)}
-          />
-        </div>
-      </Drawer>
+          <div className="border-t border-slate-200 dark:border-white/10">
+            <TaskRosterPanel
+              tasks={tasks}
+              selectedTaskId={selectedTaskId}
+              isDiscovering={isDiscovering}
+              onSelectTask={handleSelectTask}
+              onCreateTask={() => setIsWizardOpen(true)}
+            />
+          </div>
+        </Drawer>
 
-      {/* Status Panel Drawer */}
-      <Drawer
-        isOpen={isStatusPanelOpen}
-        onClose={() => setIsStatusPanelOpen(false)}
-        position="right"
-        title="System Status"
-        isPinned={isStatusPanelPinned}
-        onTogglePin={() => setIsStatusPanelPinned((prev) => !prev)}
-        width={`${STATUS_PANEL_WIDTH}px`}
-        offsetTop={HEADER_HEIGHT}
-      >
-        <StatusPanel
-          dataFps={fps}
-          renderFps={renderFps}
-          totalTasks={totalTasks}
-          operatorTasks={operatorTasks}
-          selectedTask={selectedTask}
-          streamStatus={streamStatus}
-          streamError={streamError}
-          healthStatus={healthStatus}
-          bistResult={bistResult}
-        />
-      </Drawer>
+        {/* Status Panel Drawer */}
+        <Drawer
+          isOpen={isStatusPanelOpen}
+          onClose={() => setIsStatusPanelOpen(false)}
+          position="right"
+          title="System Status"
+          isPinned={isStatusPanelPinned}
+          onTogglePin={() => setIsStatusPanelPinned((prev) => !prev)}
+          width={`${STATUS_PANEL_WIDTH}px`}
+          offsetTop={HEADER_HEIGHT}
+        >
+          <StatusPanel
+            dataFps={fps}
+            renderFps={renderFps}
+            totalTasks={totalTasks}
+            operatorTasks={operatorTasks}
+            selectedTask={selectedTask}
+            streamStatus={streamStatus}
+            streamError={streamError}
+            healthStatus={healthStatus}
+            bistResult={bistResult}
+          />
+        </Drawer>
+      </div>
+
+      {/* Mobile Navigation - only on mobile */}
+      <MobileNav
+        isOpen={isMobileNavOpen}
+        onClose={() => setIsMobileNavOpen(false)}
+        currentView={mobileView}
+        onViewChange={setMobileView}
+        onOpenSettings={handleSettingsSelect}
+        isDarkMode={theme === 'dark'}
+        onToggleTheme={toggleTheme}
+        healthIndicator={healthIndicator}
+      />
 
       {/* Task Wizard */}
       <TaskWizard

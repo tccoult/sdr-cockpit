@@ -31,7 +31,7 @@ export function VisualizationControls({
   const isDark = theme === 'dark'
 
   const inputClasses = [
-    'h-8 w-20 rounded-md border px-2 text-xs transition focus:outline-none focus-visible:ring-2',
+    'h-7 w-14 rounded-md border px-1.5 text-xs transition focus:outline-none focus-visible:ring-2 sm:h-8 sm:w-20 sm:px-2',
     'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-500 focus:border-cockpit-accent focus-visible:ring-cockpit-accent/40',
     'dark:border-white/20 dark:bg-slate-900/70 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-white/40 dark:focus-visible:ring-white/40',
   ].join(' ')
@@ -39,15 +39,16 @@ export function VisualizationControls({
   return (
     <div
       className={[
-        'flex items-center justify-center gap-4 rounded-lg border px-4 py-2 shadow-inner shadow-white/40',
+        'flex flex-wrap items-center justify-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] shadow-inner shadow-white/40 sm:gap-3 sm:px-3 sm:py-2 sm:text-xs',
         isDark
           ? 'border-white/10 bg-slate-950/60'
           : 'border-slate-300 bg-slate-50',
       ].join(' ')}
     >
       {/* Action Buttons: Interaction Mode + Auto Range */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        {/* Pan/Zoom toggle - hidden on mobile (touch controls work natively) */}
+        <div className="hidden items-center gap-1 lg:flex">
           <button
             type="button"
             onClick={() => onInteractionModeChange('pan')}
@@ -86,13 +87,13 @@ export function VisualizationControls({
         </Button>
       </div>
 
-      {/* Divider */}
-      <div className="h-6 w-px bg-slate-200 dark:bg-white/20" />
+      {/* Divider - hidden on mobile */}
+      <div className="hidden h-6 w-px bg-slate-200 dark:bg-white/20 lg:block" />
 
       {/* dB Input Controls */}
-      <div className="flex items-center gap-4 text-xs font-medium text-slate-700 dark:text-slate-300">
-        <div className="flex items-center gap-2">
-          <label htmlFor="min-db-ctrl">Min dB:</label>
+      <div className="flex flex-wrap items-center gap-2 font-medium text-slate-700 dark:text-slate-300">
+        <div className="flex items-center gap-1">
+          <label htmlFor="min-db-ctrl" className="text-[10px] sm:text-xs">Min:</label>
           <input
             id="min-db-ctrl"
             type="number"
@@ -102,8 +103,8 @@ export function VisualizationControls({
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor="max-db-ctrl">Max dB:</label>
+        <div className="flex items-center gap-1">
+          <label htmlFor="max-db-ctrl" className="text-[10px] sm:text-xs">Max:</label>
           <input
             id="max-db-ctrl"
             type="number"

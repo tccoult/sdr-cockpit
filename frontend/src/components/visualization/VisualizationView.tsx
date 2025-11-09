@@ -206,14 +206,14 @@ export const VisualizationView = memo(function VisualizationView({
   }, [visualizationMode]);
 
   const containerClasses = [
-    "flex flex-1 flex-col gap-3 rounded-xl border p-3 min-h-0 overflow-auto",
+    "flex flex-1 flex-col gap-2 rounded-xl border p-2 min-h-0 overflow-auto sm:gap-3 sm:p-3",
     isDark
       ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
       : "border-slate-300 bg-slate-50 text-slate-900 shadow-2xl shadow-slate-400/60",
   ].join(" ");
 
   const plotContainerClasses =
-    "rounded-lg border border-slate-300 bg-slate-50 p-3 shadow-inner shadow-slate-300/70 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative";
+    "rounded-lg border border-slate-300 bg-slate-50 p-2 shadow-inner shadow-slate-300/70 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative sm:p-3";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
@@ -260,8 +260,7 @@ export const VisualizationView = memo(function VisualizationView({
           ref={fftContainerRef}
           className={`${plotContainerClasses} ${
             visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]"
-          } min-h-0`}
-          style={{ minHeight: "300px" }}
+          } sm:min-h-[300px]`}
         >
           {renderStatusOverlay()}
           <FFTDisplay
@@ -282,8 +281,7 @@ export const VisualizationView = memo(function VisualizationView({
       {showWaterfall && (
         <div
           ref={waterfallContainerRef}
-          className={`${plotContainerClasses} flex-[65] min-h-0`}
-          style={{ minHeight: "360px" }}
+          className={`${plotContainerClasses} flex-[65] sm:min-h-[360px]`}
         >
           {renderStatusOverlay()}
           <WaterfallDisplay
@@ -306,8 +304,7 @@ export const VisualizationView = memo(function VisualizationView({
       {showSpectrogram && (
         <div
           ref={spectrogramContainerRef}
-          className={`${plotContainerClasses} flex-1 min-h-0`}
-          style={{ minHeight: "600px" }}
+          className={`${plotContainerClasses} flex-1 sm:min-h-[600px]`}
         >
           {renderStatusOverlay()}
           <SpectrogramDisplay
