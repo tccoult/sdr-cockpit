@@ -159,11 +159,16 @@ function drawAxis(
     const padding = config.theme.labelPaddingPx;
     const tickLabelPadding = config.theme.tickLabelPaddingPx;
     if (side === "left") {
-      // Position the axis label further left to account for tick label width
-      // Estimate ~50px for tick labels like "-100.0"
-      const estimatedTickLabelWidth = 50;
+      // Calculate actual max tick label width for accurate positioning
+      let maxTickLabelWidth = 0;
+      for (const tick of ticks) {
+        const width = ctx.measureText(tick.label).width;
+        maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
+      }
+      // Reduce padding to bring label closer to graph
+      const reducedPadding = Math.max(4, padding - 4);
       ctx.translate(
-        rect.left - (tickSize + tickLabelPadding) - estimatedTickLabelWidth - padding,
+        rect.left - (tickSize + tickLabelPadding) - maxTickLabelWidth - reducedPadding,
         rect.top + rect.height / 2
       );
       ctx.rotate(-Math.PI / 2);
@@ -171,8 +176,15 @@ function drawAxis(
       ctx.textBaseline = "top";
       ctx.fillText(label, 0, 0);
     } else if (side === "right") {
+      // Calculate actual max tick label width for accurate positioning
+      let maxTickLabelWidth = 0;
+      for (const tick of ticks) {
+        const width = ctx.measureText(tick.label).width;
+        maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
+      }
+      const reducedPadding = Math.max(4, padding - 4);
       ctx.translate(
-        rect.right + (tickSize + tickLabelPadding) + padding,
+        rect.right + (tickSize + tickLabelPadding) + maxTickLabelWidth + reducedPadding,
         rect.top + rect.height / 2
       );
       ctx.rotate(Math.PI / 2);

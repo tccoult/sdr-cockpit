@@ -101,24 +101,33 @@ export class AxisModel {
 
   /**
    * Calculate the optimal number of ticks based on available space
-   * Only applies to horizontal axes (bottom/top) where label width matters
+   * Applies to both horizontal (width-based) and vertical (height-based) axes
    */
   private getOptimalTickCount(): number {
-    // Only adjust for horizontal axes where label width matters
-    if (this.side !== 'bottom' && this.side !== 'top') {
+    const isHorizontal = this.side === 'bottom' || this.side === 'top';
+    const isVertical = this.side === 'left' || this.side === 'right';
+
+    if (!isHorizontal && !isVertical) {
       return this.targetTicks;
     }
 
-    const labelWidth = this.estimateLabelWidth();
-    const tickLabelPadding = 6; // Default padding from theme
-    const minSpacing = labelWidth + tickLabelPadding * 2; // Add padding on both sides
-
-    // Calculate how many labels can fit with adequate spacing
-    // Use a spacing factor of 1.3 to ensure labels don't touch
-    const maxTicks = Math.floor(this.spanPx / (minSpacing * 1.3));
-
-    // Ensure at least 2 ticks, but no more than the target
-    return Math.max(2, Math.min(this.targetTicks, maxTicks));
+    if (isHorizontal) {
+      // For horizontal axes, check label width
+      const labelWidth = this.estimateLabelWidth();
+      const tickLabelPadding = 6; // Default padding from theme
+      const minSpacing = labelWidth + tickLabelPadding * 2;
+      const maxTicks = Math.floor(this.spanPx / (minSpacing * 1.3));
+      return Math.max(2, Math.min(this.targetTicks, maxTicks));
+    } else {
+      // For vertical axes, check label height
+      const fontSize = parseInt(this.font) || 12;
+      const labelHeight = fontSize;
+      const tickLabelPadding = 6; // Default padding from theme
+      const minSpacing = labelHeight + tickLabelPadding * 2;
+      // Use a spacing factor of 1.5 for vertical to ensure good readability
+      const maxTicks = Math.floor(this.spanPx / (minSpacing * 1.5));
+      return Math.max(2, Math.min(this.targetTicks, maxTicks));
+    }
   }
 
   ticks(): Tick[] {
