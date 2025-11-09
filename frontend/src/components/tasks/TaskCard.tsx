@@ -11,31 +11,31 @@ const STATUS_STYLES: Record<Task['status'], { dot: string; badge: string; label:
   live: {
     dot: 'bg-status-success shadow-[0_0_10px_rgba(76,228,179,0.35)]',
     badge:
-      'border border-status-success/40 bg-status-success/18 text-status-success shadow-inner shadow-status-success/20 dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success dark:shadow-inner dark:shadow-status-success/30',
+      'border border-status-success/30 bg-status-success/12 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success',
     label: 'Live',
   },
   transmitting: {
     dot: 'bg-status-transmit shadow-[0_0_10px_rgba(110,201,255,0.35)]',
     badge:
-      'border border-status-transmit/40 bg-status-transmit/18 text-status-transmit shadow-inner shadow-status-transmit/20 dark:border-status-transmit/40 dark:bg-status-transmit/15 dark:text-status-transmit dark:shadow-inner dark:shadow-status-transmit/30',
+      'border border-status-transmit/30 bg-status-transmit/12 text-status-transmit dark:border-status-transmit/40 dark:bg-status-transmit/15 dark:text-status-transmit',
     label: 'Transmitting',
   },
   paused: {
     dot: 'bg-status-warning',
     badge:
-      'border border-status-warning/40 bg-status-warning/18 text-status-warning shadow-inner shadow-status-warning/20 dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning dark:shadow-inner dark:shadow-status-warning/30',
+      'border border-status-warning/30 bg-status-warning/12 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning',
     label: 'Paused',
   },
   stopped: {
     dot: 'bg-status-stopped',
     badge:
-      'border border-status-stopped/40 bg-status-stopped/18 text-status-stopped shadow-inner shadow-status-stopped/20 dark:border-status-stopped/40 dark:bg-status-stopped/15 dark:text-status-stopped dark:shadow-inner dark:shadow-slate-900/10',
+      'border border-status-stopped/30 bg-status-stopped/12 text-status-stopped dark:border-status-stopped/40 dark:bg-status-stopped/15 dark:text-status-stopped',
     label: 'Stopped',
   },
 }
 
 const RECORDING_BADGE =
-  'border border-status-recording/40 bg-status-recording/18 text-status-recording shadow-inner shadow-status-recording/20 dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording dark:shadow-inner dark:shadow-status-recording/30'
+  'border border-status-recording/30 bg-status-recording/12 text-status-recording dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording'
 
 export function TaskCard({
   task,
@@ -64,8 +64,8 @@ export function TaskCard({
         'group rounded-lg border px-2.5 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60',
         'backdrop-blur-sm bg-white text-slate-900 hover:bg-cockpit-accent/5 dark:bg-slate-900/40 dark:text-slate-100 dark:hover:bg-slate-900/55',
         isSelected
-          ? 'border-cockpit-accent/60 shadow-md shadow-cockpit-glow/40 ring-1 ring-cockpit-accent/40 dark:border-white/30 dark:shadow-lg dark:shadow-black/40 dark:ring-white/30'
-          : 'border-slate-300 hover:border-cockpit-accent/40 dark:border-white/10 dark:hover:border-white/20',
+          ? 'border-slate-900 bg-slate-50 ring-2 ring-slate-900 dark:border-white/30 dark:bg-slate-900/50 dark:shadow-lg dark:shadow-black/40 dark:ring-white/30'
+          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:hover:border-white/20',
       ].join(' ')}
     >
       <div className="flex items-center gap-2.5">

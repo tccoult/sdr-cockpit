@@ -40,13 +40,13 @@ export function CompactHeader({
   const healthIndicator = getHealthIndicator(healthStatus)
 
   return (
-    <header className="relative z-[60] flex h-12 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95">
+    <header className="relative z-[60] flex h-12 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 dark:border-white/10 dark:bg-slate-900/95">
       {/* Left: Menu + Title + Task Info */}
       <div className="flex items-center gap-3 overflow-hidden">
         <button
           type="button"
           onClick={onToggleTaskDrawer}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
           aria-label="Toggle task drawer"
           title="Toggle task drawer"
         >
@@ -84,11 +84,11 @@ export function CompactHeader({
       {/* Right: Telemetry + Settings + Theme + Divider + Status */}
       <div className="flex items-center gap-3">
         {/* FPS Badge */}
-        <div className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs dark:border-white/10 dark:bg-slate-800/50 sm:flex">
+        <div className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-white/10 dark:bg-slate-800/50 sm:flex">
           <span className="font-semibold text-slate-900 dark:text-white">
             {dataFps}
           </span>
-          <span className="text-slate-400 dark:text-slate-600">/</span>
+          <span className="text-slate-300 dark:text-slate-600">/</span>
           <span className="font-semibold text-slate-900 dark:text-white">
             {renderFps > 0 ? renderFps.toFixed(0) : '—'}
           </span>
@@ -99,7 +99,7 @@ export function CompactHeader({
         <button
           type="button"
           onClick={onToggleTaskDrawer}
-          className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs transition hover:bg-slate-100 dark:border-white/10 dark:bg-slate-800/50 dark:hover:bg-slate-800 sm:flex"
+          className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800/50 dark:hover:bg-slate-800 sm:flex"
           title="View tasks"
         >
           <span className="font-semibold text-slate-900 dark:text-white">
@@ -115,7 +115,7 @@ export function CompactHeader({
         <ThemeToggle />
 
         {/* Divider */}
-        <div className="h-6 w-px bg-slate-300 dark:bg-white/20" />
+        <div className="h-6 w-px bg-slate-200 dark:bg-white/20" />
 
         {/* Status Panel Button (wider with label) */}
         <button
