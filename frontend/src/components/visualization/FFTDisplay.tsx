@@ -10,6 +10,7 @@ import {
 import { usePlotRenderFps } from "../../hooks";
 import type { Theme } from "../app/theme-context";
 import type { InteractionMode } from "./VisualizationControls";
+import { getVisualizationTheme } from "./theme";
 
 interface FFTDisplayProps {
   width: number;
@@ -40,31 +41,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   interactionMode,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
-
-  const plotColors = useMemo(() => {
-    if (isDark) {
-      return {
-        background: "rgba(10, 10, 15, 0.85)",
-        gridColor: "rgba(255, 255, 255, 0.12)",
-        textColor: "#ffffff",
-        axisColor: "rgba(255, 255, 255, 0.4)",
-        traceColor: "#FF00FF",
-        tooltipBackground: "rgba(20, 20, 30, 0.95)",
-        tooltipBorder: "rgba(255, 255, 255, 0.2)",
-        tooltipText: "#ffffff",
-      };
-    }
-    return {
-      background: "rgba(248, 250, 252, 0.98)",
-      gridColor: "rgba(15, 23, 42, 0.12)",
-      textColor: "#0f172a",
-      axisColor: "rgba(15, 23, 42, 0.85)",
-      traceColor: "#7c3aed",
-      tooltipBackground: "rgba(255, 255, 255, 0.98)",
-      tooltipBorder: "rgba(15, 23, 42, 0.18)",
-      tooltipText: "#0f172a",
-    };
-  }, [isDark]);
+  const plotColors = useMemo(() => getVisualizationTheme(isDark), [isDark]);
 
   const plotOptions = useMemo<PlotCreationOptions>(
     () => ({

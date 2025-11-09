@@ -4,6 +4,7 @@ import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { Task } from '../../types/sdr'
 import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
+import { getHealthIndicator } from '../../utils/statusColors'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 
@@ -166,39 +167,5 @@ function getStatusColor(status: Task['status']): string {
       return 'text-slate-500 dark:text-slate-400'
     default:
       return 'text-slate-600 dark:text-slate-400'
-  }
-}
-
-function getHealthIndicator(status: HealthStatus) {
-  switch (status) {
-    case 'healthy':
-      return {
-        dotColor: '#10b981', // emerald-500
-        bgColor: 'rgba(16, 185, 129, 0.1)',
-        borderColor: 'rgba(16, 185, 129, 0.3)',
-        glow: '0 0 8px rgba(16, 185, 129, 0.4)',
-      }
-    case 'warning':
-      return {
-        dotColor: '#f59e0b', // amber-500
-        bgColor: 'rgba(245, 158, 11, 0.1)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
-        glow: '0 0 8px rgba(245, 158, 11, 0.4)',
-      }
-    case 'error':
-      return {
-        dotColor: '#ef4444', // red-500
-        bgColor: 'rgba(239, 68, 68, 0.1)',
-        borderColor: 'rgba(239, 68, 68, 0.3)',
-        glow: '0 0 8px rgba(239, 68, 68, 0.4)',
-      }
-    case 'unknown':
-    default:
-      return {
-        dotColor: '#64748b', // slate-500
-        bgColor: 'rgba(100, 116, 139, 0.1)',
-        borderColor: 'rgba(100, 116, 139, 0.3)',
-        glow: 'none',
-      }
   }
 }

@@ -18,7 +18,7 @@ export function ApiModeIndicator() {
         <div
           className={`h-2 w-2 rounded-full ${
             isOnline
-              ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]'
+              ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
               : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
           }`}
         />
