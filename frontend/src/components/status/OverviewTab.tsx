@@ -117,7 +117,7 @@ export function OverviewTab({
             }
           />
           {streamError && (
-            <div className="rounded-md border border-status-error bg-red-50 p-2 text-xs text-status-error dark:border-status-error/30 dark:bg-status-error/20 dark:text-status-error">
+            <div className="rounded-md border border-status-error/40 bg-status-error/10 p-2 text-xs text-status-error dark:border-status-error/30 dark:bg-status-error/20 dark:text-status-error">
               {streamError}
             </div>
           )}
@@ -185,7 +185,7 @@ function MetricRow({ label, value, status, note }: MetricRowProps) {
   }[status]
 
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-slate-900/50">
+    <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-slate-900/50">
       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
       <div className="flex items-center gap-2">
         {note && (

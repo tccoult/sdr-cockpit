@@ -8,10 +8,10 @@ html {
 
 :root {
   color-scheme: light;
-  --bg-body: radial-gradient(circle at 20% 20%, #f6f8ff 0%, #e2e8f0 50%, #d7dee9 100%);
+  --bg-body: #fafafa;
   --text-color: #0f172a;
-  --scroll-track: #e2e8f0;
-  --scroll-thumb: #cbd5f5;
+  --scroll-track: #f5f5f5;
+  --scroll-thumb: #d4d4d4;
 
   /* Status colors - light mode (RGB format for Tailwind opacity support) */
   --color-status-success: 0 183 122;

@@ -25,7 +25,7 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
       return {
         badgeClass:
-          "border-status-success/40 bg-status-success/10 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
+          "border-status-success/30 bg-status-success/12 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
         dotClass: "bg-status-success dark:bg-status-success animate-pulse",
       };
     }
@@ -33,15 +33,15 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
-          "border-status-warning/40 bg-status-warning/10 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+          "border-status-warning/30 bg-status-warning/12 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
         dotClass: "bg-status-warning",
       };
     }
 
     return {
       badgeClass:
-        "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-200",
-      dotClass: "bg-slate-500 dark:bg-slate-300",
+        "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-200",
+      dotClass: "bg-slate-400 dark:bg-slate-300",
     };
   })();
 
@@ -144,7 +144,7 @@ export function ActiveTaskPanel({
                     : onRecordTask(task.id)
                 }
                 size="sm"
-                variant={task.recording?.isRecording ? "secondary" : "primary"}
+                variant="secondary"
                 className="px-2 py-1"
               >
                 {task.recording?.isRecording ? (
