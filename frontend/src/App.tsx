@@ -184,6 +184,7 @@ function App() {
           totalTasks={totalTasks}
           healthStatus={healthStatus}
           isStatusPanelOpen={isStatusPanelOpen}
+          isMobile={isMobile}
           onToggleTaskDrawer={handleToggleMenu}
           onToggleStatusPanel={() => setIsStatusPanelOpen((prev) => !prev)}
           onOpenSettings={handleSettingsSelect}

@@ -32,16 +32,16 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition ${
         isActive
-          ? 'bg-cockpit-accent/10 text-cockpit-accent dark:bg-cockpit-accent/20'
+          ? 'bg-slate-100 text-slate-900 dark:bg-cockpit-accent/20 dark:text-white'
           : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
       }`}
     >
-      <span className={isActive ? 'text-cockpit-accent' : 'text-slate-500 dark:text-slate-400'}>
+      <span className={isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}>
         {icon}
       </span>
       <span className="font-medium">{label}</span>
       {isActive && (
-        <span className="ml-auto h-2 w-2 rounded-full bg-cockpit-accent" />
+        <span className="ml-auto h-2 w-2 rounded-full bg-slate-900 dark:bg-white" />
       )}
     </button>
   )

@@ -15,6 +15,7 @@ export interface CompactHeaderProps {
   totalTasks: number
   healthStatus: HealthStatus
   isStatusPanelOpen?: boolean
+  isMobile?: boolean
   onToggleTaskDrawer: () => void
   onToggleStatusPanel: () => void
   onOpenSettings: (item: SettingsMenuItem) => void
@@ -31,6 +32,7 @@ export function CompactHeader({
   totalTasks,
   healthStatus,
   isStatusPanelOpen = false,
+  isMobile = false,
   onToggleTaskDrawer,
   onToggleStatusPanel,
   onOpenSettings,
@@ -127,11 +129,11 @@ export function CompactHeader({
           onClick={onToggleStatusPanel}
           className={`flex h-8 items-center gap-1 rounded-md border px-3 transition-all duration-150 ease-in-out hover:brightness-110 lg:gap-1 lg:px-3`}
           style={{
-            borderColor: isStatusPanelOpen
+            borderColor: isStatusPanelOpen && !isMobile
               ? healthIndicator.dotColor
               : healthIndicator.borderColor,
             backgroundColor: healthIndicator.bgColor,
-            boxShadow: isStatusPanelOpen
+            boxShadow: isStatusPanelOpen && !isMobile
               ? `0 0 0 2px ${healthIndicator.dotColor}40`
               : undefined,
           }}
