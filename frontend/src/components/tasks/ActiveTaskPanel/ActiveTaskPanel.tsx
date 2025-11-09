@@ -25,7 +25,7 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
       return {
         badgeClass:
-          "border-status-success/40 bg-status-success/10 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
+          "border-status-success/40 bg-status-success/18 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
         dotClass: "bg-status-success dark:bg-status-success animate-pulse",
       };
     }
@@ -33,7 +33,7 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
-          "border-status-warning/40 bg-status-warning/10 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+          "border-status-warning/40 bg-status-warning/18 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
         dotClass: "bg-status-warning",
       };
     }

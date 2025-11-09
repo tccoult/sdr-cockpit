@@ -42,7 +42,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
   return (
     <div className="p-4">
-      <div className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
+      <div className="rounded-lg border border-slate-300 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900/50">
         {/* Summary Header */}
         <div className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
@@ -84,10 +84,10 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-slate-200 dark:border-white/10" />
+        <div className="border-t border-slate-300 dark:border-white/10" />
 
         {/* Expand/Collapse Controls */}
-        <div className="flex items-center justify-center gap-3 border-b border-slate-200 px-4 py-3 dark:border-white/10">
+        <div className="flex items-center justify-center gap-3 border-b border-slate-300 px-4 py-3 dark:border-white/10">
           <Button
             size="sm"
             variant="subtle"
@@ -140,13 +140,13 @@ function BistNodeContent({ node }: BistNodeContentProps) {
   const hasDetails = !!(node.details || node.metrics);
   const hasChildren = node.children && node.children.length > 0;
 
-  // Background tint based on status
+  // Background tint based on status - subtle highlight
   const getBgTint = () => {
     switch (node.status) {
       case BistStatus.FAIL:
-        return "bg-red-50/50 dark:bg-status-error/20";
+        return "bg-status-error/8 dark:bg-status-error/8";
       case BistStatus.WARN:
-        return "bg-status-warning/50 dark:bg-status-warning/20";
+        return "bg-status-warning/8 dark:bg-status-warning/8";
       default:
         return "";
     }
@@ -177,7 +177,7 @@ function BistNodeContent({ node }: BistNodeContentProps) {
           )}
 
           {node.metrics && (
-            <div className="rounded-md bg-slate-50 p-2 font-mono text-[10px] text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
+            <div className="rounded-md bg-white/80 p-2 font-mono text-[10px] text-slate-700 border border-slate-200/60 dark:bg-slate-800/70 dark:text-slate-300 dark:border-white/10">
               {node.metrics.expected && (
                 <div>
                   Expected: {node.metrics.expected} {node.metrics.unit || ""}

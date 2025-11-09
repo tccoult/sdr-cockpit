@@ -39,7 +39,7 @@ export function StatusPanel({
   return (
     <div className="flex h-full flex-col">
       {/* Tab Navigation - Sticky */}
-      <div className="sticky top-0 z-10 flex border-b border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900">
+      <div className="sticky top-0 z-10 flex border-b border-slate-300 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
         <TabButton
           active={activeTab === "overview"}
           onClick={() => setActiveTab("overview")}
