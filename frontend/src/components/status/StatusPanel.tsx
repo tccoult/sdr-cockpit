@@ -94,8 +94,8 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
       onClick={onClick}
       className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-all duration-150 ease-in-out ${
         active
-          ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-          : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+          ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white'
+          : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
       }`}
     >
       {children}
