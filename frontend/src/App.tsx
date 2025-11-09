@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
 import { Drawer } from "./components/common/Drawer";
-import { HealthDrawer } from "./components/health/HealthDrawer";
+import { StatusPanel } from "./components/status/StatusPanel";
 import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
+import { SettingsMenuItem } from "./components/settings/SettingsMenu";
+import { SystemSettings } from "./components/settings/SystemSettings";
+import { DisplaySettings } from "./components/settings/DisplaySettings";
+import { VersionInfo } from "./components/settings/VersionInfo";
+import { SystemUpdateWizard } from "./components/settings/SystemUpdateWizard";
 import { useDataStream, useTasks } from "./hooks";
 import { VisualizationView } from "./components/visualization/VisualizationView";
 import { Button } from "./components/common/Button";
 import { PLASMA } from "./utils/colorMaps";
 import { TaskStatus } from "./types/sdr";
+import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
+import { X } from "lucide-react";
 
 const TASK_DRAWER_WIDTH = 300;
-const HEALTH_DRAWER_WIDTH = 300;
+const STATUS_PANEL_WIDTH = 300;
 const HEADER_HEIGHT = 48;
 
 function App() {
@@ -21,10 +28,18 @@ function App() {
   // UI state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
-  const [isHealthDrawerOpen, setIsHealthDrawerOpen] = useState(false);
+  const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false);
   const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
-  const [isHealthDrawerPinned, setIsHealthDrawerPinned] = useState(false);
+  const [isStatusPanelPinned, setIsStatusPanelPinned] = useState(false);
   const [renderFps, setRenderFps] = useState(0);
+
+  // Settings modal state
+  const [activeSettingsPanel, setActiveSettingsPanel] = useState<SettingsMenuItem | null>(null);
+  const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
+
+  // Mock data
+  const bistResult = getMockBistResult();
+  const systemInfo = getMockSystemInfo();
 
   // Task management hook
   const {
@@ -70,6 +85,26 @@ function App() {
     }
   }, [isWizardOpen, selectedTaskId]);
 
+  // ESC key handling for modals
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeSettingsPanel) {
+          setActiveSettingsPanel(null);
+        } else if (isUpdateWizardOpen) {
+          setIsUpdateWizardOpen(false);
+        } else if (!isStatusPanelPinned && isStatusPanelOpen) {
+          setIsStatusPanelOpen(false);
+        } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
+          setIsTaskDrawerOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [activeSettingsPanel, isUpdateWizardOpen, isStatusPanelOpen, isStatusPanelPinned, isTaskDrawerOpen, isTaskDrawerPinned]);
+
   // Close unpinned drawers when selecting a task
   const handleSelectTask = (taskId: string) => {
     selectTask(taskId);
@@ -78,11 +113,20 @@ function App() {
     }
   };
 
+  // Handle settings menu selection
+  const handleSettingsSelect = (item: SettingsMenuItem) => {
+    if (item === 'update') {
+      setIsUpdateWizardOpen(true);
+    } else {
+      setActiveSettingsPanel(item);
+    }
+  };
+
   // Calculate main area margin based on pinned drawers
   const mainMarginLeft =
     isTaskDrawerPinned && isTaskDrawerOpen ? `${TASK_DRAWER_WIDTH}px` : "0";
   const mainMarginRight =
-    isHealthDrawerPinned && isHealthDrawerOpen ? `${HEALTH_DRAWER_WIDTH}px` : "0";
+    isStatusPanelPinned && isStatusPanelOpen ? `${STATUS_PANEL_WIDTH}px` : "0";
 
   return (
     <>
@@ -94,8 +138,10 @@ function App() {
           renderFps={renderFps}
           totalTasks={totalTasks}
           healthStatus={healthStatus}
+          isStatusPanelOpen={isStatusPanelOpen}
           onToggleTaskDrawer={() => setIsTaskDrawerOpen((prev) => !prev)}
-          onToggleHealthDrawer={() => setIsHealthDrawerOpen((prev) => !prev)}
+          onToggleStatusPanel={() => setIsStatusPanelOpen((prev) => !prev)}
+          onOpenSettings={handleSettingsSelect}
         />
 
         {/* Main Content Area */}
@@ -174,18 +220,18 @@ function App() {
         </div>
       </Drawer>
 
-      {/* Health Drawer */}
+      {/* Status Panel Drawer */}
       <Drawer
-        isOpen={isHealthDrawerOpen}
-        onClose={() => setIsHealthDrawerOpen(false)}
+        isOpen={isStatusPanelOpen}
+        onClose={() => setIsStatusPanelOpen(false)}
         position="right"
-        title="System Health & Telemetry"
-        isPinned={isHealthDrawerPinned}
-        onTogglePin={() => setIsHealthDrawerPinned((prev) => !prev)}
-        width={`${HEALTH_DRAWER_WIDTH}px`}
+        title="System Status"
+        isPinned={isStatusPanelPinned}
+        onTogglePin={() => setIsStatusPanelPinned((prev) => !prev)}
+        width={`${STATUS_PANEL_WIDTH}px`}
         offsetTop={HEADER_HEIGHT}
       >
-        <HealthDrawer
+        <StatusPanel
           dataFps={fps}
           renderFps={renderFps}
           totalTasks={totalTasks}
@@ -194,6 +240,7 @@ function App() {
           streamStatus={streamStatus}
           streamError={streamError}
           healthStatus={healthStatus}
+          bistResult={bistResult}
         />
       </Drawer>
 
@@ -203,6 +250,58 @@ function App() {
         onClose={() => setIsWizardOpen(false)}
         onCreateRxTask={createRxTask}
         onCreateTxTask={createTxTask}
+      />
+
+      {/* Settings Modal */}
+      {activeSettingsPanel && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setActiveSettingsPanel(null)}
+          />
+
+          {/* Modal */}
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {activeSettingsPanel === 'system'
+                  ? 'System Settings'
+                  : activeSettingsPanel === 'display'
+                  ? 'Display Settings'
+                  : 'Version Info'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setActiveSettingsPanel(null)}
+                className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="max-h-[70vh] overflow-y-auto">
+              {activeSettingsPanel === 'system' && <SystemSettings />}
+              {activeSettingsPanel === 'display' && <DisplaySettings />}
+              {activeSettingsPanel === 'version' && (
+                <VersionInfo
+                  versionTree={systemInfo.versionTree}
+                  overallVersion={systemInfo.version}
+                  buildDate={systemInfo.buildDate}
+                  platform={systemInfo.platform}
+                />
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* System Update Wizard */}
+      <SystemUpdateWizard
+        isOpen={isUpdateWizardOpen}
+        onClose={() => setIsUpdateWizardOpen(false)}
       />
     </>
   );

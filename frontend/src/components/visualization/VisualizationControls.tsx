@@ -1,4 +1,4 @@
-import { Hand, ZoomIn, Settings } from 'lucide-react'
+import { Hand, ZoomIn } from 'lucide-react'
 import { Button } from '../common/Button'
 import { useTheme } from '../app/useTheme'
 
@@ -113,19 +113,6 @@ export function VisualizationControls({
           />
         </div>
       </div>
-
-      {/* Divider */}
-      <div className="h-6 w-px bg-slate-200 dark:bg-white/20" />
-
-      {/* Placeholder for future advanced settings */}
-      <button
-        type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-slate-700 transition hover:border-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/20 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-slate-800"
-        title="Display settings (coming soon)"
-        disabled
-      >
-        <Settings size={14} />
-      </button>
     </div>
   )
 }

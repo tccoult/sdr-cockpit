@@ -111,15 +111,16 @@ export function ActiveTaskPanel({
               onClick={() => onPauseTask(task.id)}
               size="sm"
               variant="secondary"
+              className="px-2 py-1"
             >
               {task.status === TaskStatus.PAUSED ? (
                 <>
-                  <Play aria-hidden className="mr-2 h-4 w-4" />
+                  <Play aria-hidden className="mr-1 h-3.5 w-3.5" />
                   Resume
                 </>
               ) : (
                 <>
-                  <Pause aria-hidden className="mr-2 h-4 w-4" />
+                  <Pause aria-hidden className="mr-1 h-3.5 w-3.5" />
                   Pause
                 </>
               )}
@@ -129,8 +130,9 @@ export function ActiveTaskPanel({
               onClick={() => onStopTask(task.id)}
               size="sm"
               variant="secondary"
+              className="px-2 py-1"
             >
-              <Square aria-hidden className="mr-2 h-4 w-4" />
+              <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
               Stop
             </Button>
 
@@ -143,15 +145,16 @@ export function ActiveTaskPanel({
                 }
                 size="sm"
                 variant={task.recording?.isRecording ? "secondary" : "primary"}
+                className="px-2 py-1"
               >
                 {task.recording?.isRecording ? (
                   <>
-                    <Square aria-hidden className="mr-2 h-4 w-4" />
+                    <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
                     Stop Recording
                   </>
                 ) : (
                   <>
-                    <CircleDot aria-hidden className="mr-2 h-4 w-4" />
+                    <CircleDot aria-hidden className="mr-1 h-3.5 w-3.5" />
                     Record
                   </>
                 )}

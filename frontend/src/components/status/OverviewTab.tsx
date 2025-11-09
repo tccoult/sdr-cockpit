@@ -1,9 +1,10 @@
-import { Activity, AlertTriangle, Wifi, HardDrive, Radio, CheckCircle2 } from 'lucide-react'
+import { Activity, AlertTriangle, Wifi, Radio, CheckCircle2, ExternalLink } from 'lucide-react'
 import { Task } from '../../types/sdr'
 import { HealthStatus } from '../layout/CompactHeader'
 import { DataStreamStatus } from '../../api'
+import { Button } from '../common/Button'
 
-export interface HealthDrawerProps {
+export interface OverviewTabProps {
   dataFps: number
   renderFps: number
   totalTasks: number
@@ -15,10 +16,9 @@ export interface HealthDrawerProps {
 }
 
 /**
- * Health and telemetry drawer showing system status, performance metrics,
- * and diagnostic information.
+ * Overview tab showing system health, performance metrics, and quick stats.
  */
-export function HealthDrawer({
+export function OverviewTab({
   dataFps,
   renderFps,
   totalTasks,
@@ -27,7 +27,13 @@ export function HealthDrawer({
   streamStatus,
   streamError,
   healthStatus,
-}: HealthDrawerProps) {
+}: OverviewTabProps) {
+  const handleOpenGrafana = () => {
+    // Open Grafana dashboard in new tab
+    const grafanaUrl = `http://${window.location.hostname}:3000`
+    window.open(grafanaUrl, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Overall Status */}
@@ -63,11 +69,23 @@ export function HealthDrawer({
       <section>
         <SectionHeader icon={<Activity size={16} />} title="Performance" />
         <div className="space-y-2">
-          <MetricRow label="Data Rate" value={`${dataFps} FPS`} status="healthy" />
+          <MetricRow
+            label="Data Rate"
+            value={`${dataFps} FPS`}
+            status={dataFps === 0 ? 'error' : dataFps < 30 ? 'warning' : 'healthy'}
+          />
           <MetricRow
             label="Render Rate"
             value={renderFps > 0 ? `${renderFps.toFixed(1)} FPS` : '—'}
-            status={renderFps > 0 && renderFps < 30 ? 'warning' : 'healthy'}
+            status={
+              renderFps === 0
+                ? 'unknown'
+                : renderFps < 30
+                ? 'warning'
+                : renderFps < 45
+                ? 'healthy'
+                : 'healthy'
+            }
           />
           <MetricRow label="Latency" value="—" status="unknown" note="Not implemented" />
         </div>
@@ -122,48 +140,17 @@ export function HealthDrawer({
         </div>
       </section>
 
-      {/* SDR Hardware */}
-      <section>
-        <SectionHeader icon={<Radio size={16} />} title="SDR Hardware" />
-        <div className="space-y-2">
-          <MetricRow label="Device" value="—" status="unknown" note="Not implemented" />
-          <MetricRow label="Temperature" value="—" status="unknown" note="Not implemented" />
-          <MetricRow label="Buffer Usage" value="—" status="unknown" note="Not implemented" />
-        </div>
+      {/* Grafana Dashboard Link */}
+      <section className="mt-2">
+        <Button
+          onClick={handleOpenGrafana}
+          variant="secondary"
+          className="w-full justify-center gap-2"
+        >
+          <ExternalLink size={14} />
+          Open Grafana Dashboard
+        </Button>
       </section>
-
-      {/* Recording */}
-      {selectedTask?.recording && (
-        <section>
-          <SectionHeader icon={<HardDrive size={16} />} title="Recording" />
-          <div className="space-y-2">
-            <MetricRow
-              label="Status"
-              value={selectedTask.recording.isRecording ? 'Recording' : 'Idle'}
-              status={selectedTask.recording.isRecording ? 'healthy' : 'unknown'}
-            />
-            {selectedTask.recording.isRecording && (
-              <>
-                <MetricRow
-                  label="Duration"
-                  value={`${selectedTask.recording.duration}s`}
-                  status="healthy"
-                />
-                <MetricRow
-                  label="File"
-                  value={selectedTask.recording.filename}
-                  status="healthy"
-                />
-                <MetricRow
-                  label="Size"
-                  value={formatBytes(selectedTask.recording.fileSize)}
-                  status="healthy"
-                />
-              </>
-            )}
-          </div>
-        </section>
-      )}
     </div>
   )
 }
@@ -208,12 +195,4 @@ function MetricRow({ label, value, status, note }: MetricRowProps) {
       </div>
     </div>
   )
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
