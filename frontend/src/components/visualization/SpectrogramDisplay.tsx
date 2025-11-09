@@ -11,6 +11,7 @@ import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import { usePlotRenderFps } from "../../hooks";
 import type { InteractionMode } from "./VisualizationControls";
+import { getVisualizationTheme } from "./theme";
 
 interface SpectrogramDisplayProps {
   width: number;
@@ -40,27 +41,10 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
   interactionMode,
 }: SpectrogramDisplayProps) {
   const isDark = theme === "dark";
-
-  const spectrogramColors = useMemo(() => {
-    if (isDark) {
-      return {
-        background: "rgba(10, 10, 15, 0.95)",
-        axisColor: "rgba(255, 255, 255, 0.4)",
-        textColor: "rgba(255, 255, 255, 0.85)",
-        gridColor: "rgba(255, 255, 255, 0.08)",
-        tooltipBackground: "rgba(0, 0, 0, 0.7)",
-        tooltipText: "#ffffff",
-      };
-    }
-    return {
-      background: "rgba(247, 249, 255, 0.98)",
-      axisColor: "rgba(15, 23, 42, 0.8)",
-      textColor: "#0f172a",
-      gridColor: "rgba(15, 23, 42, 0.12)",
-      tooltipBackground: "rgba(255, 255, 255, 0.95)",
-      tooltipText: "#0f172a",
-    };
-  }, [isDark]);
+  const spectrogramColors = useMemo(
+    () => getVisualizationTheme(isDark),
+    [isDark]
+  );
 
   const plotOptions = useMemo<PlotCreationOptions>(
     () => ({

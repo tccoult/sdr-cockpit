@@ -11,6 +11,7 @@ import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import { usePlotRenderFps } from "../../hooks";
 import type { InteractionMode } from "./VisualizationControls";
+import { getVisualizationTheme } from "./theme";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -45,27 +46,10 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   interactionMode,
 }: WaterfallDisplayProps) {
   const isDark = theme === "dark";
-
-  const waterfallColors = useMemo(() => {
-    if (isDark) {
-      return {
-        background: "rgba(10, 10, 15, 0.95)",
-        axisColor: "rgba(255, 255, 255, 0.4)",
-        textColor: "rgba(255, 255, 255, 0.85)",
-        gridColor: "rgba(255, 255, 255, 0.08)",
-        scaleBackground: "rgba(0, 0, 0, 0.7)",
-        scaleText: "#ffffff",
-      };
-    }
-    return {
-      background: "rgba(247, 249, 255, 0.98)",
-      axisColor: "rgba(15, 23, 42, 0.75)",
-      textColor: "#0f172a",
-      gridColor: "rgba(15, 23, 42, 0.12)",
-      scaleBackground: "rgba(255, 255, 255, 0.92)",
-      scaleText: "#0f172a",
-    };
-  }, [isDark]);
+  const waterfallColors = useMemo(
+    () => getVisualizationTheme(isDark),
+    [isDark]
+  );
 
   const plotOptions = useMemo<PlotCreationOptions>(
     () => ({

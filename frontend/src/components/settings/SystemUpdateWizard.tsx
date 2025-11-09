@@ -294,7 +294,7 @@ function ValidateStep({ fileName, fileSize, progress, message }: ValidateStepPro
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
           <div
-            className="h-full bg-emerald-500 transition-all duration-300"
+            className="h-full bg-status-success transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -313,13 +313,13 @@ interface ConfirmStepProps {
 function ConfirmStep({ fileName, fileSize, onConfirm, onCancel }: ConfirmStepProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/30 dark:bg-emerald-900/20">
-        <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400" />
+      <div className="flex items-center gap-3 rounded-lg border border-status-success bg-emerald-50 p-4 dark:border-status-success/30 dark:bg-status-success/20">
+        <CheckCircle2 size={24} className="text-status-success dark:text-status-success" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-emerald-900 dark:text-emerald-300">
+          <p className="text-sm font-medium text-status-success dark:text-status-success">
             Update package validated
           </p>
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+          <p className="text-xs text-status-success dark:text-status-success">
             Ready to install
           </p>
         </div>
@@ -331,10 +331,10 @@ function ConfirmStep({ fileName, fileSize, onConfirm, onCancel }: ConfirmStepPro
         <InfoRow label="Version" value="1.2.0" />
       </div>
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/30 dark:bg-amber-900/20">
+      <div className="rounded-lg border border-status-warning bg-amber-50 p-3 dark:border-status-warning/30 dark:bg-status-warning/20">
         <div className="flex gap-2">
-          <AlertTriangle size={16} className="flex-shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="text-xs text-amber-900 dark:text-amber-300">
+          <AlertTriangle size={16} className="flex-shrink-0 text-status-warning dark:text-status-warning" />
+          <p className="text-xs text-status-warning dark:text-status-warning">
             The system will be unavailable during the update process. Ensure all tasks are stopped.
           </p>
         </div>
@@ -361,7 +361,7 @@ function InstallStep({ progress, message }: InstallStepProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-center py-6">
-        <Loader2 size={64} className="animate-spin text-emerald-500" />
+        <Loader2 size={64} className="animate-spin text-status-success" />
       </div>
 
       <div className="space-y-2">
@@ -371,7 +371,7 @@ function InstallStep({ progress, message }: InstallStepProps) {
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
           <div
-            className="h-full bg-emerald-500 transition-all duration-300"
+            className="h-full bg-status-success transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -394,7 +394,7 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
   return (
     <div className="space-y-4">
       <div className="flex flex-col items-center gap-4 py-6">
-        <CheckCircle2 size={64} className="text-emerald-500" />
+        <CheckCircle2 size={64} className="text-status-success" />
         <div className="text-center">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
             Update Complete
@@ -407,8 +407,8 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
 
       {rebootCountdown !== null ? (
         <div className="space-y-3">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-900/20">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-300">
+          <div className="rounded-lg border border-status-warning bg-amber-50 p-4 text-center dark:border-status-warning/30 dark:bg-status-warning/20">
+            <p className="text-sm font-medium text-status-warning dark:text-status-warning">
               System rebooting in {rebootCountdown} seconds...
             </p>
           </div>
@@ -416,7 +416,7 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
           <div className="space-y-2">
             <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
               <div
-                className="h-full bg-amber-500 transition-all duration-1000 ease-linear dark:bg-amber-400"
+                className="h-full bg-status-warning transition-all duration-1000 ease-linear dark:bg-status-warning"
                 style={{ width: `${(rebootCountdown / 10) * 100}%` }}
               />
             </div>
@@ -427,10 +427,10 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/30 dark:bg-amber-900/20">
+          <div className="rounded-lg border border-status-warning bg-amber-50 p-3 dark:border-status-warning/30 dark:bg-status-warning/20">
             <div className="flex gap-2">
-              <AlertTriangle size={16} className="flex-shrink-0 text-amber-600 dark:text-amber-400" />
-              <p className="text-xs text-amber-900 dark:text-amber-300">
+              <AlertTriangle size={16} className="flex-shrink-0 text-status-warning dark:text-status-warning" />
+              <p className="text-xs text-status-warning dark:text-status-warning">
                 A system reboot is required to complete the update.
               </p>
             </div>

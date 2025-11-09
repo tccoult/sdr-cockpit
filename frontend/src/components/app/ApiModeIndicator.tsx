@@ -4,10 +4,14 @@
  */
 
 import { getApiMode } from '../../api';
+import { themeColors, hexToRgba } from '../../styles/themeColors';
 
 export function ApiModeIndicator() {
   const mode = getApiMode();
   const isOnline = mode === 'online';
+
+  const dotColor = isOnline ? themeColors.status.success : themeColors.status.warning;
+  const dotShadow = `0 0 8px ${hexToRgba(dotColor, 0.5)}`;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/30 dark:shadow-inner dark:shadow-black/20">
@@ -16,11 +20,11 @@ export function ApiModeIndicator() {
       </p>
       <div className="mt-1 flex items-center gap-2">
         <div
-          className={`h-2 w-2 rounded-full ${
-            isOnline
-              ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]'
-              : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
-          }`}
+          className="h-2 w-2 rounded-full"
+          style={{
+            backgroundColor: dotColor,
+            boxShadow: dotShadow,
+          }}
         />
         <p className="text-lg font-semibold text-slate-900 dark:text-white">
           {isOnline ? 'Online' : 'Offline'}

@@ -233,7 +233,7 @@ export const VisualizationView = memo(function VisualizationView({
             </>
           ) : (
             <>
-              <div className="text-lg font-medium text-red-600 dark:text-red-400">
+              <div className="text-lg font-medium text-status-error dark:text-status-error">
                 Unable to retrieve data
               </div>
               <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">

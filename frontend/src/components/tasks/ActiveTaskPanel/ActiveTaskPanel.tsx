@@ -25,22 +25,22 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
       return {
         badgeClass:
-          "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-200",
-        dotClass: "bg-emerald-500 dark:bg-emerald-400 animate-pulse",
+          "border-status-success/40 bg-status-success/10 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
+        dotClass: "bg-status-success dark:bg-status-success animate-pulse",
       };
     }
 
     if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
-          "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200",
-        dotClass: "bg-amber-300",
+          "border-status-warning/40 bg-status-warning/10 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+        dotClass: "bg-status-warning",
       };
     }
 
     return {
       badgeClass:
-        "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200",
+        "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-200",
       dotClass: "bg-slate-500 dark:bg-slate-300",
     };
   })();

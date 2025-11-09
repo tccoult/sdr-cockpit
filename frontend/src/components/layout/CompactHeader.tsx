@@ -4,6 +4,7 @@ import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { Task } from '../../types/sdr'
 import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
+import { getHealthIndicator } from '../../styles/themeColors'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 
@@ -158,47 +159,14 @@ export function CompactHeader({
 function getStatusColor(status: Task['status']): string {
   switch (status) {
     case 'live':
+      return 'text-status-success dark:text-status-success'
     case 'transmitting':
-      return 'text-emerald-600 dark:text-emerald-400'
+      return 'text-status-transmit dark:text-status-transmit'
     case 'paused':
-      return 'text-amber-600 dark:text-amber-400'
+      return 'text-status-warning dark:text-status-warning'
     case 'stopped':
-      return 'text-slate-500 dark:text-slate-400'
+      return 'text-status-stopped dark:text-status-stopped'
     default:
       return 'text-slate-600 dark:text-slate-400'
-  }
-}
-
-function getHealthIndicator(status: HealthStatus) {
-  switch (status) {
-    case 'healthy':
-      return {
-        dotColor: '#10b981', // emerald-500
-        bgColor: 'rgba(16, 185, 129, 0.1)',
-        borderColor: 'rgba(16, 185, 129, 0.3)',
-        glow: '0 0 8px rgba(16, 185, 129, 0.4)',
-      }
-    case 'warning':
-      return {
-        dotColor: '#f59e0b', // amber-500
-        bgColor: 'rgba(245, 158, 11, 0.1)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
-        glow: '0 0 8px rgba(245, 158, 11, 0.4)',
-      }
-    case 'error':
-      return {
-        dotColor: '#ef4444', // red-500
-        bgColor: 'rgba(239, 68, 68, 0.1)',
-        borderColor: 'rgba(239, 68, 68, 0.3)',
-        glow: '0 0 8px rgba(239, 68, 68, 0.4)',
-      }
-    case 'unknown':
-    default:
-      return {
-        dotColor: '#64748b', // slate-500
-        bgColor: 'rgba(100, 116, 139, 0.1)',
-        borderColor: 'rgba(100, 116, 139, 0.3)',
-        glow: 'none',
-      }
   }
 }

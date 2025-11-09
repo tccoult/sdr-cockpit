@@ -51,32 +51,32 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
           <div className="flex flex-wrap items-center gap-6 text-xs">
             {summary.fail > 0 && (
               <div className="flex items-center gap-1.5">
-                <XCircle size={14} className="text-red-500" />
-                <span className="font-semibold text-red-600 dark:text-red-400">
+                <XCircle size={14} className="text-status-error" />
+                <span className="font-semibold text-status-error dark:text-status-error">
                   {summary.fail}
                 </span>
-                <span className="font-semibold text-red-600 dark:text-red-400 ml-0.5">
+                <span className="font-semibold text-status-error dark:text-status-error ml-0.5">
                   FAIL
                 </span>
               </div>
             )}
             {summary.warn > 0 && (
               <div className="flex items-center gap-1.5">
-                <AlertTriangle size={14} className="text-amber-500" />
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                <AlertTriangle size={14} className="text-status-warning" />
+                <span className="font-semibold text-status-warning dark:text-status-warning">
                   {summary.warn}
                 </span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400 ml-0.5">
+                <span className="font-semibold text-status-warning dark:text-status-warning ml-0.5">
                   WARN
                 </span>
               </div>
             )}
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-500" />
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 size={14} className="text-status-success" />
+              <span className="font-semibold text-status-success dark:text-status-success">
                 {summary.ok}
               </span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400 ml-0.5">
+              <span className="font-semibold text-status-success dark:text-status-success ml-0.5">
                 OK
               </span>
             </div>
@@ -144,9 +144,9 @@ function BistNodeContent({ node }: BistNodeContentProps) {
   const getBgTint = () => {
     switch (node.status) {
       case BistStatus.FAIL:
-        return "bg-red-50/50 dark:bg-red-950/20";
+        return "bg-red-50/50 dark:bg-status-error/20";
       case BistStatus.WARN:
-        return "bg-amber-50/50 dark:bg-amber-950/20";
+        return "bg-status-warning/50 dark:bg-status-warning/20";
       default:
         return "";
     }
@@ -200,7 +200,7 @@ function BistNodeContent({ node }: BistNodeContentProps) {
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+            className="flex items-center gap-1 text-[10px] font-medium text-status-success transition hover:text-status-success dark:text-status-success dark:hover:text-status-success"
           >
             <ChevronRight
               size={10}
@@ -228,11 +228,11 @@ function BistNodeContent({ node }: BistNodeContentProps) {
 function StatusIcon({ status }: { status: BistStatus }) {
   switch (status) {
     case BistStatus.OK:
-      return <CheckCircle2 size={14} className="text-emerald-500" />;
+      return <CheckCircle2 size={14} className="text-status-success" />;
     case BistStatus.WARN:
-      return <AlertTriangle size={14} className="text-amber-500" />;
+      return <AlertTriangle size={14} className="text-status-warning" />;
     case BistStatus.FAIL:
-      return <XCircle size={14} className="text-red-500" />;
+      return <XCircle size={14} className="text-status-error" />;
     case BistStatus.UNKNOWN:
     default:
       return <HelpCircle size={14} className="text-slate-400" />;
@@ -243,12 +243,12 @@ function getStatusBadge(status: BistStatus) {
   switch (status) {
     case BistStatus.OK:
       return (
-        <span className="text-emerald-600 dark:text-emerald-400">[OK]</span>
+        <span className="text-status-success dark:text-status-success">[OK]</span>
       );
     case BistStatus.WARN:
-      return <span className="text-amber-600 dark:text-amber-400">[WARN]</span>;
+      return <span className="text-status-warning dark:text-status-warning">[WARN]</span>;
     case BistStatus.FAIL:
-      return <span className="text-red-600 dark:text-red-400">[FAIL]</span>;
+      return <span className="text-status-error dark:text-status-error">[FAIL]</span>;
     case BistStatus.UNKNOWN:
     default:
       return <span className="text-slate-500 dark:text-slate-400">[?]</span>;

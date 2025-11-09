@@ -12,6 +12,20 @@ html {
   --text-color: #0f172a;
   --scroll-track: #e2e8f0;
   --scroll-thumb: #cbd5f5;
+
+  /* Status colors - light mode (RGB format for Tailwind opacity support) */
+  --color-status-success: 0 183 122;
+  --color-status-warning: 224 181 0;
+  --color-status-error: 229 57 53;
+  --color-status-info: 41 121 255;
+  --color-status-transmit: 41 121 255;
+  --color-status-recording: 229 57 53;
+  --color-status-stopped: 94 98 112;
+
+  /* Cockpit accent - light mode (RGB format for Tailwind opacity support) */
+  --color-cockpit-accent: 124 131 255;
+  --color-cockpit-accent-hover: 104 112 255;
+
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -28,6 +42,19 @@ html {
   --text-color: #f1f5f9;
   --scroll-track: #1f2937;
   --scroll-thumb: #334155;
+
+  /* Status colors - dark mode (RGB format for Tailwind opacity support) */
+  --color-status-success: 76 228 179;
+  --color-status-warning: 226 193 90;
+  --color-status-error: 255 76 76;
+  --color-status-info: 161 166 255;
+  --color-status-transmit: 110 201 255;
+  --color-status-recording: 255 107 157;
+  --color-status-stopped: 100 116 139;
+
+  /* Cockpit accent - dark mode (RGB format for Tailwind opacity support) */
+  --color-cockpit-accent: 124 131 255;
+  --color-cockpit-accent-hover: 157 162 255;
 }
 
 * {

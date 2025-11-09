@@ -37,3 +37,14 @@ When making changes:
   - `./scripts/check-frontend.sh`
   - `./scripts/check-backend.sh`
   - `./scripts/check-simulator.sh`
+
+## Color Usage Guidelines
+
+**IMPORTANT:** Always use Tailwind theme colors from `tailwind.config.js` instead of hardcoded hex values.
+
+- Use `status-*` colors for status indicators (success, warning, error, info, transmit, recording, stopped)
+- Use `cockpit-accent` for brand/interactive elements
+- Use `slate-*` for neutrals
+- Only hardcode colors when absolutely necessary (inline styles with rgba manipulation, canvas rendering)
+
+All theme colors are defined in `frontend/tailwind.config.js`.
