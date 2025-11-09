@@ -9,7 +9,7 @@ export const defaultTheme: PlotTheme = {
   fontSize: 12,
   textColor: "#ffffff",
   axisLineWidth: 1,
-  axisLabelPadding: 10,
+  axisLabelPadding: 18,
   axisTickLabelPadding: 6,
   cursorLineColor: "rgba(255, 255, 255, 0.7)",
   cursorHighlightColor: "#ffff7a",

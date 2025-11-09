@@ -9,9 +9,9 @@ const MIN_SPAN = 1e-12;
  * These can be overridden via ViewportOptions.
  */
 export const DEFAULT_PLOT_MARGINS = {
-  // Left: tick labels (~45px) + tick size (6px) + tick padding (6px) + label padding (10px) + axis label (14px) + buffer (4px) = ~85px
-  // Optimized for compact layout while maintaining readability
-  left: 85,
+  // Left: tick labels (~40px) + tick size (6px) + tick padding (6px) + y-axis label padding (6px) + axis label (14px) = ~72px
+  // Aggressively optimized for mobile/compact layouts
+  left: 70,
   // Right: small padding for aesthetics
   right: 15,
   // Top: small padding for aesthetics
