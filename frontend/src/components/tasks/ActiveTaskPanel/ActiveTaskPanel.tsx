@@ -144,7 +144,7 @@ export function ActiveTaskPanel({
                     : onRecordTask(task.id)
                 }
                 size="sm"
-                variant={task.recording?.isRecording ? "secondary" : "primary"}
+                variant="secondary"
                 className="px-2 py-1"
               >
                 {task.recording?.isRecording ? (
