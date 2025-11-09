@@ -158,11 +158,17 @@ function App() {
     }
   };
 
-  // Calculate main area margin based on pinned drawers
-  const mainMarginLeft =
-    isTaskDrawerPinned && isTaskDrawerOpen ? `${TASK_DRAWER_WIDTH}px` : "0";
-  const mainMarginRight =
-    isStatusPanelPinned && isStatusPanelOpen ? `${STATUS_PANEL_WIDTH}px` : "0";
+  // Calculate main area margin based on pinned drawers (desktop only)
+  const mainMarginLeft = isMobile
+    ? "0"
+    : isTaskDrawerPinned && isTaskDrawerOpen
+    ? `${TASK_DRAWER_WIDTH}px`
+    : "0";
+  const mainMarginRight = isMobile
+    ? "0"
+    : isStatusPanelPinned && isStatusPanelOpen
+    ? `${STATUS_PANEL_WIDTH}px`
+    : "0";
 
   // Get health indicator for mobile nav
   const healthIndicator = getHealthIndicator(healthStatus);
