@@ -12,6 +12,20 @@ html {
   --text-color: #0f172a;
   --scroll-track: #e2e8f0;
   --scroll-thumb: #cbd5f5;
+
+  /* Status colors - light mode */
+  --color-status-success: #00B77A;
+  --color-status-warning: #E0B500;
+  --color-status-error: #E53935;
+  --color-status-info: #2979FF;
+  --color-status-transmit: #2979FF;
+  --color-status-recording: #E53935;
+  --color-status-stopped: #5E6270;
+
+  /* Cockpit accent - light mode */
+  --color-cockpit-accent: #7C83FF;
+  --color-cockpit-accent-hover: #6870FF;
+
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -28,6 +42,19 @@ html {
   --text-color: #f1f5f9;
   --scroll-track: #1f2937;
   --scroll-thumb: #334155;
+
+  /* Status colors - dark mode */
+  --color-status-success: #4CE4B3;
+  --color-status-warning: #E2C15A;
+  --color-status-error: #FF4C4C;
+  --color-status-info: #A1A6FF;
+  --color-status-transmit: #6EC9FF;
+  --color-status-recording: #FF6B9D;
+  --color-status-stopped: #64748b;
+
+  /* Cockpit accent - dark mode */
+  --color-cockpit-accent: #7c83ff;
+  --color-cockpit-accent-hover: #9DA2FF;
 }
 
 * {

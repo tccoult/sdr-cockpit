@@ -1,26 +1,37 @@
 /**
- * Theme color values for use in inline styles and dynamic state-based styling.
+ * Theme color utilities for inline styles and dynamic state-based styling.
  *
- * IMPORTANT: These values MUST match tailwind.config.js
+ * IMPORTANT: Colors are defined via CSS custom properties in index.css.
  * Use Tailwind classes (bg-status-success, text-status-error, etc.) whenever possible.
- * Only use these constants when inline styles or dynamic class construction is required.
+ * Only use these utilities when inline styles or dynamic class construction is required.
  */
 
+/**
+ * Get a CSS custom property value from the current theme
+ */
+function getCSSVariable(name: string): string {
+  if (typeof document === 'undefined') return '';
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/**
+ * Get current theme color values (automatically adapts to light/dark mode)
+ */
 export const themeColors = {
   status: {
-    success: '#4CE4B3',
-    warning: '#E2C15A',
-    error: '#FF4C4C',
-    info: '#A1A6FF',
-    transmit: '#6EC9FF',
-    recording: '#FF6B9D',
-    stopped: '#64748b',
+    get success() { return getCSSVariable('--color-status-success'); },
+    get warning() { return getCSSVariable('--color-status-warning'); },
+    get error() { return getCSSVariable('--color-status-error'); },
+    get info() { return getCSSVariable('--color-status-info'); },
+    get transmit() { return getCSSVariable('--color-status-transmit'); },
+    get recording() { return getCSSVariable('--color-status-recording'); },
+    get stopped() { return getCSSVariable('--color-status-stopped'); },
   },
   cockpit: {
-    accent: '#7c83ff',
-    accentHover: '#9DA2FF',
+    get accent() { return getCSSVariable('--color-cockpit-accent'); },
+    get accentHover() { return getCSSVariable('--color-cockpit-accent-hover'); },
   },
-} as const;
+};
 
 /**
  * Convert hex color to rgba string

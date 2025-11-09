@@ -20,17 +20,27 @@ export interface VisualizationTheme {
 }
 
 /**
+ * Get CSS custom property value
+ */
+function getCSSVariable(name: string): string {
+  if (typeof document === 'undefined') return '#7c83ff';
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/**
  * Get unified theme colors for visualization components
  * Values match Tailwind config (viz.* colors)
  */
 export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
+  const accentColor = getCSSVariable('--color-cockpit-accent') || '#7c83ff';
+
   if (isDark) {
     return {
       background: 'rgba(10, 10, 15, 0.90)', // viz.bg-dark
       gridColor: 'rgba(255, 255, 255, 0.10)', // viz.grid-dark
       textColor: '#f1f5f9', // viz.text-dark
       axisColor: 'rgba(255, 255, 255, 0.40)', // viz.axis-dark
-      traceColor: '#7c83ff', // viz.trace
+      traceColor: accentColor, // viz.trace (from CSS variable)
       tooltipBackground: 'rgba(15, 20, 30, 0.95)', // viz.tooltip-bg-dark
       tooltipBorder: 'rgba(255, 255, 255, 0.20)', // viz.tooltip-border-dark
       tooltipText: '#ffffff',
@@ -43,7 +53,7 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
       gridColor: 'rgba(15, 23, 42, 0.12)', // viz.grid-light
       textColor: '#0f172a', // viz.text-light
       axisColor: 'rgba(15, 23, 42, 0.80)', // viz.axis-light
-      traceColor: '#7c83ff', // viz.trace
+      traceColor: accentColor, // viz.trace (from CSS variable)
       tooltipBackground: 'rgba(255, 255, 255, 0.95)', // viz.tooltip-bg-light
       tooltipBorder: 'rgba(15, 23, 42, 0.18)', // viz.tooltip-border-light
       tooltipText: '#0f172a',
