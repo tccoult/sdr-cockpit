@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import { Button } from '../common/Button'
 import { UpdateStatus, UpdateState } from '../../types/diagnostics'
@@ -24,6 +24,23 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
   })
   const [rebootCountdown, setRebootCountdown] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Prevent ESC from closing during reboot confirmation (step === 'complete' but rebootCountdown === null)
+  const shouldPreventEscClose = step === 'complete' && rebootCountdown === null
+
+  useEffect(() => {
+    if (!isOpen || !shouldPreventEscClose) return
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape, true) // Use capture phase
+    return () => document.removeEventListener('keydown', handleEscape, true)
+  }, [isOpen, shouldPreventEscClose])
 
   if (!isOpen) return null
 
@@ -95,6 +112,10 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
           progress: 100,
           message: 'System rebooting...',
         })
+        // Close dialog after reboot completes
+        setTimeout(() => {
+          handleCancel()
+        }, 1000)
       }
     }, 1000)
   }

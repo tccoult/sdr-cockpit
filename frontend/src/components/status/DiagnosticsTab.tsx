@@ -33,45 +33,47 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
   const { summary, tree } = bistResult
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* Summary Header */}
-      <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
-          Diagnostics Summary
-        </h3>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          {summary.fail > 0 && (
-            <div className="flex items-center gap-1.5">
-              <XCircle size={14} className="text-red-500" />
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                {summary.fail} FAIL
+    <div className="p-4">
+      <div className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
+        {/* Summary Header */}
+        <div className="p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+            Diagnostics Summary
+          </h3>
+          <div className="flex flex-wrap items-center gap-5 text-xs">
+            {summary.fail > 0 && (
+              <div className="flex items-center gap-1">
+                <XCircle size={14} className="text-red-500" />
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  {summary.fail}
+                </span>
+                <span className="font-semibold text-red-600 dark:text-red-400">FAIL</span>
+              </div>
+            )}
+            {summary.warn > 0 && (
+              <div className="flex items-center gap-1">
+                <AlertTriangle size={14} className="text-amber-500" />
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  {summary.warn}
+                </span>
+                <span className="font-semibold text-amber-600 dark:text-amber-400">WARN</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {summary.ok}
               </span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">OK</span>
             </div>
-          )}
-          {summary.warn > 0 && (
-            <div className="flex items-center gap-1.5">
-              <AlertTriangle size={14} className="text-amber-500" />
-              <span className="font-semibold text-amber-600 dark:text-amber-400">
-                {summary.warn} WARN
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 size={14} className="text-emerald-500" />
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-              {summary.ok} OK
-            </span>
           </div>
-          <span className="ml-auto text-slate-500 dark:text-slate-400">
-            Total: {summary.total}
-          </span>
         </div>
-      </section>
 
-      {/* BIST Tree */}
-      <section>
+        {/* Divider */}
+        <div className="border-t border-slate-200 dark:border-white/10" />
+
         {/* Expand/Collapse Controls */}
-        <div className="mb-2 flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center gap-3 border-b border-slate-200 px-4 py-3 dark:border-white/10">
           <Button
             size="sm"
             variant="subtle"
@@ -92,7 +94,8 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
           </Button>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900/50">
+        {/* BIST Tree */}
+        <div className="p-3">
           <TreeView<BistNode>
             key={expandAll === null ? 'auto' : expandAll ? 'expanded' : 'collapsed'}
             data={tree}
@@ -107,7 +110,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
             }
           />
         </div>
-      </section>
+      </div>
     </div>
   )
 }
