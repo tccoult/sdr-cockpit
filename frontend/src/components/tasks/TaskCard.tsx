@@ -11,31 +11,31 @@ const STATUS_STYLES: Record<Task['status'], { dot: string; badge: string; label:
   live: {
     dot: 'bg-status-success shadow-[0_0_10px_rgba(76,228,179,0.35)]',
     badge:
-      'border border-status-success/30 bg-status-success/10 text-status-success shadow-inner shadow-status-success/10 dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success dark:shadow-inner dark:shadow-status-success/20',
+      'border border-status-success/30 bg-status-success/20 text-status-success shadow-inner shadow-status-success/20 dark:border-status-success/40 dark:bg-status-success/25 dark:text-status-success dark:shadow-inner dark:shadow-status-success/30',
     label: 'Live',
   },
   transmitting: {
     dot: 'bg-status-transmit shadow-[0_0_10px_rgba(110,201,255,0.35)]',
     badge:
-      'border border-status-transmit/30 bg-status-transmit/10 text-status-transmit shadow-inner shadow-status-transmit/10 dark:border-status-transmit/40 dark:bg-status-transmit/15 dark:text-status-transmit dark:shadow-inner dark:shadow-status-transmit/20',
+      'border border-status-transmit/30 bg-status-transmit/20 text-status-transmit shadow-inner shadow-status-transmit/20 dark:border-status-transmit/40 dark:bg-status-transmit/25 dark:text-status-transmit dark:shadow-inner dark:shadow-status-transmit/30',
     label: 'Transmitting',
   },
   paused: {
     dot: 'bg-status-warning',
     badge:
-      'border border-status-warning/30 bg-status-warning/10 text-status-warning shadow-inner shadow-status-warning/10 dark:border-status-warning/30 dark:bg-status-warning/15 dark:text-status-warning dark:shadow-inner dark:shadow-status-warning/20',
+      'border border-status-warning/30 bg-status-warning/20 text-status-warning shadow-inner shadow-status-warning/20 dark:border-status-warning/40 dark:bg-status-warning/25 dark:text-status-warning dark:shadow-inner dark:shadow-status-warning/30',
     label: 'Paused',
   },
   stopped: {
     dot: 'bg-status-stopped',
     badge:
-      'border border-status-stopped/30 bg-status-stopped/10 text-status-stopped shadow-inner shadow-status-stopped/10 dark:border-status-stopped/40 dark:bg-status-stopped/15 dark:text-status-stopped dark:shadow-inner dark:shadow-slate-900/10',
+      'border border-status-stopped/30 bg-status-stopped/20 text-status-stopped shadow-inner shadow-status-stopped/20 dark:border-status-stopped/40 dark:bg-status-stopped/25 dark:text-status-stopped dark:shadow-inner dark:shadow-slate-900/10',
     label: 'Stopped',
   },
 }
 
 const RECORDING_BADGE =
-  'border border-status-recording/30 bg-status-recording/10 text-status-recording shadow-inner shadow-status-recording/10 dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording dark:shadow-inner dark:shadow-status-recording/25'
+  'border border-status-recording/30 bg-status-recording/20 text-status-recording shadow-inner shadow-status-recording/20 dark:border-status-recording/50 dark:bg-status-recording/25 dark:text-status-recording dark:shadow-inner dark:shadow-status-recording/30'
 
 export function TaskCard({
   task,
