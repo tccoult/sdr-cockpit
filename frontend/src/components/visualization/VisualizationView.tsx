@@ -205,38 +205,46 @@ export const VisualizationView = memo(function VisualizationView({
     return () => observer.disconnect();
   }, [visualizationMode]);
 
-  const containerClasses = [
-    "flex flex-1 flex-col gap-2 rounded-xl border p-2 min-h-0 overflow-auto sm:gap-3 sm:p-3",
+  const surfaceClasses = [
+    "viz-surface relative flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border px-3 py-3 text-sm sm:px-4 sm:py-4",
     isDark
-      ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
-      : "border-slate-300 bg-slate-50 text-slate-900 shadow-2xl shadow-slate-400/60",
+      ? "bg-viz-bg-dark border-white/5 text-slate-100 shadow-viz-surface-dark"
+      : "bg-viz-bg-light border-slate-200 text-slate-900 shadow-viz-surface-light",
   ].join(" ");
 
-  const plotContainerClasses =
-    "rounded-lg border border-slate-300 bg-slate-50 p-2 shadow-inner shadow-slate-300/70 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative sm:p-3";
+  const sectionBaseClasses =
+    "relative flex flex-col overflow-hidden min-h-[220px]";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
       return null;
     }
+
+    const overlayClasses = [
+      "absolute inset-0 z-20 flex items-center justify-center rounded-2xl border backdrop-blur-sm",
+      isDark
+        ? "border-white/5 bg-[#0E1018]/85 text-slate-100"
+        : "border-slate-200 bg-[#F5F6F8]/90 text-slate-900",
+    ].join(" ");
+
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 backdrop-blur-sm rounded-lg z-10">
-        <div className="text-center px-4">
+      <div className={overlayClasses}>
+        <div className="px-4 text-center">
           {isConnecting ? (
             <>
-              <div className="text-lg font-medium text-slate-800 dark:text-slate-200">
+              <div className="text-base font-semibold sm:text-lg">
                 Connecting to data stream...
               </div>
-              <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
                 Please wait
               </div>
             </>
           ) : (
             <>
-              <div className="text-lg font-medium text-status-error dark:text-status-error">
+              <div className="text-base font-semibold text-status-error sm:text-lg">
                 Unable to retrieve data
               </div>
-              <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
                 {dataError || "Connection to data stream failed"}
               </div>
             </>
@@ -252,76 +260,80 @@ export const VisualizationView = memo(function VisualizationView({
     visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showWaterfall = visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showSpectrogram = visualizationMode === VisualizationMode.SPECTROGRAM;
+  const fftSectionClasses = [
+    sectionBaseClasses,
+    visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]",
+    "min-h-[220px] sm:min-h-[300px]",
+  ].join(" ");
+  const waterfallSectionClasses = [
+    sectionBaseClasses,
+    "flex-[65] sm:min-h-[360px]",
+  ].join(" ");
+  const spectrogramSectionClasses = [
+    sectionBaseClasses,
+    "flex-1 sm:min-h-[600px]",
+  ].join(" ");
 
   return (
-    <div ref={containerRef} className={containerClasses}>
-      {showFFT && (
-        <div
-          ref={fftContainerRef}
-          className={`${plotContainerClasses} ${
-            visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]"
-          } sm:min-h-[300px]`}
-        >
-          {renderStatusOverlay()}
-          <FFTDisplay
-            width={Math.max(fftSize.width, 0)}
-            height={Math.max(fftSize.height, 180)}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={viewDataKey}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-            theme={theme}
-            onRenderFpsChange={setFftRenderFps}
-            interactionMode={interactionMode}
-          />
-        </div>
-      )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={containerRef} className={surfaceClasses}>
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          {showFFT && (
+            <div ref={fftContainerRef} className={fftSectionClasses}>
+              <FFTDisplay
+                width={Math.max(fftSize.width, 0)}
+                height={Math.max(fftSize.height, 180)}
+                minDb={minDb}
+                maxDb={maxDb}
+                frequencyRange={frequencyRange}
+                dataKey={viewDataKey}
+                onFrequencyRangeChange={handleFrequencyRangeChange}
+                theme={theme}
+                onRenderFpsChange={setFftRenderFps}
+                interactionMode={interactionMode}
+              />
+            </div>
+          )}
 
-      {showWaterfall && (
-        <div
-          ref={waterfallContainerRef}
-          className={`${plotContainerClasses} flex-[65] sm:min-h-[360px]`}
-        >
-          {renderStatusOverlay()}
-          <WaterfallDisplay
-            width={Math.max(waterfallSize.width, 0)}
-            height={waterfallSize.height > 0 ? waterfallSize.height : 240}
-            colorMap={colorMap}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={viewDataKey}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-            theme={theme}
-            resetYKey={waterfallResetKey}
-            onRenderFpsChange={setWaterfallRenderFps}
-            interactionMode={interactionMode}
-          />
-        </div>
-      )}
+          {showWaterfall && (
+            <div ref={waterfallContainerRef} className={waterfallSectionClasses}>
+              <WaterfallDisplay
+                width={Math.max(waterfallSize.width, 0)}
+                height={waterfallSize.height > 0 ? waterfallSize.height : 240}
+                colorMap={colorMap}
+                minDb={minDb}
+                maxDb={maxDb}
+                frequencyRange={frequencyRange}
+                dataKey={viewDataKey}
+                onFrequencyRangeChange={handleFrequencyRangeChange}
+                theme={theme}
+                resetYKey={waterfallResetKey}
+                onRenderFpsChange={setWaterfallRenderFps}
+                interactionMode={interactionMode}
+              />
+            </div>
+          )}
 
-      {showSpectrogram && (
-        <div
-          ref={spectrogramContainerRef}
-          className={`${plotContainerClasses} flex-1 sm:min-h-[600px]`}
-        >
-          {renderStatusOverlay()}
-          <SpectrogramDisplay
-            width={Math.max(spectrogramSize.width, 0)}
-            height={Math.max(spectrogramSize.height, 360)}
-            colorMap={colorMap}
-            minDb={minDb}
-            maxDb={maxDb}
-            frequencyRange={frequencyRange}
-            dataKey={viewDataKey}
-            onFrequencyRangeChange={handleFrequencyRangeChange}
-            theme={theme}
-            onRenderFpsChange={setSpectrogramRenderFps}
-            interactionMode={interactionMode}
-          />
+          {showSpectrogram && (
+            <div ref={spectrogramContainerRef} className={spectrogramSectionClasses}>
+              <SpectrogramDisplay
+                width={Math.max(spectrogramSize.width, 0)}
+                height={Math.max(spectrogramSize.height, 360)}
+                colorMap={colorMap}
+                minDb={minDb}
+                maxDb={maxDb}
+                frequencyRange={frequencyRange}
+                dataKey={viewDataKey}
+                onFrequencyRangeChange={handleFrequencyRangeChange}
+                theme={theme}
+                onRenderFpsChange={setSpectrogramRenderFps}
+                interactionMode={interactionMode}
+              />
+            </div>
+          )}
         </div>
-      )}
+        {renderStatusOverlay()}
+      </div>
 
       <VisualizationControls
         interactionMode={interactionMode}

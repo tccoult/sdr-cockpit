@@ -348,8 +348,6 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         position: "relative",
         width,
         height,
-        background: waterfallColors.background,
-        borderRadius: 4,
         overflow: "hidden",
       }}
     >

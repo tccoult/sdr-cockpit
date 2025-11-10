@@ -262,8 +262,6 @@ export const FFTDisplay = memo(function FFTDisplay({
         position: "relative",
         width,
         height,
-        background: plotColors.background,
-        borderRadius: 4,
         overflow: "hidden",
       }}
     >

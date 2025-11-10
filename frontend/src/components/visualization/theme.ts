@@ -41,33 +41,35 @@ function rgbStringToHex(rgb: string): string {
  * Values match Tailwind config (viz.* colors)
  */
 export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
-  const accentColor = rgbStringToHex(getCSSVariable('--color-cockpit-accent') || '124 131 255');
+  const accentColor =
+    rgbStringToHex(getCSSVariable('--color-cockpit-accent') || '124 131 255') ||
+    '#7C83FF';
 
   if (isDark) {
     return {
-      background: 'rgba(10, 10, 15, 0.90)', // viz.bg-dark
-      gridColor: 'rgba(255, 255, 255, 0.10)', // viz.grid-dark
-      textColor: '#f1f5f9', // viz.text-dark
-      axisColor: 'rgba(255, 255, 255, 0.40)', // viz.axis-dark
-      traceColor: accentColor, // viz.trace (from CSS variable)
-      tooltipBackground: 'rgba(15, 20, 30, 0.95)', // viz.tooltip-bg-dark
-      tooltipBorder: 'rgba(255, 255, 255, 0.20)', // viz.tooltip-border-dark
-      tooltipText: '#ffffff',
-      scaleBackground: 'rgba(0, 0, 0, 0.70)', // viz.scale-bg-dark
-      scaleText: '#ffffff',
-    };
-  } else {
-    return {
-      background: 'rgba(247, 249, 255, 0.98)', // viz.bg-light
-      gridColor: 'rgba(15, 23, 42, 0.12)', // viz.grid-light
-      textColor: '#0f172a', // viz.text-light
-      axisColor: 'rgba(15, 23, 42, 0.80)', // viz.axis-light
-      traceColor: accentColor, // viz.trace (from CSS variable)
-      tooltipBackground: 'rgba(255, 255, 255, 0.95)', // viz.tooltip-bg-light
-      tooltipBorder: 'rgba(15, 23, 42, 0.18)', // viz.tooltip-border-light
-      tooltipText: '#0f172a',
-      scaleBackground: 'rgba(255, 255, 255, 0.92)', // viz.scale-bg-light
-      scaleText: '#0f172a',
+      background: '#0E1018',
+      gridColor: 'rgba(255, 255, 255, 0.08)',
+      textColor: '#E5E7EB',
+      axisColor: 'rgba(255, 255, 255, 0.40)',
+      traceColor: accentColor,
+      tooltipBackground: 'rgba(14, 16, 24, 0.95)',
+      tooltipBorder: 'rgba(124, 131, 255, 0.35)',
+      tooltipText: '#F8FAFC',
+      scaleBackground: 'rgba(14, 16, 24, 0.85)',
+      scaleText: '#F8FAFC',
     };
   }
+
+  return {
+    background: '#F5F6F8',
+    gridColor: 'rgba(15, 23, 42, 0.06)',
+    textColor: '#1F2937',
+    axisColor: 'rgba(15, 23, 42, 0.80)',
+    traceColor: accentColor,
+    tooltipBackground: 'rgba(255, 255, 255, 0.96)',
+    tooltipBorder: 'rgba(124, 131, 255, 0.20)',
+    tooltipText: '#1F2937',
+    scaleBackground: 'rgba(255, 255, 255, 0.92)',
+    scaleText: '#1F2937',
+  };
 }
