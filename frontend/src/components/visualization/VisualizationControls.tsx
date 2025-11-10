@@ -37,11 +37,15 @@ export function VisualizationControls({
   ].join(" ");
 
   const dockClasses = [
-    "flex flex-col items-center gap-3 border-t px-4 py-2 text-[11px] sm:text-xs",
+    "flex flex-col items-center gap-3 border-t border-transparent px-4 py-2 text-[11px] sm:text-xs",
     isDark
-      ? "border-white/10 bg-viz-ctrl-dark text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-      : "border-black/10 bg-viz-ctrl-light text-slate-600 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]",
+      ? "bg-viz-bg-dark text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+      : "bg-viz-bg-light text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
   ].join(" ");
+
+  const dockStyle = {
+    borderTopColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.08)",
+  };
 
   const actionGroupClasses =
     "flex flex-wrap items-center justify-center gap-2 sm:gap-3";
@@ -74,7 +78,7 @@ export function VisualizationControls({
   ].join(" ");
 
   return (
-    <div className={dockClasses}>
+    <div className={dockClasses} style={dockStyle}>
       <div className="flex flex-wrap items-center justify-center gap-4 text-center sm:gap-5">
         <div className={actionGroupClasses}>
           <button
