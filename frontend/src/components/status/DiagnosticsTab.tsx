@@ -11,6 +11,7 @@ import { useState } from "react";
 import { BistNode, BistResult, BistStatus } from "../../types/diagnostics";
 import { Button } from "../common/Button";
 import { TreeView } from "../common/TreeView";
+import { panelChrome } from "../../styles/panelStyles";
 
 export interface DiagnosticsTabProps {
   bistResult: BistResult | null;
@@ -42,7 +43,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
   return (
     <div className="p-4">
-      <div className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
+      <div className={[panelChrome, 'bg-white dark:bg-slate-900/50'].join(' ')}>
         {/* Summary Header */}
         <div className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">

@@ -293,8 +293,6 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
         position: "relative",
         width,
         height,
-        background: spectrogramColors.background,
-        borderRadius: 4,
         overflow: "hidden",
       }}
     >
@@ -313,7 +311,7 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
             background: spectrogramColors.tooltipBackground,
             color: spectrogramColors.tooltipText,
             border: "1px solid rgba(15,23,42,0.2)",
-            borderRadius: 4,
+            borderRadius: 2,
             padding: "4px 8px",
             fontSize: 11,
             pointerEvents: "none",

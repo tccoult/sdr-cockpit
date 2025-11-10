@@ -2,6 +2,7 @@ import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
 import { Button } from '../common/Button'
 import { Input } from '../common/Input'
 import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr'
+import { panelChrome } from '../../styles/panelStyles'
 
 type TaskMode = 'select' | 'rx' | 'tx'
 
@@ -15,9 +16,9 @@ interface TaskWizardProps {
 const labelClass =
   'mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 const selectClass =
-  'h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition focus:border-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50 dark:border-white/15 dark:bg-white/10 dark:text-slate-100 dark:focus:border-white/40 dark:focus-visible:ring-white/40'
+  'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 transition focus:border-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50 dark:border-white/15 dark:bg-white/10 dark:text-slate-100 dark:focus:border-white/40 dark:focus-visible:ring-white/40'
 const checkboxClass =
-  'h-4 w-4 rounded border-slate-300 bg-white text-cockpit-accent accent-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50 dark:border-white/30 dark:bg-slate-900/70 dark:focus-visible:ring-white/40'
+  'h-4 w-4 rounded-sm border-slate-300 bg-white text-cockpit-accent accent-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50 dark:border-white/30 dark:bg-slate-900/70 dark:focus-visible:ring-white/40'
 
 export function TaskWizard({
   isOpen,
@@ -125,7 +126,7 @@ export function TaskWizard({
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-300/60 dark:border-white/10 dark:bg-slate-950/90 dark:shadow-black/60"
+        className={[panelChrome, 'w-full max-w-xl overflow-hidden p-6 dark:bg-slate-950/90'].join(' ')}
         onClick={(event) => event.stopPropagation()}
       >
         {mode === 'select' && (
@@ -136,7 +137,7 @@ export function TaskWizard({
               <button
                 type="button"
                 onClick={() => setMode('rx')}
-                className="rounded-xl border border-slate-200 bg-slate-100 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
+                className="rounded-sm border border-slate-200 bg-slate-100 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
               >
                 <div className="text-xl font-semibold text-slate-900 dark:text-white">📡 Receive Signal</div>
                 <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
@@ -147,7 +148,7 @@ export function TaskWizard({
               <button
                 type="button"
                 onClick={() => setMode('tx')}
-                className="rounded-xl border border-slate-200 bg-slate-100 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
+                className="rounded-sm border border-slate-200 bg-slate-100 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
               >
                 <div className="text-xl font-semibold text-slate-900 dark:text-white">📤 Transmit File</div>
                 <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
@@ -292,7 +293,7 @@ export function TaskWizard({
                 <div
                   tabIndex={0}
                   role="button"
-                  className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-100 p-6 text-center text-slate-600 transition hover:border-cockpit-accent/50 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/20 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
+                  className="rounded-sm border-2 border-dashed border-slate-300 bg-slate-100 p-6 text-center text-slate-600 transition hover:border-cockpit-accent/50 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/20 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
                   onClick={handleFilePicker}
                   onKeyDown={handleFilePickerKeyDown}
                 >

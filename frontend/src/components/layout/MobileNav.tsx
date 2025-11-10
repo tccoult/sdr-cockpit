@@ -30,7 +30,7 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition ${
+      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition ${
         isActive
           ? 'bg-slate-100 text-slate-900 dark:bg-cockpit-accent/20 dark:text-white'
           : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -58,7 +58,7 @@ function SettingsItem({ icon, label, onClick }: SettingsItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+      className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
     >
       <span className="text-slate-500 dark:text-slate-400">{icon}</span>
       <span className="font-medium">{label}</span>
@@ -186,7 +186,7 @@ export function MobileNav({
             <button
               type="button"
               onClick={handleThemeToggle}
-              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               <span className="text-slate-500 dark:text-slate-400">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}

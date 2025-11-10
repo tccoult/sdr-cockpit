@@ -68,7 +68,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute right-0 top-full z-[70] mt-2 w-56 animate-in fade-in slide-in-from-top-1 duration-100 rounded-lg border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900"
+          className="absolute right-0 top-full z-[70] mt-2 w-56 animate-in fade-in slide-in-from-top-1 duration-100 rounded-sm border border-slate-200 bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900"
         >
           <div className="p-1 pr-1">
             <MenuItem

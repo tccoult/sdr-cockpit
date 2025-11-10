@@ -3,6 +3,7 @@ import { Task } from '../../types/sdr'
 import { HealthStatus } from '../layout/CompactHeader'
 import { DataStreamStatus } from '../../api'
 import { Button } from '../common/Button'
+import { panelChromeMuted } from '../../styles/panelStyles'
 
 export interface OverviewTabProps {
   dataFps: number
@@ -37,7 +38,7 @@ export function OverviewTab({
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Overall Status */}
-      <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
+      <section className={[panelChromeMuted, 'p-4'].join(' ')}>
         <div className="flex items-center gap-3">
           {healthStatus === 'healthy' ? (
             <CheckCircle2 className="h-6 w-6 text-status-success" />

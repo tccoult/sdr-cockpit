@@ -5,6 +5,7 @@
 
 import { getApiMode } from '../../api';
 import { themeColors, hexToRgba } from '../../styles/themeColors';
+import { panelChrome } from '../../styles/panelStyles';
 
 export function ApiModeIndicator() {
   const mode = getApiMode();
@@ -14,7 +15,7 @@ export function ApiModeIndicator() {
   const dotShadow = `0 0 8px ${hexToRgba(dotColor, 0.5)}`;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-inner shadow-slate-200/60 dark:border-white/10 dark:bg-black/30 dark:shadow-inner dark:shadow-black/20">
+    <div className={[panelChrome, 'p-3 dark:bg-black/30'].join(' ')}>
       <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
         Mode
       </p>
