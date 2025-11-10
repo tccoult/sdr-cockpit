@@ -61,7 +61,7 @@ export function TaskCard({
         }
       }}
       className={[
-        'group rounded-lg border px-2.5 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60 relative',
+        'group rounded-sm border px-2.5 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60 relative',
         'backdrop-blur-sm bg-white text-slate-900 hover:bg-cockpit-accent/5 dark:bg-slate-900/40 dark:text-slate-100 dark:hover:bg-slate-900/55',
         isSelected
           ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900 z-10 dark:border-white/30 dark:bg-slate-900/50 dark:shadow-lg dark:shadow-black/40 dark:ring-white/30'

@@ -64,7 +64,7 @@ export const CockpitHeaderZone = forwardRef<HTMLDivElement, DivProps>(
     <header
       ref={ref}
       className={cn(
-        'order-1 rounded-xl border border-slate-200 bg-white/80 p-4 shadow-lg shadow-slate-200/60 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:shadow-black/30',
+        'order-1 rounded-sm border border-slate-200 bg-white/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
         'lg:col-span-full',
         className
       )}
@@ -126,7 +126,7 @@ export function CockpitSpotlightSection({
   return (
     <section
       className={cn(
-        'flex-none rounded-xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-300/70 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/70 dark:shadow-cockpit-glow',
+        'flex-none rounded-sm border border-slate-200 bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/70 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
         className
       )}
       {...props}
@@ -148,7 +148,7 @@ export function CockpitRosterSection({
   return (
     <section
       className={cn(
-        'flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/60',
+        'flex flex-1 flex-col overflow-hidden rounded-sm border border-slate-200 bg-white backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/60',
         'min-h-0',
         className
       )}

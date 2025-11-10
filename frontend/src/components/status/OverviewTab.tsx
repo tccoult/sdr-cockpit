@@ -37,7 +37,7 @@ export function OverviewTab({
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Overall Status */}
-      <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
+      <section className="rounded-sm border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
         <div className="flex items-center gap-3">
           {healthStatus === 'healthy' ? (
             <CheckCircle2 className="h-6 w-6 text-status-success" />

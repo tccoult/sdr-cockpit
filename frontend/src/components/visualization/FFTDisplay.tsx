@@ -277,7 +277,7 @@ export const FFTDisplay = memo(function FFTDisplay({
             top: Math.min(Math.max(cursorInfo.canvasY - 32, 8), height - 48),
             background: plotColors.tooltipBackground,
             border: `1px solid ${plotColors.tooltipBorder}`,
-            borderRadius: 4,
+            borderRadius: 2,
             padding: "4px 8px",
             color: plotColors.tooltipText,
             fontSize: 11,

@@ -42,7 +42,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
 
   return (
     <div className="p-4">
-      <div className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
+      <div className="rounded-sm border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/50">
         {/* Summary Header */}
         <div className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">

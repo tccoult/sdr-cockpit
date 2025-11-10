@@ -399,7 +399,7 @@ function App() {
           />
 
           {/* Modal */}
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-sm border border-slate-200 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
