@@ -1,6 +1,6 @@
-import type { AxisModel } from "./AxisModel";
-import type { AxisOptions, AxisTheme, AxisSide, Tick } from "./axisTypes";
 import type { Layer, LayerRenderContext } from "../types";
+import type { AxisModel } from "./AxisModel";
+import type { AxisOptions, AxisSide, AxisTheme, Tick } from "./axisTypes";
 
 const SIDE_TO_PHASE: Record<AxisSide, "grid" | "foreground"> = {
   left: "foreground",
@@ -159,11 +159,15 @@ function drawAxis(
     const padding = config.theme.labelPaddingPx;
     const tickLabelPadding = config.theme.tickLabelPaddingPx;
     if (side === "left") {
-      // Position the axis label further left to account for tick label width
-      // Estimate ~50px for tick labels like "-100.0"
-      const estimatedTickLabelWidth = 50;
+      // Calculate actual max tick label width for accurate positioning
+      let maxTickLabelWidth = 0;
+      for (const tick of ticks) {
+        const width = ctx.measureText(tick.label).width;
+        maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
+      }
+      // Reduce padding to bring label closer to graph
       ctx.translate(
-        rect.left - (tickSize + tickLabelPadding) - estimatedTickLabelWidth - padding,
+        rect.left - (tickSize + tickLabelPadding) - maxTickLabelWidth - padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(-Math.PI / 2);
@@ -171,8 +175,17 @@ function drawAxis(
       ctx.textBaseline = "top";
       ctx.fillText(label, 0, 0);
     } else if (side === "right") {
+      // Calculate actual max tick label width for accurate positioning
+      let maxTickLabelWidth = 0;
+      for (const tick of ticks) {
+        const width = ctx.measureText(tick.label).width;
+        maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
+      }
       ctx.translate(
-        rect.right + (tickSize + tickLabelPadding) + padding,
+        rect.right +
+          (tickSize + tickLabelPadding) +
+          maxTickLabelWidth +
+          padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(Math.PI / 2);
@@ -182,7 +195,11 @@ function drawAxis(
     } else if (side === "top") {
       ctx.textBaseline = "bottom";
       ctx.textAlign = "center";
-      ctx.fillText(label, rect.left + rect.width / 2, rect.top - (tickSize + tickLabelPadding) - padding);
+      ctx.fillText(
+        label,
+        rect.left + rect.width / 2,
+        rect.top - (tickSize + tickLabelPadding) - padding
+      );
     } else {
       ctx.textBaseline = "top";
       ctx.textAlign = "center";

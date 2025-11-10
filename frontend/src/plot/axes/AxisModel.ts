@@ -23,18 +23,22 @@ export class AxisModel {
   private readonly formatter?: (value: number) => string;
   private readonly targetTicks: number;
   private readonly font: string;
+  private readonly side: string;
 
   private range: Range = [0, 1];
   private spanPx = 1;
   private cachedTicks: Tick[] = [];
   private cacheKey = "";
   private logRange: Range | null = null;
+  private static textMeasureCanvas: HTMLCanvasElement | null = null;
+  private static textMeasureContext: CanvasRenderingContext2D | null = null;
 
   constructor(options: AxisOptions & { themeFont?: string }) {
     this.scale = options.scale ?? "linear";
     this.formatter = options.format;
     this.targetTicks = Math.max(2, Math.round(options.ticksTarget ?? DEFAULT_TARGET_TICKS));
     this.font = options.themeFont ?? "12px sans-serif";
+    this.side = options.side ?? "bottom";
   }
 
   setRange(range: Range) {
@@ -53,6 +57,77 @@ export class AxisModel {
   setSpanPx(spanPx: number) {
     this.spanPx = Math.max(1, spanPx);
     this.invalidate();
+  }
+
+  /**
+   * Get a canvas context for measuring text dimensions
+   */
+  private getTextMeasureContext(): CanvasRenderingContext2D {
+    if (!AxisModel.textMeasureContext) {
+      if (typeof document !== 'undefined') {
+        AxisModel.textMeasureCanvas = document.createElement('canvas');
+        AxisModel.textMeasureContext = AxisModel.textMeasureCanvas.getContext('2d');
+      }
+    }
+    return AxisModel.textMeasureContext!;
+  }
+
+  /**
+   * Estimate the typical width of axis labels in pixels
+   */
+  private estimateLabelWidth(): number {
+    const ctx = this.getTextMeasureContext();
+    if (!ctx) {
+      // Fallback estimate if canvas not available (e.g., SSR)
+      return 60;
+    }
+
+    ctx.font = this.font;
+
+    // Sample a few values across the range to estimate typical label width
+    const sampleCount = 5;
+    let maxWidth = 0;
+
+    for (let i = 0; i < sampleCount; i++) {
+      const ratio = i / (sampleCount - 1);
+      const value = this.range[0] + ratio * (this.range[1] - this.range[0]);
+      const label = this.format(value, (this.range[1] - this.range[0]) / this.targetTicks);
+      const width = ctx.measureText(label).width;
+      maxWidth = Math.max(maxWidth, width);
+    }
+
+    return maxWidth || 60; // Fallback to 60px if measurement fails
+  }
+
+  /**
+   * Calculate the optimal number of ticks based on available space
+   * Applies to both horizontal (width-based) and vertical (height-based) axes
+   */
+  private getOptimalTickCount(): number {
+    const isHorizontal = this.side === 'bottom' || this.side === 'top';
+    const isVertical = this.side === 'left' || this.side === 'right';
+
+    if (!isHorizontal && !isVertical) {
+      return this.targetTicks;
+    }
+
+    if (isHorizontal) {
+      // For horizontal axes, check label width
+      const labelWidth = this.estimateLabelWidth();
+      const tickLabelPadding = 6; // Default padding from theme
+      const minSpacing = labelWidth + tickLabelPadding * 2;
+      const maxTicks = Math.floor(this.spanPx / (minSpacing * 1.3));
+      return Math.max(2, Math.min(this.targetTicks, maxTicks));
+    } else {
+      // For vertical axes, check label height
+      const fontSize = parseInt(this.font) || 12;
+      const labelHeight = fontSize;
+      const tickLabelPadding = 6; // Default padding from theme
+      const minSpacing = labelHeight + tickLabelPadding * 2;
+      // Use a spacing factor of 1.5 for vertical to ensure good readability
+      const maxTicks = Math.floor(this.spanPx / (minSpacing * 1.5));
+      return Math.max(2, Math.min(this.targetTicks, maxTicks));
+    }
   }
 
   ticks(): Tick[] {
@@ -97,13 +172,15 @@ export class AxisModel {
 
   private computeTickValues(): number[] {
     const [min, max] = this.range;
+    const optimalCount = this.getOptimalTickCount();
+
     if (this.scale === "log") {
-      const ticks = computeLogTicks(min, max, this.targetTicks);
+      const ticks = computeLogTicks(min, max, optimalCount);
       if (ticks.length > 0) {
         return ticks;
       }
     } else if (this.scale === "time") {
-      const timeTicks = computeTimeTicks(min, max, this.targetTicks);
+      const timeTicks = computeTimeTicks(min, max, optimalCount);
       if (timeTicks.length > 0) {
         return timeTicks;
       }
@@ -111,7 +188,7 @@ export class AxisModel {
     return computeTicks({
       min,
       max,
-      count: this.targetTicks,
+      count: optimalCount,
       font: this.font,
     });
   }

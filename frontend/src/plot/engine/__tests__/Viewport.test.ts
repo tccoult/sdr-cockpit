@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createViewport } from "../../engine/Viewport";
+import { createViewport, DEFAULT_PLOT_MARGINS } from "../../engine/Viewport";
 
 describe("createViewport", () => {
   it("provides a non-zero span when min equals max", () => {
@@ -20,10 +20,13 @@ describe("createViewport", () => {
 
     viewport.updateDimensions(canvas, 1);
 
-    // Viewport applies margins for axes: left=110, right=15, top=15, bottom=50
-    expect(viewport.rect.width).toBeCloseTo(195); // 320 - 110 - 15
-    expect(viewport.rect.height).toBeCloseTo(115); // 180 - 15 - 50
-    expect(viewport.rect.left).toBeCloseTo(110); // MARGIN_LEFT
-    expect(viewport.rect.top).toBeCloseTo(15); // MARGIN_TOP
+    expect(viewport.rect.width).toBeCloseTo(
+      320 - DEFAULT_PLOT_MARGINS.left - 15
+    );
+    expect(viewport.rect.height).toBeCloseTo(
+      180 - DEFAULT_PLOT_MARGINS.top - 50
+    );
+    expect(viewport.rect.left).toBeCloseTo(DEFAULT_PLOT_MARGINS.left); // MARGIN_LEFT
+    expect(viewport.rect.top).toBeCloseTo(DEFAULT_PLOT_MARGINS.top); // MARGIN_TOP
   });
 });

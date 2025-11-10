@@ -9,13 +9,9 @@ const MIN_SPAN = 1e-12;
  * These can be overridden via ViewportOptions.
  */
 export const DEFAULT_PLOT_MARGINS = {
-  // Left: tick labels (~50px) + tick size (6px) + tick padding (6px) + label padding (18px) + axis label (14px) + buffer (16px) = ~110px
-  left: 110,
-  // Right: small padding for aesthetics
+  left: 70,
   right: 15,
-  // Top: small padding for aesthetics
   top: 15,
-  // Bottom: tick size (6px) + tick label height (14px) + padding (6px) + label padding (17px) + label height (14px) = ~57px
   bottom: 50,
 } as const;
 
@@ -70,11 +66,16 @@ export function createViewport(options: ViewportOptions): Viewport {
       const rectLike =
         typeof canvas.getBoundingClientRect === "function"
           ? canvas.getBoundingClientRect()
-          : { width: canvas.width / Math.max(1, dpr), height: canvas.height / Math.max(1, dpr) };
+          : {
+              width: canvas.width / Math.max(1, dpr),
+              height: canvas.height / Math.max(1, dpr),
+            };
       const cssWidth =
         rectLike.width > 0 ? rectLike.width : canvas.width / Math.max(1, dpr);
       const cssHeight =
-        rectLike.height > 0 ? rectLike.height : canvas.height / Math.max(1, dpr);
+        rectLike.height > 0
+          ? rectLike.height
+          : canvas.height / Math.max(1, dpr);
 
       // Apply margins for axes and labels (can be overridden via options)
       const margins = options.margins ?? DEFAULT_PLOT_MARGINS;
