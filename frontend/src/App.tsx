@@ -269,7 +269,7 @@ function App() {
             )}
 
             {mobileView === 'tasks' && (
-              <div className="flex h-full flex-col overflow-hidden bg-white dark:bg-slate-900">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900">
                 <div className="border-b border-slate-200 p-4 dark:border-white/10">
                   <ActiveTaskPanel
                     task={selectedTask}
@@ -279,7 +279,7 @@ function App() {
                     onStopRecording={stopRecording}
                   />
                 </div>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex flex-1 min-h-0 overflow-hidden">
                   <TaskRosterPanel
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
