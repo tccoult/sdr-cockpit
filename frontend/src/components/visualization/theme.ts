@@ -11,6 +11,7 @@ export interface VisualizationTheme {
   gridColor: string;
   textColor: string;
   axisColor: string;
+  cursorLineColor: string;
   traceColor: string;
   tooltipBackground: string;
   tooltipBorder: string;
@@ -50,9 +51,10 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
   if (isDark) {
     return {
       background: "#0E1018",
-      gridColor: "rgba(255, 255, 255, 0.08)",
+      gridColor: "rgba(15, 23, 42, 0.08)",
       textColor: "#E5E7EB",
-      axisColor: "rgba(255, 255, 255, 0.40)",
+      axisColor: "rgba(15, 23, 42, 0.40)",
+      cursorLineColor: "rgba(255, 255, 255, 0.4)",
       traceColor: accentColor,
       tooltipBackground: "rgba(14, 16, 24, 0.95)",
       tooltipBorder: "rgba(124, 131, 255, 0.35)",
@@ -67,6 +69,7 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
     gridColor: "rgba(15, 23, 42, 0.08)",
     textColor: "#1F2937",
     axisColor: "rgba(15, 23, 42, 0.65)",
+    cursorLineColor: "rgba(31, 41, 55, 0.35)",
     traceColor: accentColor,
     tooltipBackground: "rgba(255, 255, 255, 0.96)",
     tooltipBorder: "rgba(124, 131, 255, 0.20)",

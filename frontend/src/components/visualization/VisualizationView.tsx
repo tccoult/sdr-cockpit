@@ -206,14 +206,14 @@ export const VisualizationView = memo(function VisualizationView({
   }, [visualizationMode]);
 
   const surfaceClasses = [
-    "viz-surface relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden rounded-sm border px-3 py-3 text-sm sm:px-4 sm:py-4",
+    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border px-3 py-3 text-sm sm:px-4 sm:py-4",
     isDark
       ? "bg-viz-bg-dark border-white/5 text-slate-100 shadow-viz-surface-dark"
       : "bg-viz-bg-light border-slate-200 text-slate-900 shadow-viz-surface-light",
   ].join(" ");
 
   const sectionBaseClasses =
-    "relative flex flex-col overflow-hidden min-h-[220px]";
+    "relative flex flex-col overflow-hidden min-h-[180px]";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
@@ -263,21 +263,21 @@ export const VisualizationView = memo(function VisualizationView({
   const fftSectionClasses = [
     sectionBaseClasses,
     visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]",
-    "min-h-[220px] sm:min-h-[300px]",
+    "min-h-[200px] sm:min-h-[260px]",
   ].join(" ");
   const waterfallSectionClasses = [
     sectionBaseClasses,
-    "flex-[65] sm:min-h-[360px]",
+    "flex-[65] sm:min-h-[320px]",
   ].join(" ");
   const spectrogramSectionClasses = [
     sectionBaseClasses,
-    "flex-1 sm:min-h-[600px]",
+    "flex-1 sm:min-h-[520px]",
   ].join(" ");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div ref={containerRef} className={surfaceClasses}>
-        <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
           {showFFT && (
             <div ref={fftContainerRef} className={fftSectionClasses}>
               <FFTDisplay
@@ -331,17 +331,16 @@ export const VisualizationView = memo(function VisualizationView({
               />
             </div>
           )}
+          <VisualizationControls
+            interactionMode={interactionMode}
+            onInteractionModeChange={setInteractionMode}
+            minDb={minDb}
+            maxDb={maxDb}
+            onMinDbChange={setMinDb}
+            onMaxDbChange={setMaxDb}
+            onAutoRange={autoRange}
+          />
         </div>
-
-        <VisualizationControls
-          interactionMode={interactionMode}
-          onInteractionModeChange={setInteractionMode}
-          minDb={minDb}
-          maxDb={maxDb}
-          onMinDbChange={setMinDb}
-          onMaxDbChange={setMaxDb}
-          onAutoRange={autoRange}
-        />
 
         {renderStatusOverlay()}
       </div>
