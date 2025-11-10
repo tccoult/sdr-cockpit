@@ -1,6 +1,6 @@
-import type { AxisModel } from "./AxisModel";
-import type { AxisOptions, AxisTheme, AxisSide, Tick } from "./axisTypes";
 import type { Layer, LayerRenderContext } from "../types";
+import type { AxisModel } from "./AxisModel";
+import type { AxisOptions, AxisSide, AxisTheme, Tick } from "./axisTypes";
 
 const SIDE_TO_PHASE: Record<AxisSide, "grid" | "foreground"> = {
   left: "foreground",
@@ -165,10 +165,9 @@ function drawAxis(
         const width = ctx.measureText(tick.label).width;
         maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
       }
-      // Use minimal padding for y-axis to bring closer to edge
-      const yAxisPadding = 6;
+      // Reduce padding to bring label closer to graph
       ctx.translate(
-        rect.left - (tickSize + tickLabelPadding) - maxTickLabelWidth - yAxisPadding,
+        rect.left - (tickSize + tickLabelPadding) - maxTickLabelWidth - padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(-Math.PI / 2);
@@ -182,9 +181,11 @@ function drawAxis(
         const width = ctx.measureText(tick.label).width;
         maxTickLabelWidth = Math.max(maxTickLabelWidth, width);
       }
-      const yAxisPadding = 6;
       ctx.translate(
-        rect.right + (tickSize + tickLabelPadding) + maxTickLabelWidth + yAxisPadding,
+        rect.right +
+          (tickSize + tickLabelPadding) +
+          maxTickLabelWidth +
+          padding,
         rect.top + rect.height / 2
       );
       ctx.rotate(Math.PI / 2);
@@ -194,7 +195,11 @@ function drawAxis(
     } else if (side === "top") {
       ctx.textBaseline = "bottom";
       ctx.textAlign = "center";
-      ctx.fillText(label, rect.left + rect.width / 2, rect.top - (tickSize + tickLabelPadding) - padding);
+      ctx.fillText(
+        label,
+        rect.left + rect.width / 2,
+        rect.top - (tickSize + tickLabelPadding) - padding
+      );
     } else {
       ctx.textBaseline = "top";
       ctx.textAlign = "center";
