@@ -37,45 +37,52 @@ export function VisualizationControls({
   ].join(" ");
 
   const dockClasses = [
-    "flex flex-col items-center gap-3 border-t border-transparent px-4 py-2 text-[11px] sm:text-xs",
+    "flex w-full flex-col items-center justify-center gap-3 border-t border-transparent px-4 py-2 text-[11px] sm:text-xs",
     isDark
       ? "bg-viz-bg-dark text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
       : "bg-viz-bg-light text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
   ].join(" ");
 
   const dockStyle = {
-    borderTopColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.08)",
+    borderTopColor: isDark
+      ? "rgba(255, 255, 255, 0.05)"
+      : "rgba(0, 0, 0, 0.08)",
   };
 
   const actionGroupClasses =
-    "flex flex-wrap items-center justify-center gap-2 sm:gap-3";
+    "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
 
   const rangeGroupClasses =
-    "flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-semibold uppercase tracking-wide text-[10px] sm:text-xs";
+    "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
+
+  const rangeLabelClasses = [
+    "text-[11px] font-medium",
+    isDark ? "text-slate-200" : "text-slate-600",
+  ].join(" ");
 
   const dividerClasses = [
     "hidden h-6 w-px sm:block",
     isDark ? "bg-white/10" : "bg-black/10",
   ].join(" ");
 
+  const sharedButtonBase =
+    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
+
+  const buttonActiveClasses = isDark
+    ? "border-slate-500 bg-slate-700 text-white shadow-sm"
+    : "border-slate-300 bg-slate-200 text-slate-900 shadow-sm";
+
+  const buttonDefaultClasses = isDark
+    ? "border-white/10 text-slate-300 hover:border-white/30 hover:bg-white/5 hover:text-white"
+    : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50";
+
   const modeButtonClasses = (mode: InteractionMode) =>
     [
-      "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[11px] font-semibold tracking-tight transition sm:text-xs",
-      interactionMode === mode
-        ? isDark
-          ? "border-slate-500 bg-slate-700 text-white shadow-sm"
-          : "border-slate-300 bg-slate-200 text-slate-900 shadow-sm"
-        : isDark
-        ? "border-white/10 text-slate-400 hover:border-white/30 hover:bg-white/5 hover:text-white"
-        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50",
+      sharedButtonBase,
+      interactionMode === mode ? buttonActiveClasses : buttonDefaultClasses,
     ].join(" ");
 
-  const autoRangeClasses = [
-    "rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition sm:text-xs",
-    isDark
-      ? "border-[#7C83FF]/50 bg-[#7C83FF]/20 text-white hover:bg-[#7C83FF]/30"
-      : "border-[#7C83FF]/40 bg-white text-slate-800 hover:bg-[#7C83FF]/10",
-  ].join(" ");
+  const autoRangeClasses = [sharedButtonBase, buttonDefaultClasses].join(" ");
 
   return (
     <div className={dockClasses} style={dockStyle}>
@@ -114,7 +121,9 @@ export function VisualizationControls({
 
         <div className={rangeGroupClasses}>
           <div className="flex items-center gap-2">
-            <label htmlFor="min-db-ctrl">Min</label>
+            <label htmlFor="min-db-ctrl" className={rangeLabelClasses}>
+              Min
+            </label>
             <input
               id="min-db-ctrl"
               type="number"
@@ -125,7 +134,9 @@ export function VisualizationControls({
           </div>
 
           <div className="flex items-center gap-2">
-            <label htmlFor="max-db-ctrl">Max</label>
+            <label htmlFor="max-db-ctrl" className={rangeLabelClasses}>
+              Max
+            </label>
             <input
               id="max-db-ctrl"
               type="number"

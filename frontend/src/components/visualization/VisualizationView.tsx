@@ -206,7 +206,7 @@ export const VisualizationView = memo(function VisualizationView({
   }, [visualizationMode]);
 
   const surfaceClasses = [
-    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border px-3 py-3 text-sm sm:px-4 sm:py-4",
+    "viz-surface relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border px-3 py-3 text-sm sm:px-4 sm:py-4",
     isDark
       ? "bg-viz-bg-dark border-white/5 text-slate-100 shadow-viz-surface-dark"
       : "bg-viz-bg-light border-slate-200 text-slate-900 shadow-viz-surface-light",
