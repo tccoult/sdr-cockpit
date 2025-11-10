@@ -41,8 +41,8 @@ export function VisualizationControls({
       className={[
         "flex flex-wrap items-center justify-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs",
         isDark
-          ? "border-white/10 bg-slate-950/60"
-          : "border-slate-300 bg-slate-50",
+          ? "border-white/10 bg-white/5"
+          : "border-slate-200 bg-white/80",
       ].join(" ")}
     >
       {/* Action Buttons: Interaction Mode + Auto Range */}

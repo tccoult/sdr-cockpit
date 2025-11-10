@@ -208,19 +208,19 @@ export const VisualizationView = memo(function VisualizationView({
   const containerClasses = [
     "flex flex-1 flex-col gap-2 rounded-xl border p-2 min-h-0 overflow-auto sm:gap-3 sm:p-3",
     isDark
-      ? "border-white/10 bg-slate-950/60 text-slate-100 shadow-2xl shadow-black/40"
-      : "border-slate-300 bg-slate-50 text-slate-900 shadow-2xl shadow-slate-400/60",
+      ? "border-white/10 bg-[#0E1018] text-slate-100 shadow-lg shadow-black/30"
+      : "border-slate-200 bg-[#F5F6F8] text-slate-900 shadow-lg shadow-slate-300/40",
   ].join(" ");
 
   const plotContainerClasses =
-    "rounded-lg border border-slate-300 bg-slate-50 p-2 shadow-inner shadow-slate-300/70 dark:border-white/5 dark:bg-slate-900/40 dark:shadow-inner dark:shadow-black/40 relative sm:p-3";
+    "relative p-2 sm:p-3";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
       return null;
     }
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 backdrop-blur-sm rounded-lg z-10">
+      <div className="absolute inset-0 flex items-center justify-center bg-[#F5F6F8]/95 dark:bg-[#0E1018]/95 backdrop-blur-sm rounded z-10">
         <div className="text-center px-4">
           {isConnecting ? (
             <>
@@ -276,6 +276,11 @@ export const VisualizationView = memo(function VisualizationView({
             interactionMode={interactionMode}
           />
         </div>
+      )}
+
+      {/* Hairline divider between FFT and Waterfall */}
+      {showFFT && showWaterfall && (
+        <div className={isDark ? "h-px bg-white/[0.04]" : "h-px bg-black/5"} />
       )}
 
       {showWaterfall && (

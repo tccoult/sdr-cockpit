@@ -45,8 +45,8 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
 
   if (isDark) {
     return {
-      background: 'rgba(10, 10, 15, 0.90)', // viz.bg-dark
-      gridColor: 'rgba(255, 255, 255, 0.10)', // viz.grid-dark
+      background: 'rgba(8, 10, 16, 0.95)', // viz.bg-dark - blue tinted to harmonize
+      gridColor: 'rgba(255, 255, 255, 0.06)', // viz.grid-dark - reduced opacity
       textColor: '#f1f5f9', // viz.text-dark
       axisColor: 'rgba(255, 255, 255, 0.40)', // viz.axis-dark
       traceColor: accentColor, // viz.trace (from CSS variable)
@@ -58,8 +58,8 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
     };
   } else {
     return {
-      background: 'rgba(247, 249, 255, 0.98)', // viz.bg-light
-      gridColor: 'rgba(15, 23, 42, 0.12)', // viz.grid-light
+      background: 'rgba(247, 249, 251, 0.98)', // viz.bg-light - subtle blue tint
+      gridColor: 'rgba(15, 23, 42, 0.08)', // viz.grid-light - reduced opacity
       textColor: '#0f172a', // viz.text-light
       axisColor: 'rgba(15, 23, 42, 0.80)', // viz.axis-light
       traceColor: accentColor, // viz.trace (from CSS variable)
