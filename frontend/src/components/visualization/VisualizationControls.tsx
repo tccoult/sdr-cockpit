@@ -37,14 +37,22 @@ export function VisualizationControls({
   ].join(" ");
 
   const dockClasses = [
-    "flex flex-col gap-3 border-t px-4 py-3 text-[11px] sm:px-5 sm:py-4 sm:text-sm",
+    "flex flex-col items-center gap-3 border-t px-4 py-2 text-[11px] sm:text-xs",
     isDark
       ? "border-white/10 bg-viz-ctrl-dark text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
       : "border-black/10 bg-viz-ctrl-light text-slate-600 shadow-[inset_0_1px_0_rgba(0,0,0,0.04)]",
   ].join(" ");
 
   const actionGroupClasses =
-    "flex flex-wrap items-center gap-2 text-[11px] sm:text-xs lg:gap-3";
+    "flex flex-wrap items-center justify-center gap-2 sm:gap-3";
+
+  const rangeGroupClasses =
+    "flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-semibold uppercase tracking-wide text-[10px] sm:text-xs";
+
+  const dividerClasses = [
+    "hidden h-6 w-px sm:block",
+    isDark ? "bg-white/10" : "bg-black/10",
+  ].join(" ");
 
   const modeButtonClasses = (mode: InteractionMode) =>
     [
@@ -67,29 +75,27 @@ export function VisualizationControls({
 
   return (
     <div className={dockClasses}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap items-center justify-center gap-4 text-center sm:gap-5">
         <div className={actionGroupClasses}>
-          <div className="hidden items-center gap-2 lg:flex">
-            <button
-              type="button"
-              onClick={() => onInteractionModeChange("pan")}
-              className={modeButtonClasses("pan")}
-              title="Pan mode - Click and drag to pan"
-            >
-              <Hand size={14} />
-              <span>Pan</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => onInteractionModeChange("pan")}
+            className={modeButtonClasses("pan")}
+            title="Pan mode - Click and drag to pan"
+          >
+            <Hand size={14} />
+            <span>Pan</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => onInteractionModeChange("zoom")}
-              className={modeButtonClasses("zoom")}
-              title="Zoom mode - Click and drag to zoom to range"
-            >
-              <ZoomIn size={14} />
-              <span>Zoom</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onInteractionModeChange("zoom")}
+            className={modeButtonClasses("zoom")}
+            title="Zoom mode - Click and drag to zoom to range"
+          >
+            <ZoomIn size={14} />
+            <span>Zoom</span>
+          </button>
 
           <button
             type="button"
@@ -100,7 +106,9 @@ export function VisualizationControls({
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 font-semibold uppercase tracking-wide text-[10px] sm:text-xs">
+        <div className={dividerClasses} aria-hidden="true" />
+
+        <div className={rangeGroupClasses}>
           <div className="flex items-center gap-2">
             <label htmlFor="min-db-ctrl">Min</label>
             <input

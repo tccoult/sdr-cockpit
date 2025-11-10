@@ -32,8 +32,8 @@ export default {
           'axis-light': 'rgba(15, 23, 42, 0.80)',
           'text-dark': '#E5E7EB',
           'text-light': '#1F2937',
-          'ctrl-dark': '#11131C',
-          'ctrl-light': '#F8F9FA',
+          'ctrl-dark': '#0E1018',
+          'ctrl-light': '#F5F6F8',
         },
       },
       fontFamily: {
