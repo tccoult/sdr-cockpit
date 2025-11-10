@@ -86,7 +86,7 @@ export function TaskCard({
         </div>
         <span
           className={[
-            'whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+            'whitespace-nowrap rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
             statusStyles.badge,
           ].join(' ')}
         >
@@ -106,7 +106,7 @@ export function TaskCard({
         {task.recording && (
           <span
             className={[
-              'rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
+              'rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
               RECORDING_BADGE,
             ].join(' ')}
           >

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import { Button } from '../common/Button'
 import { UpdateStatus, UpdateState } from '../../types/diagnostics'
+import { panelChrome, panelChromeMuted } from '../../styles/panelStyles'
 
 export interface SystemUpdateWizardProps {
   isOpen: boolean
@@ -150,7 +151,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
 
       {/* Modal */}
       <div
-        className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-sm border border-slate-200 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+        className={[panelChrome, 'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2'].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -277,7 +278,7 @@ interface ValidateStepProps {
 function ValidateStep({ fileName, fileSize, progress, message }: ValidateStepProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-sm border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
+      <div className={[panelChromeMuted, 'flex items-center gap-3 p-4'].join(' ')}>
         <Upload size={32} className="text-slate-500" />
         <div className="flex-1 overflow-hidden">
           <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
@@ -325,7 +326,7 @@ function ConfirmStep({ fileName, fileSize, onConfirm, onCancel }: ConfirmStepPro
         </div>
       </div>
 
-      <div className="space-y-2 rounded-sm border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
+      <div className={[panelChromeMuted, 'space-y-2 p-4'].join(' ')}>
         <InfoRow label="File" value={fileName} />
         <InfoRow label="Size" value={`${(fileSize / 1024 / 1024).toFixed(2)} MB`} />
         <InfoRow label="Version" value="1.2.0" />
@@ -369,7 +370,7 @@ function InstallStep({ progress, message }: InstallStepProps) {
           <span className="text-slate-700 dark:text-slate-300">{message}</span>
           <span className="font-semibold text-slate-900 dark:text-white">{progress}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        <div className="h-2 overflow-hidden rounded-sm bg-slate-200 dark:bg-slate-700">
           <div
             className="h-full bg-status-success transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -414,7 +415,7 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
           </div>
           {/* Progress bar showing countdown */}
           <div className="space-y-2">
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div className="h-2 overflow-hidden rounded-sm bg-slate-200 dark:bg-slate-700">
               <div
                 className="h-full bg-status-warning transition-all duration-1000 ease-linear dark:bg-status-warning"
                 style={{ width: `${(rebootCountdown / 10) * 100}%` }}

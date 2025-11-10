@@ -2,6 +2,7 @@ import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
 import { Button } from '../common/Button'
 import { Input } from '../common/Input'
 import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr'
+import { panelChrome } from '../../styles/panelStyles'
 
 type TaskMode = 'select' | 'rx' | 'tx'
 
@@ -125,7 +126,7 @@ export function TaskWizard({
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-sm border border-slate-200 bg-white p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-slate-950/90 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+        className={[panelChrome, 'w-full max-w-xl overflow-hidden p-6 dark:bg-slate-950/90'].join(' ')}
         onClick={(event) => event.stopPropagation()}
       >
         {mode === 'select' && (

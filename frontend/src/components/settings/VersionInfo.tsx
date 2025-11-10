@@ -1,5 +1,6 @@
 import { TreeView } from '../common/TreeView'
 import { SystemVersion } from '../../types/diagnostics'
+import { panelChrome, panelChromeMuted } from '../../styles/panelStyles'
 
 export interface VersionInfoProps {
   versionTree: SystemVersion
@@ -15,7 +16,7 @@ export function VersionInfo({ versionTree, overallVersion, buildDate, platform }
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Overall Info */}
-      <section className="rounded-sm border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-800/50">
+      <section className={[panelChromeMuted, 'p-4'].join(' ')}>
         <div className="space-y-2">
           <InfoRow label="Version" value={overallVersion} highlight />
           <InfoRow label="Build Date" value={buildDate} />
@@ -28,7 +29,7 @@ export function VersionInfo({ versionTree, overallVersion, buildDate, platform }
         <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
           Component Versions
         </h3>
-        <div className="rounded-sm border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900/50">
+        <div className={[panelChrome, 'p-3 bg-white dark:bg-slate-900/50'].join(' ')}>
           <TreeView<SystemVersion>
             data={versionTree}
             renderNode={(node) => (
