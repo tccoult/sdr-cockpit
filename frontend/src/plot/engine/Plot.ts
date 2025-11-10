@@ -1160,6 +1160,12 @@ class PlotEngine implements PlotHandle {
     if (rect.width <= 0 || rect.height <= 0) {
       return;
     }
+    const insideViewport =
+      x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    if (!insideViewport) {
+      this.clearCursor();
+      return;
+    }
     const dataX = this.viewport.invertX(x);
     const dataY = this.viewport.invertY(y);
     const next: CursorState = { canvasX: x, canvasY: y, dataX, dataY };
