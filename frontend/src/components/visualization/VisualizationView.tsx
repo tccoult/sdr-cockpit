@@ -206,10 +206,10 @@ export const VisualizationView = memo(function VisualizationView({
   }, [visualizationMode]);
 
   const containerClasses = [
-    "flex flex-1 flex-col gap-2 rounded-xl border p-2 min-h-0 overflow-auto sm:gap-3 sm:p-3",
+    "flex flex-1 flex-col gap-2 rounded-xl p-2 min-h-0 overflow-auto transition-all duration-150 sm:gap-3 sm:p-3",
     isDark
-      ? "border-white/10 bg-[#0E1018] text-slate-100 shadow-lg shadow-black/30"
-      : "border-slate-200 bg-[#F5F6F8] text-slate-900 shadow-lg shadow-slate-300/40",
+      ? "bg-viz-container-dark text-slate-100 shadow-viz-inset"
+      : "bg-viz-container-light text-slate-900 shadow-[inset_0_1px_0_rgba(0,0,0,0.02)]",
   ].join(" ");
 
   const plotContainerClasses =
@@ -220,7 +220,7 @@ export const VisualizationView = memo(function VisualizationView({
       return null;
     }
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#F5F6F8]/95 dark:bg-[#0E1018]/95 backdrop-blur-sm rounded z-10">
+      <div className="absolute inset-0 flex items-center justify-center bg-viz-container-light/95 dark:bg-viz-container-dark/95 backdrop-blur-sm rounded z-10">
         <div className="text-center px-4">
           {isConnecting ? (
             <>

@@ -24,18 +24,25 @@ export default {
         },
         viz: {
           trace: 'rgb(var(--color-cockpit-accent) / <alpha-value>)',
+          // Unified visualization surface colors
+          'container-dark': '#0E1018',
+          'container-light': '#F5F6F8',
+          // Canvas backgrounds (for JavaScript canvas rendering)
           'bg-dark': 'rgba(8, 10, 16, 0.95)',
           'bg-light': 'rgba(247, 249, 251, 0.98)',
+          // Grid and axes
           'grid-dark': 'rgba(255, 255, 255, 0.06)',
           'grid-light': 'rgba(15, 23, 42, 0.08)',
           'axis-dark': 'rgba(255, 255, 255, 0.40)',
           'axis-light': 'rgba(15, 23, 42, 0.80)',
           'text-dark': '#f1f5f9',
           'text-light': '#0f172a',
+          // Tooltips
           'tooltip-bg-dark': 'rgba(15, 20, 30, 0.95)',
           'tooltip-bg-light': 'rgba(255, 255, 255, 0.95)',
           'tooltip-border-dark': 'rgba(255, 255, 255, 0.20)',
           'tooltip-border-light': 'rgba(15, 23, 42, 0.18)',
+          // Scale labels
           'scale-bg-dark': 'rgba(0, 0, 0, 0.70)',
           'scale-bg-light': 'rgba(255, 255, 255, 0.92)',
         },
@@ -45,6 +52,8 @@ export default {
       },
       boxShadow: {
         'cockpit-glow': '0 20px 60px rgba(0, 0, 0, 0.45)',
+        'viz-inset': 'inset 0 1px 0 rgba(255, 255, 255, 0.03)',
+        'viz-focus': '0 0 20px rgba(124, 131, 255, 0.08)',
       },
     },
   },

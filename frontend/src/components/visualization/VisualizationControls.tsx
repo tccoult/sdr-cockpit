@@ -39,10 +39,10 @@ export function VisualizationControls({
   return (
     <div
       className={[
-        "flex flex-wrap items-center justify-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs",
+        "flex flex-wrap items-center justify-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] backdrop-blur-sm transition-all duration-150 sm:gap-3 sm:px-3 sm:py-2 sm:text-xs",
         isDark
-          ? "border-white/10 bg-white/5"
-          : "border-slate-200 bg-white/80",
+          ? "border-white/10 bg-white/5 shadow-lg shadow-black/30"
+          : "border-slate-200 bg-white/80 shadow-lg shadow-slate-300/40",
       ].join(" ")}
     >
       {/* Action Buttons: Interaction Mode + Auto Range */}
