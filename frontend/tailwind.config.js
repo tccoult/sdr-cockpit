@@ -25,7 +25,7 @@ export default {
         viz: {
           trace: '#7C83FF',
           'bg-dark': '#0E1018',
-          'bg-light': '#F5F6F8',
+          'bg-light': '#FCFDFF',
           'grid-dark': 'rgba(255, 255, 255, 0.08)',
           'grid-light': 'rgba(15, 23, 42, 0.06)',
           'axis-dark': 'rgba(255, 255, 255, 0.40)',
@@ -33,7 +33,7 @@ export default {
           'text-dark': '#E5E7EB',
           'text-light': '#1F2937',
           'ctrl-dark': '#0E1018',
-          'ctrl-light': '#F5F6F8',
+          'ctrl-light': '#FCFDFF',
         },
       },
       fontFamily: {

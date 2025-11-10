@@ -223,8 +223,8 @@ export const VisualizationView = memo(function VisualizationView({
     const overlayClasses = [
       "absolute inset-0 z-20 flex items-center justify-center rounded-sm border backdrop-blur-sm",
       isDark
-        ? "border-white/5 bg-[#0E1018]/85 text-slate-100"
-        : "border-slate-200 bg-[#F5F6F8]/90 text-slate-900",
+        ? "border-white/5 bg-viz-bg-dark/85 text-slate-100"
+        : "border-slate-200 bg-viz-bg-light/90 text-slate-900",
     ].join(" ");
 
     return (
