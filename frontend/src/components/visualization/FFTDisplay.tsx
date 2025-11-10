@@ -1,13 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
-import { formatFrequency } from "../../utils/formatters";
+import { usePlotRenderFps } from "../../hooks";
 import {
   usePlot,
   type CursorState,
   type LineLayerHandle,
   type PlotCreationOptions,
 } from "../../plot";
-import { usePlotRenderFps } from "../../hooks";
+import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
+import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import type { InteractionMode } from "./VisualizationControls";
 import { getVisualizationTheme } from "./theme";
@@ -50,8 +50,8 @@ export const FFTDisplay = memo(function FFTDisplay({
         gridColor: plotColors.gridColor,
         textColor: plotColors.textColor,
         axisColor: plotColors.axisColor,
-        cursorLineColor: plotColors.textColor,
-        cursorHighlightColor: plotColors.traceColor,
+        cursorLineColor: plotColors.cursorLineColor,
+        cursorHighlightColor: plotColors.cursorLineColor,
       },
       interactions: {
         pan: { x: true, y: false },

@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePlotRenderFps } from "../../hooks";
 import type {
   CursorState,
   HeatmapLayerHandle,
@@ -9,7 +10,6 @@ import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
-import { usePlotRenderFps } from "../../hooks";
 import type { InteractionMode } from "./VisualizationControls";
 import { getVisualizationTheme } from "./theme";
 
@@ -54,8 +54,8 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
         axisColor: spectrogramColors.axisColor,
         textColor: spectrogramColors.textColor,
         gridColor: spectrogramColors.gridColor,
-        cursorLineColor: spectrogramColors.textColor,
-        cursorHighlightColor: spectrogramColors.textColor,
+        cursorLineColor: spectrogramColors.cursorLineColor,
+        cursorHighlightColor: spectrogramColors.cursorLineColor,
       },
       interactions: {
         pan: { x: true, y: true },

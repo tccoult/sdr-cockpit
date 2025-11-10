@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePlotRenderFps } from "../../hooks";
 import type {
   CursorState,
   HeatmapLayerHandle,
@@ -9,7 +10,6 @@ import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
-import { usePlotRenderFps } from "../../hooks";
 import type { InteractionMode } from "./VisualizationControls";
 import { getVisualizationTheme } from "./theme";
 
@@ -59,8 +59,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         axisColor: waterfallColors.axisColor,
         textColor: waterfallColors.textColor,
         gridColor: waterfallColors.gridColor,
-        cursorLineColor: waterfallColors.textColor,
-        cursorHighlightColor: waterfallColors.textColor,
+        cursorLineColor: waterfallColors.cursorLineColor,
+        cursorHighlightColor: waterfallColors.cursorLineColor,
       },
       interactions: {
         pan: { x: true, y: false },
@@ -251,7 +251,9 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
           !rowTimestampsRef.current ||
           rowTimestampsRef.current.length !== rowCount
         ) {
-          rowTimestampsRef.current = new Float64Array(rowCount).fill(Number.NaN);
+          rowTimestampsRef.current = new Float64Array(rowCount).fill(
+            Number.NaN
+          );
           rowHeadRef.current = 0;
           rowsFilledRef.current = 0;
         }
@@ -293,8 +295,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         const domainYMax = rowCount;
         const domainYMin = 0;
         const domainSpan = domainYMax - domainYMin || 1;
-        const normalizedFromTop =
-          (domainYMax - cursorInfo.dataY) / domainSpan;
+        const normalizedFromTop = (domainYMax - cursorInfo.dataY) / domainSpan;
         const clamped = Math.min(Math.max(normalizedFromTop, 0), 0.999999);
         displayRow = Math.min(
           rowCount - 1,
@@ -303,8 +304,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       }
       if (timestamps && rowsFilled > 0 && displayRow !== null) {
         if (displayRow < rowsFilled) {
-          const bufferIndex =
-            (rowHeadRef.current + displayRow) % rowCount;
+          const bufferIndex = (rowHeadRef.current + displayRow) % rowCount;
           const ts = timestamps[bufferIndex];
           const newestTs = timestamps[rowHeadRef.current];
           if (Number.isFinite(ts) && Number.isFinite(newestTs)) {
