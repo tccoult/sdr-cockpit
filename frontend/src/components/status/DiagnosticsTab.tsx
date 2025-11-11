@@ -1,5 +1,5 @@
-import { MoreVertical } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MoreVertical } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   BistResult,
@@ -7,30 +7,30 @@ import {
   BistSummary,
   BistTest,
   BistTreeNode,
-} from '../../types/diagnostics'
-import { Button } from '../common/Button'
-import { TreeNodeData, TreeView } from '../common/TreeView'
+} from "../../types/diagnostics";
+import { Button } from "../common/Button";
+import { TreeNodeData, TreeView } from "../common/TreeView";
 
 export interface DiagnosticsTabProps {
-  bistResult: BistResult | null
+  bistResult: BistResult | null;
 }
 
-type PanelView = 'tests' | 'function' | 'hardware'
+type PanelView = "tests" | "function" | "hardware";
 
 interface HighlightState {
-  function: string[]
-  hardware: string[]
+  function: string[];
+  hardware: string[];
 }
 
 interface RollupDisplayNode extends TreeNodeData {
-  kind: 'group' | 'test'
-  name: string
-  status: BistStatus
-  description?: string
-  tests?: string[]
-  testId?: string
-  lastRun?: number
-  durationMs?: number
+  kind: "group" | "test";
+  name: string;
+  status: BistStatus;
+  description?: string;
+  tests?: string[];
+  testId?: string;
+  lastRun?: number;
+  durationMs?: number;
 }
 
 const STATUS_PRIORITY: Record<BistStatus, number> = {
@@ -38,234 +38,251 @@ const STATUS_PRIORITY: Record<BistStatus, number> = {
   [BistStatus.WARN]: 2,
   [BistStatus.OK]: 1,
   [BistStatus.UNKNOWN]: 0,
-}
+};
 
 const STATUS_TOKENS: Record<
   BistStatus,
   { dot: string; text: string; badge: string; tint: string }
 > = {
   [BistStatus.FAIL]: {
-    dot: 'bg-status-error',
-    text: 'text-status-error',
-    badge: 'text-status-error',
-    tint: 'bg-status-error/10',
+    dot: "bg-status-error",
+    text: "text-status-error",
+    badge: "text-status-error",
+    tint: "bg-status-error/10",
   },
   [BistStatus.WARN]: {
-    dot: 'bg-status-warning',
-    text: 'text-status-warning',
-    badge: 'text-status-warning',
-    tint: 'bg-status-warning/10',
+    dot: "bg-status-warning",
+    text: "text-status-warning",
+    badge: "text-status-warning",
+    tint: "bg-status-warning/10",
   },
   [BistStatus.OK]: {
-    dot: 'bg-status-success',
-    text: 'text-status-success',
-    badge: 'text-status-success',
-    tint: 'bg-status-success/10',
+    dot: "bg-status-success",
+    text: "text-status-success",
+    badge: "text-status-success",
+    tint: "bg-status-success/10",
   },
   [BistStatus.UNKNOWN]: {
-    dot: 'bg-muted-foreground/50',
-    text: 'text-muted-foreground',
-    badge: 'text-muted-foreground',
-    tint: 'bg-muted/40',
+    dot: "bg-muted-foreground/50",
+    text: "text-muted-foreground",
+    badge: "text-muted-foreground",
+    tint: "bg-muted/40",
   },
-}
+};
 
 export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
-  const [view, setView] = useState<PanelView>('tests')
-  const [expandState, setExpandState] = useState<'auto' | 'all' | 'none'>('auto')
-  const [activeTestId, setActiveTestId] = useState<string | null>(null)
+  const [view, setView] = useState<PanelView>("tests");
+  const [expandState, setExpandState] = useState<"auto" | "all" | "none">(
+    "auto"
+  );
+  const [activeTestId, setActiveTestId] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState<HighlightState>({
     function: [],
     hardware: [],
-  })
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement | null>(null)
+  });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [forcedExpand, setForcedExpand] = useState<{
-    scope: keyof HighlightState
-    ids: string[]
-  } | null>(null)
+    scope: keyof HighlightState;
+    ids: string[];
+  } | null>(null);
   const [focusRequest, setFocusRequest] = useState<{
-    scope: keyof HighlightState
-    nodeId: string
-  } | null>(null)
+    scope: keyof HighlightState;
+    nodeId: string;
+  } | null>(null);
   const [testFocusRequest, setTestFocusRequest] = useState<{
-    testId: string
-    token: number
-  } | null>(null)
+    testId: string;
+    token: number;
+  } | null>(null);
 
   useEffect(() => {
-    setActiveTestId(null)
-    setHighlighted({ function: [], hardware: [] })
-    setForcedExpand(null)
-    setFocusRequest(null)
-    setTestFocusRequest(null)
-  }, [bistResult?.timestamp])
+    setActiveTestId(null);
+    setHighlighted({ function: [], hardware: [] });
+    setForcedExpand(null);
+    setFocusRequest(null);
+    setTestFocusRequest(null);
+  }, [bistResult?.timestamp]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
-      if (!menuRef.current) return
+      if (!menuRef.current) return;
       if (!menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
+        setMenuOpen(false);
       }
-    }
+    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMenuOpen(false)
+      if (event.key === "Escape") {
+        setMenuOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const testsById = useMemo(() => {
-    if (!bistResult) return new Map<string, BistTest>()
-    return new Map(bistResult.tests.map((test) => [test.id, test]))
-  }, [bistResult])
+    if (!bistResult) return new Map<string, BistTest>();
+    return new Map(bistResult.tests.map((test) => [test.id, test]));
+  }, [bistResult]);
 
   const functionLookup = useMemo(() => {
-    if (!bistResult) return {}
-    return buildNodeLookup(bistResult.functionTree)
-  }, [bistResult])
+    if (!bistResult) return {};
+    return buildNodeLookup(bistResult.functionTree);
+  }, [bistResult]);
 
   const hardwareLookup = useMemo(() => {
-    if (!bistResult) return {}
-    return buildNodeLookup(bistResult.hardwareTree)
-  }, [bistResult])
+    if (!bistResult) return {};
+    return buildNodeLookup(bistResult.hardwareTree);
+  }, [bistResult]);
 
   const functionTree = useMemo(() => {
-    if (!bistResult) return null
-    return createDisplayTree(bistResult.functionTree, testsById)
-  }, [bistResult, testsById])
+    if (!bistResult) return null;
+    return createDisplayTree(bistResult.functionTree, testsById);
+  }, [bistResult, testsById]);
 
   const hardwareTree = useMemo(() => {
-    if (!bistResult) return null
-    return createDisplayTree(bistResult.hardwareTree, testsById)
-  }, [bistResult, testsById])
+    if (!bistResult) return null;
+    return createDisplayTree(bistResult.hardwareTree, testsById);
+  }, [bistResult, testsById]);
 
-  const consumeTestFocusRequest = useCallback(() => setTestFocusRequest(null), [])
+  const consumeTestFocusRequest = useCallback(
+    () => setTestFocusRequest(null),
+    []
+  );
 
   const handleSelectTest = (testId: string, focusTestsView = false) => {
-    const test = testsById.get(testId)
-    if (!test) return
+    const test = testsById.get(testId);
+    if (!test) return;
 
     const directFunctionNodes = bistResult
       ? getTerminalNodeIds(test.functionNodes, bistResult.functionTree)
-      : []
+      : [];
     const directHardwareNodes = bistResult
       ? getTerminalNodeIds(test.hardwareNodes, bistResult.hardwareTree)
-      : []
+      : [];
 
     const functionHighlight = bistResult
-      ? directFunctionNodes.flatMap((nodeId) =>
-          findNodePath(bistResult.functionTree, nodeId) ?? [nodeId]
+      ? directFunctionNodes.flatMap(
+          (nodeId) => findNodePath(bistResult.functionTree, nodeId) ?? [nodeId]
         )
-      : directFunctionNodes
+      : directFunctionNodes;
     const hardwareHighlight = bistResult
-      ? directHardwareNodes.flatMap((nodeId) =>
-          findNodePath(bistResult.hardwareTree, nodeId) ?? [nodeId]
+      ? directHardwareNodes.flatMap(
+          (nodeId) => findNodePath(bistResult.hardwareTree, nodeId) ?? [nodeId]
         )
-      : directHardwareNodes
+      : directHardwareNodes;
 
-    setActiveTestId(testId)
+    setActiveTestId(testId);
     setHighlighted({
       function: Array.from(new Set(functionHighlight)),
       hardware: Array.from(new Set(hardwareHighlight)),
-    })
+    });
 
     if (focusTestsView) {
-      setView('tests')
-      setTestFocusRequest({ testId, token: Date.now() })
+      setView("tests");
+      setTestFocusRequest({ testId, token: Date.now() });
     }
-  }
+  };
 
   const handleFocusNode = (scope: keyof HighlightState, nodeId: string) => {
-    if (!bistResult) return
+    if (!bistResult) return;
 
-    const tree = scope === 'function' ? bistResult.functionTree : bistResult.hardwareTree
-    const path = findNodePath(tree, nodeId) ?? [nodeId]
+    const tree =
+      scope === "function" ? bistResult.functionTree : bistResult.hardwareTree;
+    const path = findNodePath(tree, nodeId) ?? [nodeId];
 
     setHighlighted((prev) => {
-      const current = new Set(prev[scope])
-      path.forEach((id) => current.add(id))
+      const current = new Set(prev[scope]);
+      path.forEach((id) => current.add(id));
       return {
         ...prev,
         [scope]: Array.from(current),
-      }
-    })
+      };
+    });
 
-    const nextView = scope === 'function' ? 'function' : 'hardware'
-    setView(nextView)
-    setExpandState('auto')
+    const nextView = scope === "function" ? "function" : "hardware";
+    setView(nextView);
+    setExpandState("auto");
 
     if (path) {
-      setForcedExpand({ scope, ids: path })
-      setFocusRequest({ scope, nodeId })
+      setForcedExpand({ scope, ids: path });
+      setFocusRequest({ scope, nodeId });
     }
-  }
+  };
 
   const sortedTests = useMemo(() => {
-    if (!bistResult) return []
+    if (!bistResult) return [];
     return [...bistResult.tests].sort((a, b) => {
-      const diff = STATUS_PRIORITY[b.status] - STATUS_PRIORITY[a.status]
-      if (diff !== 0) return diff
-      return a.name.localeCompare(b.name)
-    })
-  }, [bistResult])
+      const diff = STATUS_PRIORITY[b.status] - STATUS_PRIORITY[a.status];
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
+  }, [bistResult]);
 
   if (!bistResult) {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="max-w-sm rounded-lg border border-border/60 bg-card p-6 text-center shadow-sm">
-          <h3 className="text-sm font-semibold text-foreground">No diagnostics available</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            No diagnostics available
+          </h3>
           <p className="mt-2 text-xs text-muted-foreground">
             Run system diagnostics to view Built-In Test results.
           </p>
         </div>
       </div>
-    )
+    );
   }
 
-  const currentTree = view === 'function' ? functionTree : hardwareTree
-  const highlightedNodes = view === 'function' ? highlighted.function : highlighted.hardware
+  const currentTree = view === "function" ? functionTree : hardwareTree;
+  const highlightedNodes =
+    view === "function" ? highlighted.function : highlighted.hardware;
 
   return (
     <div className="flex h-full flex-col p-4">
       <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
         <div className="px-4 pt-4">
-          <h3 className="text-sm font-semibold text-foreground">Built-In Test</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            Built-In Test
+          </h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Last updated {formatRelativeTimestamp(bistResult.timestamp)}
           </p>
         </div>
         <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-2">
           <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
-            {(['tests', 'function', 'hardware'] as PanelView[]).map((mode, index) => (
-              <Button
-                key={mode}
-                variant={view === mode ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setView(mode)}
-                className={cn(
-                  'px-3 text-xs font-medium transition',
-                  'rounded-none first:rounded-l-md last:rounded-r-md',
-                  index > 0 && '-ml-px'
-                )}
-              >
-                {mode === 'tests' ? 'Tests' : mode === 'function' ? 'Function' : 'Hardware'}
-              </Button>
-            ))}
+            {(["tests", "function", "hardware"] as PanelView[]).map(
+              (mode, index) => (
+                <Button
+                  key={mode}
+                  variant={view === mode ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setView(mode)}
+                  className={cn(
+                    "px-3 text-xs font-medium transition",
+                    "rounded-none first:rounded-l-md last:rounded-r-md",
+                    index > 0 && "-ml-px"
+                  )}
+                >
+                  {mode === "tests"
+                    ? "Tests"
+                    : mode === "function"
+                    ? "Function"
+                    : "Hardware"}
+                </Button>
+              )
+            )}
           </div>
           <div className="relative" ref={menuRef}>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-10 p-0"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((prev) => !prev)}
@@ -278,42 +295,46 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
                 <button
                   type="button"
                   className={cn(
-                    'flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition',
-                    view === 'tests'
-                      ? 'cursor-not-allowed opacity-50'
-                      : 'hover:bg-muted/70 hover:text-foreground'
+                    "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
+                    view === "tests"
+                      ? "cursor-not-allowed opacity-50"
+                      : "hover:bg-muted/70 hover:text-foreground"
                   )}
                   onClick={() => {
-                    if (view === 'tests') return
-                    setExpandState('all')
-                    setForcedExpand(null)
-                    setFocusRequest(null)
-                    setMenuOpen(false)
+                    if (view === "tests") return;
+                    setExpandState("all");
+                    setForcedExpand(null);
+                    setFocusRequest(null);
+                    setMenuOpen(false);
                   }}
-                  aria-disabled={view === 'tests'}
+                  aria-disabled={view === "tests"}
                 >
                   Expand all
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">⇲</span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    ⇲
+                  </span>
                 </button>
                 <button
                   type="button"
                   className={cn(
-                    'flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition',
-                    view === 'tests'
-                      ? 'cursor-not-allowed opacity-50'
-                      : 'hover:bg-muted/70 hover:text-foreground'
+                    "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
+                    view === "tests"
+                      ? "cursor-not-allowed opacity-50"
+                      : "hover:bg-muted/70 hover:text-foreground"
                   )}
                   onClick={() => {
-                    if (view === 'tests') return
-                    setExpandState('none')
-                    setForcedExpand(null)
-                    setFocusRequest(null)
-                    setMenuOpen(false)
+                    if (view === "tests") return;
+                    setExpandState("none");
+                    setForcedExpand(null);
+                    setFocusRequest(null);
+                    setMenuOpen(false);
                   }}
-                  aria-disabled={view === 'tests'}
+                  aria-disabled={view === "tests"}
                 >
                   Collapse all
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">⇱</span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    ⇱
+                  </span>
                 </button>
               </div>
             )}
@@ -321,7 +342,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
         </div>
         <div className="border-t border-border/70" />
         <div className="flex-1 overflow-hidden">
-          {view === 'tests' && (
+          {view === "tests" && (
             <TestsView
               tests={sortedTests}
               summary={bistResult.summary}
@@ -337,7 +358,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               onConsumeFocusRequest={consumeTestFocusRequest}
             />
           )}
-          {view !== 'tests' && currentTree && (
+          {view !== "tests" && currentTree && (
             <RollupTreeView
               tree={currentTree}
               summary={bistResult.summary}
@@ -347,17 +368,21 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               testsById={testsById}
               onFocusTest={(testId) => handleSelectTest(testId, true)}
               forcedExpandIds={
-                forcedExpand && forcedExpand.scope === view ? forcedExpand.ids : []
+                forcedExpand && forcedExpand.scope === view
+                  ? forcedExpand.ids
+                  : []
               }
               focusNodeId={
-                focusRequest && focusRequest.scope === view ? focusRequest.nodeId : null
+                focusRequest && focusRequest.scope === view
+                  ? focusRequest.nodeId
+                  : null
               }
               onClearFocus={() => {
                 if (focusRequest && focusRequest.scope === view) {
-                  setFocusRequest(null)
+                  setFocusRequest(null);
                 }
                 if (forcedExpand && forcedExpand.scope === view) {
-                  setForcedExpand(null)
+                  setForcedExpand(null);
                 }
               }}
             />
@@ -365,22 +390,22 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface TestsViewProps {
-  tests: BistTest[]
-  summary: BistSummary
-  activeTestId: string | null
-  functionLookup: Record<string, BistTreeNode>
-  hardwareLookup: Record<string, BistTreeNode>
-  functionTree: BistTreeNode
-  hardwareTree: BistTreeNode
-  highlighted: HighlightState
-  onSelectTest: (testId: string) => void
-  onFocusNode: (scope: keyof HighlightState, nodeId: string) => void
-  focusRequest: { testId: string; token: number } | null
-  onConsumeFocusRequest: () => void
+  tests: BistTest[];
+  summary: BistSummary;
+  activeTestId: string | null;
+  functionLookup: Record<string, BistTreeNode>;
+  hardwareLookup: Record<string, BistTreeNode>;
+  functionTree: BistTreeNode;
+  hardwareTree: BistTreeNode;
+  highlighted: HighlightState;
+  onSelectTest: (testId: string) => void;
+  onFocusNode: (scope: keyof HighlightState, nodeId: string) => void;
+  focusRequest: { testId: string; token: number } | null;
+  onConsumeFocusRequest: () => void;
 }
 
 function TestsView({
@@ -397,50 +422,50 @@ function TestsView({
   focusRequest,
   onConsumeFocusRequest,
 }: TestsViewProps) {
-  const listRef = useRef<HTMLDivElement | null>(null)
-  const [openTestId, setOpenTestId] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [openTestId, setOpenTestId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!focusRequest) return
+    if (!focusRequest) return;
 
-    const { testId } = focusRequest
+    const { testId } = focusRequest;
     const target = listRef.current?.querySelector<HTMLElement>(
       `[data-test-row-id="${testId}"]`
-    )
+    );
 
-    setOpenTestId(testId)
+    setOpenTestId(testId);
 
     if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      target.focus({ preventScroll: true })
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.focus({ preventScroll: true });
     }
 
-    onConsumeFocusRequest()
-  }, [focusRequest, onConsumeFocusRequest])
+    onConsumeFocusRequest();
+  }, [focusRequest, onConsumeFocusRequest]);
 
   const handleToggleTest = useCallback(
     (testId: string) => {
-      setOpenTestId((current) => (current === testId ? null : testId))
-      onSelectTest(testId)
+      setOpenTestId((current) => (current === testId ? null : testId));
+      onSelectTest(testId);
     },
     [onSelectTest]
-  )
+  );
 
   const handleOpenFromTag = useCallback(
     (testId: string, scope: keyof HighlightState, nodeId: string) => {
-      setOpenTestId(testId)
-      onSelectTest(testId)
-      onFocusNode(scope, nodeId)
+      setOpenTestId(testId);
+      onSelectTest(testId);
+      onFocusNode(scope, nodeId);
     },
     [onFocusNode, onSelectTest]
-  )
+  );
 
   useEffect(() => {
-    if (!openTestId) return
+    if (!openTestId) return;
     if (!tests.some((test) => test.id === openTestId)) {
-      setOpenTestId(null)
+      setOpenTestId(null);
     }
-  }, [openTestId, tests])
+  }, [openTestId, tests]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -451,28 +476,30 @@ function TestsView({
         <div className="overflow-hidden rounded-md border border-border/60 bg-card/40">
           <div className="divide-y divide-border/70">
             {tests.map((test) => {
-              const isActive = test.id === activeTestId
-              const isOpen = openTestId === test.id
-              const statusTokens = STATUS_TOKENS[test.status]
+              const isActive = test.id === activeTestId;
+              const isOpen = openTestId === test.id;
+              const statusTokens = STATUS_TOKENS[test.status];
               const lastRunLabel =
-                typeof test.lastRun === 'number'
+                typeof test.lastRun === "number"
                   ? `Last run ${formatRelativeTimestamp(test.lastRun)}`
-                  : null
+                  : null;
               const durationLabel =
-                typeof test.durationMs === 'number'
+                typeof test.durationMs === "number"
                   ? `Duration ${(test.durationMs / 1000).toFixed(1)}s`
-                  : null
+                  : null;
 
-              const metadata = [lastRunLabel, durationLabel].filter(Boolean).join(' · ')
+              const metadata = [lastRunLabel, durationLabel]
+                .filter(Boolean)
+                .join(" · ");
               const directFunctionNodes = getTerminalNodeIds(
                 test.functionNodes,
                 functionTree
-              ).filter((nodeId) => functionLookup[nodeId])
+              ).filter((nodeId) => functionLookup[nodeId]);
               const directHardwareNodes = getTerminalNodeIds(
                 test.hardwareNodes,
                 hardwareTree
-              ).filter((nodeId) => hardwareLookup[nodeId])
-              const detailPanelId = `test-${test.id}-details`
+              ).filter((nodeId) => hardwareLookup[nodeId]);
+              const detailPanelId = `test-${test.id}-details`;
 
               return (
                 <div
@@ -481,17 +508,17 @@ function TestsView({
                   tabIndex={0}
                   onClick={() => handleToggleTest(test.id)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      handleToggleTest(test.id)
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleToggleTest(test.id);
                     }
                   }}
                   className={cn(
-                    'relative cursor-pointer px-3 py-1.5 outline-none transition-colors',
-                    'focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-offset-0',
+                    "relative cursor-pointer px-3 py-1.5 outline-none transition-colors",
+                    "focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-offset-0",
                     isActive
-                      ? 'bg-accent/10'
-                      : 'hover:bg-muted/60 focus-visible:bg-muted/60'
+                      ? "bg-accent/10"
+                      : "hover:bg-muted/60 focus-visible:bg-muted/60"
                   )}
                   data-test-row-id={test.id}
                   aria-expanded={isOpen}
@@ -501,26 +528,30 @@ function TestsView({
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
-                          'h-2 w-2 flex-shrink-0 rounded-full',
+                          "h-2 w-2 flex-shrink-0 rounded-full",
                           statusTokens.dot
                         )}
                       />
-                      <span className="text-sm font-medium text-foreground">{test.name}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {test.name}
+                      </span>
                     </div>
                     <StatusBadge status={test.status} />
                   </div>
                   <div
                     className={cn(
-                      'overflow-hidden transition-[max-height,opacity]',
+                      "overflow-hidden transition-[max-height,opacity]",
                       isOpen
-                        ? 'max-h-48 opacity-100 duration-200 ease-out'
-                        : 'max-h-0 opacity-0 duration-150 ease-in'
+                        ? "max-h-48 opacity-100 duration-200 ease-out"
+                        : "max-h-0 opacity-0 duration-150 ease-in"
                     )}
                     id={detailPanelId}
                   >
                     <div className="pt-2 text-xs text-muted-foreground">
                       {test.description && (
-                        <p className="leading-snug text-muted-foreground">{test.description}</p>
+                        <p className="leading-snug text-muted-foreground">
+                          {test.description}
+                        </p>
                       )}
                       {metadata && (
                         <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/90">
@@ -548,26 +579,26 @@ function TestsView({
                     </div>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface RollupTreeViewProps {
-  tree: RollupDisplayNode
-  summary: BistSummary
-  expandState: 'auto' | 'all' | 'none'
-  highlightedNodeIds: string[]
-  activeTestId: string | null
-  testsById: Map<string, BistTest>
-  onFocusTest: (testId: string) => void
-  forcedExpandIds: string[]
-  focusNodeId: string | null
-  onClearFocus: () => void
+  tree: RollupDisplayNode;
+  summary: BistSummary;
+  expandState: "auto" | "all" | "none";
+  highlightedNodeIds: string[];
+  activeTestId: string | null;
+  testsById: Map<string, BistTest>;
+  onFocusTest: (testId: string) => void;
+  forcedExpandIds: string[];
+  focusNodeId: string | null;
+  onClearFocus: () => void;
 }
 
 function RollupTreeView({
@@ -583,46 +614,51 @@ function RollupTreeView({
   onClearFocus,
 }: RollupTreeViewProps) {
   const autoExpandCondition = useMemo(() => {
-    if (expandState !== 'auto') return undefined
+    if (expandState !== "auto") return undefined;
     return (node: RollupDisplayNode) =>
-      node.kind === 'group' &&
-      (node.status === BistStatus.FAIL || node.status === BistStatus.WARN)
-  }, [expandState])
+      node.kind === "group" &&
+      (node.status === BistStatus.FAIL || node.status === BistStatus.WARN);
+  }, [expandState]);
 
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const focusClearTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const focusClearTimerRef = useRef<ReturnType<
+    typeof window.setTimeout
+  > | null>(null);
 
   useEffect(() => {
-    if (!focusNodeId) return
+    if (!focusNodeId) return;
     const frame = requestAnimationFrame(() => {
       if (!containerRef.current) {
-        onClearFocus()
-        return
+        onClearFocus();
+        return;
       }
       const target = containerRef.current.querySelector<HTMLElement>(
         `[data-tree-node-id="${focusNodeId}"]`
-      )
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          if (focusClearTimerRef.current) {
-            window.clearTimeout(focusClearTimerRef.current)
-          }
-          focusClearTimerRef.current = window.setTimeout(() => {
-            focusClearTimerRef.current = null
-            onClearFocus()
-          }, 800)
-        } else {
-          onClearFocus()
+      );
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (focusClearTimerRef.current) {
+          window.clearTimeout(focusClearTimerRef.current);
         }
-      })
-    return () => cancelAnimationFrame(frame)
-  }, [focusNodeId, onClearFocus])
+        focusClearTimerRef.current = window.setTimeout(() => {
+          focusClearTimerRef.current = null;
+          onClearFocus();
+        }, 800);
+      } else {
+        onClearFocus();
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusNodeId, onClearFocus]);
 
-  useEffect(() => () => {
-    if (focusClearTimerRef.current) {
-      window.clearTimeout(focusClearTimerRef.current)
-    }
-  }, [])
+  useEffect(
+    () => () => {
+      if (focusClearTimerRef.current) {
+        window.clearTimeout(focusClearTimerRef.current);
+      }
+    },
+    []
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -633,7 +669,7 @@ function RollupTreeView({
         <TreeView<RollupDisplayNode>
           key={`${tree.id}-${expandState}`}
           data={tree}
-          defaultExpanded={expandState === 'all'}
+          defaultExpanded={expandState === "all"}
           autoExpandCondition={autoExpandCondition}
           forcedExpandIds={forcedExpandIds}
           renderNode={(node) => (
@@ -648,15 +684,15 @@ function RollupTreeView({
         />
       </div>
     </div>
-  )
+  );
 }
 
 interface RollupTreeNodeProps {
-  node: RollupDisplayNode
-  highlightedNodeIds: string[]
-  activeTestId: string | null
-  testsById: Map<string, BistTest>
-  onFocusTest: (testId: string) => void
+  node: RollupDisplayNode;
+  highlightedNodeIds: string[];
+  activeTestId: string | null;
+  testsById: Map<string, BistTest>;
+  onFocusTest: (testId: string) => void;
 }
 
 function RollupTreeNode({
@@ -666,9 +702,9 @@ function RollupTreeNode({
   testsById,
   onFocusTest,
 }: RollupTreeNodeProps) {
-  if (node.kind === 'test' && node.testId) {
-    const test = testsById.get(node.testId)
-    const isActive = activeTestId === node.testId
+  if (node.kind === "test" && node.testId) {
+    const test = testsById.get(node.testId);
+    const isActive = activeTestId === node.testId;
     return (
       <button
         type="button"
@@ -676,16 +712,16 @@ function RollupTreeNode({
         title={test?.description}
         data-tree-node-id={node.testId}
         className={cn(
-          'w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition',
-          'hover:border-border hover:bg-muted/70',
-          isActive && 'border-accent/40 bg-accent/10 ring-1 ring-accent/50'
+          "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition",
+          "hover:border-border hover:bg-muted/70",
+          isActive && "border-accent/40 bg-accent/10 ring-1 ring-accent/50"
         )}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                'h-2 w-2 flex-shrink-0 rounded-full',
+                "h-2 w-2 flex-shrink-0 rounded-full",
                 STATUS_TOKENS[node.status].dot
               )}
             />
@@ -696,18 +732,18 @@ function RollupTreeNode({
           <StatusBadge status={node.status} />
         </div>
       </button>
-    )
+    );
   }
 
-  const isHighlighted = highlightedNodeIds.includes(node.id)
-  const containsActiveTest = node.tests?.includes(activeTestId ?? '')
+  const isHighlighted = highlightedNodeIds.includes(node.id);
+  const containsActiveTest = node.tests?.includes(activeTestId ?? "");
 
   return (
     <div
       className={cn(
-        'rounded-md px-2 py-1.5 text-xs transition',
-        isHighlighted && 'border border-accent/40 bg-accent/10',
-        !isHighlighted && containsActiveTest && 'bg-accent/10'
+        "rounded-md px-2 py-1.5 text-xs transition",
+        isHighlighted && "border border-accent/40 bg-accent/10",
+        !isHighlighted && containsActiveTest && "bg-accent/10"
       )}
       data-tree-node-id={node.id}
     >
@@ -715,26 +751,32 @@ function RollupTreeNode({
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              'h-2.5 w-2.5 flex-shrink-0 rounded-full',
+              "h-2.5 w-2.5 flex-shrink-0 rounded-full",
               STATUS_TOKENS[node.status].dot
             )}
           />
-          <span className="text-xs font-medium text-foreground">{node.name}</span>
+          <span className="text-xs font-medium text-foreground">
+            {node.name}
+          </span>
         </div>
         <StatusBadge status={node.status} />
       </div>
     </div>
-  )
+  );
 }
 
 interface TagGroupProps {
-  label: string
-  scope: keyof HighlightState
-  testId: string
-  nodeIds: string[]
-  lookup: Record<string, BistTreeNode>
-  highlighted: string[]
-  onTagSelect: (testId: string, scope: keyof HighlightState, nodeId: string) => void
+  label: string;
+  scope: keyof HighlightState;
+  testId: string;
+  nodeIds: string[];
+  lookup: Record<string, BistTreeNode>;
+  highlighted: string[];
+  onTagSelect: (
+    testId: string,
+    scope: keyof HighlightState,
+    nodeId: string
+  ) => void;
 }
 
 function TagGroup({
@@ -746,7 +788,7 @@ function TagGroup({
   highlighted,
   onTagSelect,
 }: TagGroupProps) {
-  if (!nodeIds.length) return null
+  if (!nodeIds.length) return null;
 
   return (
     <div className="mt-2">
@@ -755,30 +797,31 @@ function TagGroup({
       </span>
       <div className="mt-1 flex flex-wrap gap-1.5">
         {nodeIds.map((nodeId) => {
-          const node = lookup[nodeId]
-          const isHighlighted = highlighted.includes(nodeId)
+          const node = lookup[nodeId];
+          const isHighlighted = highlighted.includes(nodeId);
           return (
             <button
               type="button"
               key={`${scope}-${nodeId}`}
               className={cn(
-                'inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-[11px] font-medium transition',
-                'bg-muted/70 text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground',
-                isHighlighted && 'border-accent/40 bg-accent/10 text-foreground shadow-sm'
+                "inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-[11px] font-medium transition",
+                "bg-muted/70 text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
+                isHighlighted &&
+                  "border-accent/40 bg-accent/10 text-foreground shadow-sm"
               )}
               onClick={(event) => {
-                event.stopPropagation()
-                onTagSelect(testId, scope, nodeId)
+                event.stopPropagation();
+                onTagSelect(testId, scope, nodeId);
               }}
               title={node ? `${label} node: ${node.name}` : nodeId}
             >
               {node ? node.name : nodeId}
             </button>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
 function SummaryBanner({ summary }: { summary: BistSummary }) {
@@ -787,9 +830,11 @@ function SummaryBanner({ summary }: { summary: BistSummary }) {
       <SummaryChip label="Fail" value={summary.fail} status={BistStatus.FAIL} />
       <SummaryChip label="Warn" value={summary.warn} status={BistStatus.WARN} />
       <SummaryChip label="Ok" value={summary.ok} status={BistStatus.OK} />
-      <span className="text-[11px] text-muted-foreground">Total tests: {summary.total}</span>
+      <span className="text-[11px] text-muted-foreground">
+        Total tests: {summary.total}
+      </span>
     </div>
-  )
+  );
 }
 
 function SummaryChip({
@@ -797,14 +842,14 @@ function SummaryChip({
   value,
   status,
 }: {
-  label: string
-  value: number
-  status: BistStatus
+  label: string;
+  value: number;
+  status: BistStatus;
 }) {
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide',
+        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide",
         STATUS_TOKENS[status].tint,
         STATUS_TOKENS[status].badge
       )}
@@ -813,142 +858,142 @@ function SummaryChip({
       <span>{label}</span>
       <span>{value}</span>
     </div>
-  )
+  );
 }
 
 function StatusBadge({ status }: { status: BistStatus }) {
   return (
     <span
       className={cn(
-        'text-[10px] font-semibold uppercase tracking-wide',
+        "text-[10px] font-semibold uppercase tracking-wide",
         STATUS_TOKENS[status].badge
       )}
     >
       {statusLabel(status)}
     </span>
-  )
+  );
 }
 
 function statusLabel(status: BistStatus) {
   switch (status) {
     case BistStatus.FAIL:
-      return 'Fail'
+      return "Fail";
     case BistStatus.WARN:
-      return 'Warn'
+      return "Warn";
     case BistStatus.OK:
-      return 'Ok'
+      return "Ok";
     default:
-      return 'Unknown'
+      return "Unknown";
   }
 }
 
 function buildNodeLookup(tree: BistTreeNode): Record<string, BistTreeNode> {
-  const map: Record<string, BistTreeNode> = {}
+  const map: Record<string, BistTreeNode> = {};
 
   const traverse = (node: BistTreeNode) => {
-    map[node.id] = node
-    node.children?.forEach(traverse)
-  }
+    map[node.id] = node;
+    node.children?.forEach(traverse);
+  };
 
-  traverse(tree)
-  return map
+  traverse(tree);
+  return map;
 }
 
 function createDisplayTree(
   node: BistTreeNode,
   testsById: Map<string, BistTest>
 ): RollupDisplayNode {
-  const children: RollupDisplayNode[] = []
+  const children: RollupDisplayNode[] = [];
 
   node.children?.forEach((child) => {
-    children.push(createDisplayTree(child, testsById))
-  })
+    children.push(createDisplayTree(child, testsById));
+  });
 
   node.tests?.forEach((testId) => {
-    const test = testsById.get(testId)
-    if (!test) return
+    const test = testsById.get(testId);
+    if (!test) return;
     children.push({
       id: `${node.id}::${test.id}`,
-      kind: 'test',
+      kind: "test",
       name: test.name,
       status: test.status,
       description: test.description,
       testId: test.id,
       lastRun: test.lastRun,
       durationMs: test.durationMs,
-    })
-  })
+    });
+  });
 
   return {
     id: node.id,
-    kind: 'group',
+    kind: "group",
     name: node.name,
     status: node.status,
     description: node.description,
     tests: node.tests,
     children: children.length > 0 ? children : undefined,
-  }
+  };
 }
 
 function findNodePath(node: BistTreeNode, targetId: string): string[] | null {
   if (node.id === targetId) {
-    return [node.id]
+    return [node.id];
   }
 
   for (const child of node.children ?? []) {
-    const childPath = findNodePath(child, targetId)
+    const childPath = findNodePath(child, targetId);
     if (childPath) {
-      return [node.id, ...childPath]
+      return [node.id, ...childPath];
     }
   }
 
-  return null
+  return null;
 }
 
 function getTerminalNodeIds(nodeIds: string[], tree: BistTreeNode): string[] {
-  if (!nodeIds.length) return []
-  const unique = Array.from(new Set(nodeIds))
-  const paths = unique.map((id) => ({ id, path: findNodePath(tree, id) }))
-  const terminals = new Set<string>()
+  if (!nodeIds.length) return [];
+  const unique = Array.from(new Set(nodeIds));
+  const paths = unique.map((id) => ({ id, path: findNodePath(tree, id) }));
+  const terminals = new Set<string>();
 
   paths.forEach(({ id, path }) => {
     if (!path) {
-      terminals.add(id)
-      return
+      terminals.add(id);
+      return;
     }
     const isAncestor = paths.some(({ id: otherId, path: otherPath }) => {
-      if (otherId === id || !otherPath) return false
-      return otherPath.includes(id)
-    })
+      if (otherId === id || !otherPath) return false;
+      return otherPath.includes(id);
+    });
     if (!isAncestor) {
-      terminals.add(id)
+      terminals.add(id);
     }
-  })
+  });
 
-  return Array.from(terminals)
+  return Array.from(terminals);
 }
 
 function formatRelativeTimestamp(timestamp: number) {
-  const diffMs = Date.now() - timestamp
-  const diffSeconds = Math.floor(diffMs / 1000)
+  const diffMs = Date.now() - timestamp;
+  const diffSeconds = Math.floor(diffMs / 1000);
   if (diffSeconds < 60) {
-    return `${diffSeconds}s ago`
+    return `${diffSeconds}s ago`;
   }
-  const diffMinutes = Math.floor(diffSeconds / 60)
+  const diffMinutes = Math.floor(diffSeconds / 60);
   if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`
+    return `${diffMinutes}m ago`;
   }
-  const diffHours = Math.floor(diffMinutes / 60)
+  const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) {
-    return `${diffHours}h ago`
+    return `${diffHours}h ago`;
   }
-  const diffDays = Math.floor(diffHours / 24)
+  const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) {
-    return `${diffDays}d ago`
+    return `${diffDays}d ago`;
   }
-  return new Date(timestamp).toLocaleDateString()
+  return new Date(timestamp).toLocaleDateString();
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ')
+  return classes.filter(Boolean).join(" ");
 }
