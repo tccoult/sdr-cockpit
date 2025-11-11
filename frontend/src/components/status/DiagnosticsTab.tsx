@@ -398,8 +398,7 @@ function TestsView({
   onConsumeFocusRequest,
 }: TestsViewProps) {
   const listRef = useRef<HTMLDivElement | null>(null)
-  const [forcedOpenTestId, setForcedOpenTestId] = useState<string | null>(null)
-  const forceTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const [openTestId, setOpenTestId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!focusRequest) return
@@ -409,30 +408,39 @@ function TestsView({
       `[data-test-row-id="${testId}"]`
     )
 
-    if (forceTimerRef.current) {
-      window.clearTimeout(forceTimerRef.current)
-    }
-
-    setForcedOpenTestId(testId)
+    setOpenTestId(testId)
 
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' })
       target.focus({ preventScroll: true })
     }
 
-    forceTimerRef.current = window.setTimeout(() => {
-      setForcedOpenTestId((current) => (current === testId ? null : current))
-      forceTimerRef.current = null
-    }, 2200)
-
     onConsumeFocusRequest()
   }, [focusRequest, onConsumeFocusRequest])
 
-  useEffect(() => () => {
-    if (forceTimerRef.current) {
-      window.clearTimeout(forceTimerRef.current)
+  const handleToggleTest = useCallback(
+    (testId: string) => {
+      setOpenTestId((current) => (current === testId ? null : testId))
+      onSelectTest(testId)
+    },
+    [onSelectTest]
+  )
+
+  const handleOpenFromTag = useCallback(
+    (testId: string, scope: keyof HighlightState, nodeId: string) => {
+      setOpenTestId(testId)
+      onSelectTest(testId)
+      onFocusNode(scope, nodeId)
+    },
+    [onFocusNode, onSelectTest]
+  )
+
+  useEffect(() => {
+    if (!openTestId) return
+    if (!tests.some((test) => test.id === openTestId)) {
+      setOpenTestId(null)
     }
-  }, [])
+  }, [openTestId, tests])
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -444,6 +452,7 @@ function TestsView({
           <div className="divide-y divide-border/70">
             {tests.map((test) => {
               const isActive = test.id === activeTestId
+              const isOpen = openTestId === test.id
               const statusTokens = STATUS_TOKENS[test.status]
               const lastRunLabel =
                 typeof test.lastRun === 'number'
@@ -463,28 +472,30 @@ function TestsView({
                 test.hardwareNodes,
                 hardwareTree
               ).filter((nodeId) => hardwareLookup[nodeId])
-              const shouldForceOpen = forcedOpenTestId === test.id
+              const detailPanelId = `test-${test.id}-details`
 
               return (
                 <div
                   key={test.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => onSelectTest(test.id)}
+                  onClick={() => handleToggleTest(test.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      onSelectTest(test.id)
+                      handleToggleTest(test.id)
                     }
                   }}
                   className={cn(
-                    'group relative cursor-pointer px-3 py-1.5 outline-none transition-all duration-150 ease-in-out',
+                    'relative cursor-pointer px-3 py-1.5 outline-none transition-colors',
                     'focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-offset-0',
                     isActive
                       ? 'bg-accent/10'
                       : 'hover:bg-muted/60 focus-visible:bg-muted/60'
                   )}
                   data-test-row-id={test.id}
+                  aria-expanded={isOpen}
+                  aria-controls={detailPanelId}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -500,12 +511,12 @@ function TestsView({
                   </div>
                   <div
                     className={cn(
-                      'overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out',
-                      'delay-[250ms] group-hover:delay-[120ms] group-focus-within:delay-[120ms]',
-                      shouldForceOpen
-                        ? 'max-h-48 opacity-100'
-                        : 'max-h-0 opacity-0 group-hover:max-h-48 group-hover:opacity-100 group-focus-within:max-h-48 group-focus-within:opacity-100'
+                      'overflow-hidden transition-[max-height,opacity]',
+                      isOpen
+                        ? 'max-h-48 opacity-100 duration-200 ease-out'
+                        : 'max-h-0 opacity-0 duration-150 ease-in'
                     )}
+                    id={detailPanelId}
                   >
                     <div className="pt-2 text-xs text-muted-foreground">
                       {test.description && (
@@ -523,8 +534,7 @@ function TestsView({
                         nodeIds={directFunctionNodes}
                         lookup={functionLookup}
                         highlighted={highlighted.function}
-                        onSelectTest={onSelectTest}
-                        onFocusNode={onFocusNode}
+                        onTagSelect={handleOpenFromTag}
                       />
                       <TagGroup
                         label="Hardware"
@@ -533,8 +543,7 @@ function TestsView({
                         nodeIds={directHardwareNodes}
                         lookup={hardwareLookup}
                         highlighted={highlighted.hardware}
-                        onSelectTest={onSelectTest}
-                        onFocusNode={onFocusNode}
+                        onTagSelect={handleOpenFromTag}
                       />
                     </div>
                   </div>
@@ -725,8 +734,7 @@ interface TagGroupProps {
   nodeIds: string[]
   lookup: Record<string, BistTreeNode>
   highlighted: string[]
-  onSelectTest: (testId: string) => void
-  onFocusNode: (scope: keyof HighlightState, nodeId: string) => void
+  onTagSelect: (testId: string, scope: keyof HighlightState, nodeId: string) => void
 }
 
 function TagGroup({
@@ -736,8 +744,7 @@ function TagGroup({
   nodeIds,
   lookup,
   highlighted,
-  onSelectTest,
-  onFocusNode,
+  onTagSelect,
 }: TagGroupProps) {
   if (!nodeIds.length) return null
 
@@ -761,8 +768,7 @@ function TagGroup({
               )}
               onClick={(event) => {
                 event.stopPropagation()
-                onSelectTest(testId)
-                onFocusNode(scope, nodeId)
+                onTagSelect(testId, scope, nodeId)
               }}
               title={node ? `${label} node: ${node.name}` : nodeId}
             >
