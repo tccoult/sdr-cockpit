@@ -23,15 +23,37 @@ export interface BistMetrics {
 }
 
 /**
- * A node in the BIST diagnostic tree
+ * Atomic BIST test definition with rollup mappings.
  */
-export interface BistNode {
+export interface BistTest {
   id: string
   name: string
   status: BistStatus
-  children?: BistNode[]
-  details?: string // Error message or additional info
+  description?: string
+  lastRun?: number
+  durationMs?: number
   metrics?: BistMetrics
+  functionNodes: string[]
+  hardwareNodes: string[]
+}
+
+/**
+ * Rollup node used by functional and hardware hierarchies.
+ */
+export interface BistTreeNode {
+  id: string
+  name: string
+  status: BistStatus
+  description?: string
+  children?: BistTreeNode[]
+  tests?: string[] // IDs of tests mapped to this node
+}
+
+export interface BistSummary {
+  total: number
+  ok: number
+  warn: number
+  fail: number
 }
 
 /**
@@ -39,13 +61,10 @@ export interface BistNode {
  */
 export interface BistResult {
   timestamp: number // Unix timestamp in ms
-  summary: {
-    total: number
-    ok: number
-    warn: number
-    fail: number
-  }
-  tree: BistNode
+  summary: BistSummary
+  tests: BistTest[]
+  functionTree: BistTreeNode
+  hardwareTree: BistTreeNode
 }
 
 /**

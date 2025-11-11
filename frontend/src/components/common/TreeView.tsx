@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 export interface TreeNodeData {
@@ -14,6 +14,7 @@ export interface TreeViewProps<T extends TreeNodeData> {
   level?: number
   className?: string
   isLastChild?: boolean
+  forcedExpandIds?: string[]
 }
 
 /**
@@ -28,9 +29,17 @@ export function TreeView<T extends TreeNodeData>({
   level = 0,
   className = '',
   isLastChild = false,
+  forcedExpandIds,
 }: TreeViewProps<T>) {
   const shouldAutoExpand = autoExpandCondition?.(data) ?? defaultExpanded
-  const [isExpanded, setIsExpanded] = useState(shouldAutoExpand)
+  const isForcedExpanded = forcedExpandIds?.includes(data.id) ?? false
+  const [isExpanded, setIsExpanded] = useState(shouldAutoExpand || isForcedExpanded)
+
+  useEffect(() => {
+    if (isForcedExpanded && !isExpanded) {
+      setIsExpanded(true)
+    }
+  }, [isForcedExpanded, isExpanded])
 
   const hasChildren = data.children && data.children.length > 0
   const indent = level * 8 // 8px per level
@@ -40,7 +49,7 @@ export function TreeView<T extends TreeNodeData>({
       {/* Vertical line continuing through this node to next sibling (if not last) */}
       {level > 0 && !isLastChild && (
         <div
-          className="absolute w-px bg-slate-300 dark:bg-slate-600"
+          className="absolute w-px bg-border/60"
           style={{
             left: `${indent - 8}px`,
             top: '12px', // Start after the horizontal connection point
@@ -50,7 +59,7 @@ export function TreeView<T extends TreeNodeData>({
       )}
 
       {/* Node Row */}
-      <div className="relative flex items-start gap-2 py-1.5 transition-colors duration-150 ease-in-out hover:bg-slate-50 dark:hover:bg-slate-800/50"
+      <div className="relative flex items-start gap-2 py-1.5 transition-colors duration-150 ease-in-out hover:bg-muted/70"
         style={{ paddingLeft: `${indent}px` }}>
 
         {/* Tree connectors (L-shaped lines) */}
@@ -58,7 +67,7 @@ export function TreeView<T extends TreeNodeData>({
           <>
             {/* Vertical line from parent down to horizontal junction */}
             <div
-              className="absolute top-0 w-px bg-slate-300 dark:bg-slate-600"
+              className="absolute top-0 w-px bg-border/60"
               style={{
                 left: `${indent - 8}px`,
                 height: '12px',
@@ -66,7 +75,7 @@ export function TreeView<T extends TreeNodeData>({
             />
             {/* Horizontal line */}
             <div
-              className="absolute top-3 h-px bg-slate-300 dark:bg-slate-600"
+              className="absolute top-3 h-px bg-border/60"
               style={{
                 left: `${indent - 8}px`,
                 width: hasChildren ? '6px' : '14px',
@@ -80,7 +89,7 @@ export function TreeView<T extends TreeNodeData>({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="relative z-10 mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-slate-500 transition-all duration-150 ease-in-out hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="relative z-10 mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-muted-foreground transition-all duration-150 ease-in-out hover:bg-muted hover:text-foreground"
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
             <div className={`transition-transform duration-150 ease-in-out ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
@@ -107,6 +116,7 @@ export function TreeView<T extends TreeNodeData>({
               autoExpandCondition={autoExpandCondition}
               level={level + 1}
               isLastChild={index === data.children!.length - 1}
+              forcedExpandIds={forcedExpandIds}
             />
           ))}
         </div>
