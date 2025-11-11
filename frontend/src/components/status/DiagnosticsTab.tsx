@@ -270,7 +270,7 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((prev) => !prev)}
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="h-5 w-5" />
               <span className="sr-only">Built-In Test actions</span>
             </Button>
             {menuOpen && (
