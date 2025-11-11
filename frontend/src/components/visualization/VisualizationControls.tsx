@@ -1,5 +1,4 @@
 import { Hand, ZoomIn } from "lucide-react";
-import { useTheme } from "../app/useTheme";
 
 export type InteractionMode = "pan" | "zoom";
 
@@ -26,28 +25,13 @@ export function VisualizationControls({
   onMaxDbChange,
   onAutoRange,
 }: VisualizationControlsProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   const inputClasses = [
-    "h-8 w-16 rounded-md border px-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 sm:h-9 sm:w-20 sm:text-sm",
-    isDark
-      ? "border-white/15 bg-[#0E1018] text-slate-100 placeholder:text-slate-500 focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/20"
-      : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/30",
+    "h-8 w-16 rounded-md border border-border/60 bg-card px-2 text-xs font-semibold text-foreground shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 sm:h-9 sm:w-20 sm:text-sm",
   ].join(" ");
 
-  const dockClasses = [
-    "flex w-full flex-col items-center justify-center gap-3 border-t border-transparent px-4 py-2 text-[11px] sm:text-xs",
-    isDark
-      ? "bg-viz-bg-dark text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-      : "bg-viz-bg-light text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
-  ].join(" ");
-
-  const dockStyle = {
-    borderTopColor: isDark
-      ? "rgba(255, 255, 255, 0.05)"
-      : "rgba(0, 0, 0, 0.08)",
-  };
+  const dockClasses =
+    "mt-4 flex w-full flex-col items-center justify-center gap-4 rounded-lg border border-border/60 bg-card/95 px-4 py-3 text-[11px] shadow-sm sm:flex-row sm:justify-between sm:text-xs";
 
   const actionGroupClasses =
     "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
@@ -55,38 +39,29 @@ export function VisualizationControls({
   const rangeGroupClasses =
     "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
 
-  const rangeLabelClasses = [
-    "text-[11px] font-medium",
-    isDark ? "text-slate-200" : "text-slate-600",
-  ].join(" ");
+  const rangeLabelClasses = "text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground";
 
-  const dividerClasses = [
-    "hidden h-6 w-px sm:block",
-    isDark ? "bg-white/10" : "bg-black/10",
-  ].join(" ");
+  const dividerClasses = "hidden h-8 w-px bg-border/60 sm:block";
 
   const sharedButtonBase =
-    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
+    "inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground sm:text-xs";
 
-  const buttonActiveClasses = isDark
-    ? "border-slate-500 bg-slate-700 text-white shadow-sm"
-    : "border-slate-300 bg-slate-200 text-slate-900 shadow-sm";
-
-  const buttonDefaultClasses = isDark
-    ? "border-white/10 text-slate-300 hover:border-white/30 hover:bg-white/5 hover:text-white"
-    : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50";
+  const buttonActiveClasses =
+    "border-cockpit-accent/60 bg-cockpit-accent/15 text-foreground shadow-inner";
 
   const modeButtonClasses = (mode: InteractionMode) =>
     [
       sharedButtonBase,
-      interactionMode === mode ? buttonActiveClasses : buttonDefaultClasses,
+      interactionMode === mode ? buttonActiveClasses : "",
     ].join(" ");
 
-  const autoRangeClasses = [sharedButtonBase, buttonDefaultClasses].join(" ");
+  const autoRangeClasses = [
+    "inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-card px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground sm:text-xs",
+  ].join(" ");
 
   return (
-    <div className={dockClasses} style={dockStyle}>
-      <div className="flex flex-wrap items-center justify-center gap-4 text-center sm:gap-5">
+    <div className={dockClasses}>
+      <div className="flex flex-1 flex-wrap items-center justify-center gap-4 text-center sm:justify-start sm:gap-5">
         <div className={actionGroupClasses}>
           <button
             type="button"

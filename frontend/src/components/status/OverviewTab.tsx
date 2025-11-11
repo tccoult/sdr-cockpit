@@ -1,9 +1,16 @@
-import { Activity, AlertTriangle, Wifi, Radio, CheckCircle2, ExternalLink } from 'lucide-react'
+import {
+  Activity,
+  AlertTriangle,
+  Wifi,
+  Radio,
+  CheckCircle2,
+  ExternalLink,
+} from 'lucide-react'
 import { Task } from '../../types/sdr'
 import { HealthStatus } from '../layout/CompactHeader'
 import { DataStreamStatus } from '../../api'
 import { Button } from '../common/Button'
-import { panelChromeMuted } from '../../styles/panelStyles'
+import { dataLabel, dataValue, moduleLabel, panelChromeMuted } from '../../styles/panelStyles'
 
 export interface OverviewTabProps {
   dataFps: number
@@ -36,24 +43,25 @@ export function OverviewTab({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-6 p-4">
       {/* Overall Status */}
-      <section className={[panelChromeMuted, 'p-4'].join(' ')}>
+      <section className={[panelChromeMuted, 'space-y-4 p-4'].join(' ')}>
+        <p className={moduleLabel}>Overall</p>
         <div className="flex items-center gap-3">
-          {healthStatus === 'healthy' ? (
-            <CheckCircle2 className="h-6 w-6 text-status-success" />
-          ) : healthStatus === 'warning' ? (
-            <AlertTriangle className="h-6 w-6 text-status-warning" />
-          ) : healthStatus === 'error' ? (
-            <AlertTriangle className="h-6 w-6 text-status-error" />
-          ) : (
-            <Activity className="h-6 w-6 text-slate-500" />
-          )}
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              System Status
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md border border-border/40 bg-muted/60 text-muted-foreground">
+            {healthStatus === 'healthy' ? (
+              <CheckCircle2 className="h-5 w-5 text-status-success" />
+            ) : healthStatus === 'warning' ? (
+              <AlertTriangle className="h-5 w-5 text-status-warning" />
+            ) : healthStatus === 'error' ? (
+              <AlertTriangle className="h-5 w-5 text-status-error" />
+            ) : (
+              <Activity className="h-5 w-5" />
+            )}
+          </span>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground">System Status</h3>
+            <p className="text-xs text-muted-foreground">
               {healthStatus === 'healthy'
                 ? 'All systems operational'
                 : healthStatus === 'warning'
@@ -66,87 +74,99 @@ export function OverviewTab({
         </div>
       </section>
 
-      {/* Performance */}
-      <section>
-        <SectionHeader icon={<Activity size={16} />} title="Performance" />
-        <div className="space-y-2">
-          <MetricRow
-            label="Data Rate"
-            value={`${dataFps} FPS`}
-            status={dataFps === 0 ? 'error' : dataFps < 30 ? 'warning' : 'healthy'}
-          />
-          <MetricRow
-            label="Render Rate"
-            value={renderFps > 0 ? `${renderFps.toFixed(1)} FPS` : '—'}
-            status={
+      <MetricGroup
+        icon={<Activity size={14} />}
+        title="Performance"
+        metrics={[
+          {
+            label: 'Data Rate',
+            value: `${dataFps} FPS`,
+            status: dataFps === 0 ? 'error' : dataFps < 30 ? 'warning' : 'healthy',
+          },
+          {
+            label: 'Render Rate',
+            value: renderFps > 0 ? `${renderFps.toFixed(1)} FPS` : '—',
+            status:
               renderFps === 0
                 ? 'unknown'
                 : renderFps < 30
                 ? 'warning'
-                : renderFps < 45
-                ? 'healthy'
-                : 'healthy'
-            }
-          />
-          <MetricRow label="Latency" value="—" status="unknown" note="Not implemented" />
-        </div>
-      </section>
+                : 'healthy',
+          },
+          {
+            label: 'Latency',
+            value: '—',
+            status: 'unknown',
+            note: 'Not instrumented',
+          },
+        ]}
+      />
 
-      {/* Network */}
-      <section>
-        <SectionHeader icon={<Wifi size={16} />} title="Network" />
-        <div className="space-y-2">
-          <MetricRow
-            label="WebSocket"
-            value={
+      <MetricGroup
+        icon={<Wifi size={14} />}
+        title="Network"
+        metrics={[
+          {
+            label: 'WebSocket',
+            value:
               streamStatus === 'connected'
                 ? 'Connected'
                 : streamStatus === 'connecting'
-                ? 'Connecting...'
+                ? 'Connecting'
                 : streamStatus === 'error'
                 ? 'Error'
-                : 'Disconnected'
-            }
-            status={
+                : 'Disconnected',
+            status:
               streamStatus === 'connected'
                 ? 'healthy'
                 : streamStatus === 'connecting'
                 ? 'warning'
                 : streamStatus === 'error'
                 ? 'error'
-                : 'unknown'
-            }
-          />
-          {streamError && (
-            <div className="rounded-md border border-status-error/40 bg-status-error/10 p-2 text-xs text-status-error dark:border-status-error/30 dark:bg-status-error/20 dark:text-status-error">
+                : 'unknown',
+          },
+          {
+            label: 'Backend',
+            value: '—',
+            status: 'unknown',
+            note: 'Not instrumented',
+          },
+          {
+            label: 'Ping',
+            value: '—',
+            status: 'unknown',
+            note: 'Not instrumented',
+          },
+        ]}
+        footer={
+          streamError ? (
+            <div className="rounded-md border border-status-error/50 bg-status-error/10 px-3 py-2 text-[11px] font-medium text-status-error">
               {streamError}
             </div>
-          )}
-          <MetricRow label="Backend" value="—" status="unknown" note="Not implemented" />
-          <MetricRow label="Ping" value="—" status="unknown" note="Not implemented" />
-        </div>
-      </section>
+          ) : null
+        }
+      />
 
-      {/* Tasks */}
-      <section>
-        <SectionHeader icon={<Radio size={16} />} title="Tasks" />
-        <div className="space-y-2">
-          <MetricRow label="Total Tasks" value={totalTasks.toString()} status="healthy" />
-          <MetricRow label="Your Tasks" value={operatorTasks.toString()} status="healthy" />
-          <MetricRow
-            label="Active Task"
-            value={selectedTask ? selectedTask.name : 'None'}
-            status={selectedTask ? 'healthy' : 'unknown'}
-          />
-        </div>
-      </section>
+      <MetricGroup
+        icon={<Radio size={14} />}
+        title="Tasks"
+        metrics={[
+          { label: 'Total Tasks', value: totalTasks.toString(), status: 'healthy' },
+          { label: 'Your Tasks', value: operatorTasks.toString(), status: 'healthy' },
+          {
+            label: 'Active Task',
+            value: selectedTask ? selectedTask.name : 'None',
+            status: selectedTask ? 'healthy' : 'unknown',
+          },
+        ]}
+      />
 
-      {/* Grafana Dashboard Link */}
-      <section className="mt-2">
+      <section className={[panelChromeMuted, 'space-y-4 p-4'].join(' ')}>
+        <p className={moduleLabel}>Telemetry</p>
         <Button
           onClick={handleOpenGrafana}
           variant="secondary"
-          className="w-full justify-center gap-2"
+          className="w-full justify-center gap-2 text-xs"
         >
           <ExternalLink size={14} />
           Open Grafana Dashboard
@@ -156,43 +176,57 @@ export function OverviewTab({
   )
 }
 
-interface SectionHeaderProps {
-  icon: React.ReactNode
-  title: string
-}
+type MetricStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 
-function SectionHeader({ icon, title }: SectionHeaderProps) {
-  return (
-    <div className="mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-      {icon}
-      <h3 className="text-sm font-semibold">{title}</h3>
-    </div>
-  )
-}
-
-interface MetricRowProps {
+interface MetricDefinition {
   label: string
   value: string
-  status: 'healthy' | 'warning' | 'error' | 'unknown'
+  status: MetricStatus
   note?: string
 }
 
-function MetricRow({ label, value, status, note }: MetricRowProps) {
-  const statusColor = {
-    healthy: 'text-status-success dark:text-status-success',
-    warning: 'text-status-warning dark:text-status-warning',
-    error: 'text-status-error dark:text-status-error',
-    unknown: 'text-slate-500 dark:text-slate-400',
+interface MetricGroupProps {
+  icon: React.ReactNode
+  title: string
+  metrics: MetricDefinition[]
+  footer?: React.ReactNode
+}
+
+function MetricGroup({ icon, title, metrics, footer }: MetricGroupProps) {
+  return (
+    <section className={[panelChromeMuted, 'space-y-4 p-4'].join(' ')}>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md border border-border/40 bg-muted/60 text-muted-foreground">
+          {icon}
+        </span>
+        <p className={moduleLabel}>{title}</p>
+      </div>
+      <div className="space-y-2">
+        {metrics.map((metric) => (
+          <MetricRow key={metric.label} {...metric} />
+        ))}
+      </div>
+      {footer && <div className="pt-1">{footer}</div>}
+    </section>
+  )
+}
+
+function MetricRow({ label, value, status, note }: MetricDefinition) {
+  const tone = {
+    healthy: 'text-status-success',
+    warning: 'text-status-warning',
+    error: 'text-status-error',
+    unknown: 'text-muted-foreground',
   }[status]
 
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-slate-900/50">
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      <div className="flex items-center gap-2">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 rounded-md border border-border/40 bg-card/90 px-3 py-2 shadow-sm">
+      <span className={dataLabel}>{label}</span>
+      <div className="flex items-baseline gap-2">
         {note && (
-          <span className="text-[10px] italic text-slate-400 dark:text-slate-600">{note}</span>
+          <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{note}</span>
         )}
-        <span className={`text-xs font-semibold ${statusColor}`}>{value}</span>
+        <span className={[dataValue, tone].join(' ')}>{value}</span>
       </div>
     </div>
   )

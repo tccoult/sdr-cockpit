@@ -8,26 +8,26 @@ html {
 
 :root {
   color-scheme: light;
-  --bg-body: #fafafa;
+  --bg-body: #e9eef6;
   --text-color: #0f172a;
-  --scroll-track: #f5f5f5;
-  --scroll-thumb: #d4d4d4;
-  --background: 0 0% 100%;
+  --scroll-track: #e1e7f0;
+  --scroll-thumb: #c3ccda;
+  --background: 220 26% 95%;
   --foreground: 222.2 47.4% 11.2%;
-  --card: 0 0% 100%;
+  --card: 220 22% 97%;
   --card-foreground: 222.2 47.4% 11.2%;
-  --popover: 0 0% 100%;
+  --popover: 220 22% 97%;
   --popover-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
+  --muted: 220 22% 92%;
   --muted-foreground: 215.4 16.3% 46.9%;
   --accent: 226 70% 55%;
   --accent-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
+  --border: 218 21% 80%;
+  --input: 218 21% 80%;
   --ring: 226 70% 55%;
-  --secondary: 210 40% 96.1%;
+  --secondary: 220 20% 90%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  --ghost: 210 20% 96%;
+  --ghost: 220 18% 92%;
   --ghost-foreground: 222.2 47.4% 11.2%;
 
   /* Status colors - light mode (RGB format for Tailwind opacity support) */
@@ -55,26 +55,26 @@ html {
 
 .dark {
   color-scheme: dark;
-  --bg-body: radial-gradient(circle at 20% 20%, #131826 0%, #080b10 50%, #05070b 100%);
+  --bg-body: radial-gradient(circle at 18% 18%, #111827 0%, #090d16 52%, #05070c 100%);
   --text-color: #f1f5f9;
-  --scroll-track: #1f2937;
-  --scroll-thumb: #334155;
-  --background: 222.2 84% 4.9%;
+  --scroll-track: #0f172a;
+  --scroll-thumb: #1f2937;
+  --background: 222 70% 3.8%;
   --foreground: 210 40% 98%;
-  --card: 222.2 84% 6%;
+  --card: 222 62% 7%;
   --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 5%;
+  --popover: 222 62% 7%;
   --popover-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
+  --muted: 222 34% 13%;
   --muted-foreground: 215 20.2% 65.1%;
   --accent: 226 70% 65%;
   --accent-foreground: 222.2 47.4% 11.2%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
+  --border: 222 28% 18%;
+  --input: 222 28% 18%;
   --ring: 226 70% 65%;
-  --secondary: 222.2 47.4% 20%;
+  --secondary: 222 36% 16%;
   --secondary-foreground: 210 40% 96%;
-  --ghost: 217.2 32.6% 24%;
+  --ghost: 222 36% 18%;
   --ghost-foreground: 210 40% 96%;
 
   /* Status colors - dark mode (RGB format for Tailwind opacity support) */

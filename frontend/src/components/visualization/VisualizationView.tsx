@@ -34,7 +34,6 @@ export const VisualizationView = memo(function VisualizationView({
   onRenderFpsChange,
 }: VisualizationViewProps) {
   const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fftContainerRef = useRef<HTMLDivElement>(null);
@@ -206,14 +205,11 @@ export const VisualizationView = memo(function VisualizationView({
   }, [visualizationMode]);
 
   const surfaceClasses = [
-    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border px-3 py-3 text-sm sm:px-4 sm:py-4",
-    isDark
-      ? "bg-viz-bg-dark border-white/5 text-slate-100 shadow-viz-surface-dark"
-      : "bg-viz-bg-light border-slate-200 text-slate-900 shadow-viz-surface-light",
+    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card/95 px-4 py-4 text-sm shadow-[0_22px_48px_rgba(7,11,19,0.18)] dark:shadow-[0_28px_60px_rgba(0,0,0,0.65)]",
   ].join(" ");
 
   const sectionBaseClasses =
-    "relative flex flex-col overflow-hidden min-h-[180px]";
+    "relative flex flex-col overflow-hidden rounded-lg border border-border/50 bg-muted/70 px-2 py-2 min-h-[180px]";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
@@ -221,10 +217,7 @@ export const VisualizationView = memo(function VisualizationView({
     }
 
     const overlayClasses = [
-      "absolute inset-0 z-20 flex items-center justify-center rounded-sm border backdrop-blur-sm",
-      isDark
-        ? "border-white/5 bg-viz-bg-dark/85 text-slate-100"
-        : "border-slate-200 bg-viz-bg-light/90 text-slate-900",
+      "absolute inset-0 z-20 flex items-center justify-center rounded-lg border border-border/60 bg-muted/80 backdrop-blur-sm text-center",
     ].join(" ");
 
     return (

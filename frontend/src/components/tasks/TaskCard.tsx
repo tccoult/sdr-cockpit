@@ -14,31 +14,31 @@ const STATUS_STYLES: Record<
   live: {
     dot: "bg-status-success shadow-[0_0_10px_rgba(76,228,179,0.35)]",
     badge:
-      "border border-status-success/30 bg-status-success/12 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
+      "border border-status-success/35 bg-status-success/15 text-status-success",
     label: "Live",
   },
   transmitting: {
-    dot: "bg-status-transmit shadow-[0_0_10px_rgba(110,201,255,0.35)]",
+    dot: "bg-status-transmit shadow-[0_0_12px_rgba(110,201,255,0.45)]",
     badge:
-      "border border-status-transmit/30 bg-status-transmit/12 text-status-transmit dark:border-status-transmit/40 dark:bg-status-transmit/15 dark:text-status-transmit",
+      "border border-status-transmit/35 bg-status-transmit/15 text-status-transmit",
     label: "Transmitting",
   },
   paused: {
     dot: "bg-status-warning",
     badge:
-      "border border-status-warning/30 bg-status-warning/12 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+      "border border-status-warning/35 bg-status-warning/15 text-status-warning",
     label: "Paused",
   },
   stopped: {
     dot: "bg-status-stopped",
     badge:
-      "border border-status-stopped/30 bg-status-stopped/12 text-status-stopped dark:border-status-stopped/40 dark:bg-status-stopped/15 dark:text-status-stopped",
+      "border border-status-stopped/35 bg-status-stopped/15 text-status-stopped",
     label: "Stopped",
   },
 };
 
 const RECORDING_BADGE =
-  "border border-status-recording/30 bg-status-recording/12 text-status-recording dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording";
+  "border border-status-recording/35 bg-status-recording/15 text-status-recording";
 
 export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
   const statusStyles = STATUS_STYLES[task.status];
@@ -60,11 +60,11 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         }
       }}
       className={[
-        "group rounded-sm border px-2.5 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60 relative",
-        "backdrop-blur-sm bg-white text-slate-900 hover:bg-cockpit-accent/5 dark:bg-slate-900/40 dark:text-slate-100 dark:hover:bg-slate-900/55",
+        "group relative flex flex-col gap-2 rounded-md border px-3 py-2.5 text-foreground shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40",
+        "border-border/50 bg-card/95 hover:border-border/40 hover:bg-card",
         isSelected
-          ? "border-cockpit-accent/40 bg-cockpit-accent/5 ring-1 ring-cockpit-accent/30 z-10 dark:border-cockpit-accent/40 dark:bg-slate-900/50 dark:shadow-lg dark:shadow-black/40 dark:ring-cockpit-accent/40"
-          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:hover:border-white/20",
+          ? "border-cockpit-accent/60 bg-cockpit-accent/10 ring-1 ring-cockpit-accent/40 shadow-[0_0_0_1px_rgba(124,131,255,0.2)]"
+          : "",
       ].join(" ")}
     >
       <div className="flex items-center gap-2.5">
@@ -76,10 +76,10 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
           ].join(" ")}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <p className="truncate text-sm font-semibold text-foreground">
             {task.name}
           </p>
-          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="truncate text-[11px] text-muted-foreground">
             {formatFrequency(task.frequency)} · {task.type.toUpperCase()}
           </p>
         </div>
@@ -93,20 +93,20 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="font-medium text-slate-600 dark:text-slate-400">
+          <span className="font-medium text-muted-foreground">
             Owner
           </span>
-          <span className="text-slate-700 dark:text-slate-300">
+          <span className="text-foreground/90">
             {task.ownerName}
           </span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="font-medium text-slate-600 dark:text-slate-400">
+          <span className="font-medium text-muted-foreground">
             Uptime
           </span>
-          <span className="text-slate-700 dark:text-slate-300">
+          <span className="text-foreground/90">
             {formatDuration(task.uptime)}
           </span>
         </span>

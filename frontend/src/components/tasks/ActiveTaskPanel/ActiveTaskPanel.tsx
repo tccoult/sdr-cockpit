@@ -1,6 +1,7 @@
 import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { Task, TaskType, TaskStatus } from "../../../types/sdr";
 import { formatFrequency } from "../../../utils/formatters";
+import { dataLabel, dataValue, moduleLabel, panelChromeMuted } from "../../../styles/panelStyles";
 import { Button } from "../../common/Button";
 import { getTaskStatusLabel } from "./taskStatus";
 
@@ -25,7 +26,7 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
       return {
         badgeClass:
-          "border-status-success/30 bg-status-success/12 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
+          "border-status-success/30 bg-status-success/15 text-status-success",
         dotClass: "bg-status-success dark:bg-status-success animate-pulse",
       };
     }
@@ -33,38 +34,34 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
-          "border-status-warning/30 bg-status-warning/12 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+          "border-status-warning/30 bg-status-warning/15 text-status-warning",
         dotClass: "bg-status-warning",
       };
     }
 
     return {
       badgeClass:
-        "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-200",
-      dotClass: "bg-slate-400 dark:bg-slate-300",
+        "border-border/60 bg-muted/70 text-muted-foreground",
+      dotClass: "bg-muted-foreground",
     };
   })();
 
   return (
-    <div className="space-y-4">
+    <div className={[panelChromeMuted, "space-y-5 p-4"].join(" ")}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Active Task
-          </p>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+        <div className="space-y-1">
+          <p className={moduleLabel}>Active Task</p>
+          <h2 className="text-lg font-semibold text-foreground">
             {task ? task.name : "No task selected"}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-muted-foreground">
             {task
-              ? `${formatFrequency(
-                  task.frequency
-                )} · ${task.type.toUpperCase()} task`
+              ? `${formatFrequency(task.frequency)} · ${task.type.toUpperCase()} task`
               : "Select a task from the roster to drive the cockpit visuals."}
           </p>
         </div>
         <div
-          className={`flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold ${badgeClass}`}
+          className={`flex items-center gap-2 rounded-md border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${badgeClass}`}
         >
           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
           {statusLabel}
@@ -72,30 +69,22 @@ export function ActiveTaskPanel({
       </div>
 
       {task && (
-        <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-300">
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Sample Rate
-            </p>
-            <p>{task.sampleRate.toLocaleString()} sps</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-muted-foreground">
+          <div className="space-y-1">
+            <p className={dataLabel}>Sample Rate</p>
+            <p className={dataValue}>{task.sampleRate.toLocaleString()} sps</p>
           </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Owner
-            </p>
-            <p>{task.ownerName}</p>
+          <div className="space-y-1">
+            <p className={dataLabel}>Owner</p>
+            <p className={dataValue}>{task.ownerName}</p>
           </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Uptime
-            </p>
-            <p>{Math.max(task.uptime, 0).toFixed(0)}s</p>
+          <div className="space-y-1">
+            <p className={dataLabel}>Uptime</p>
+            <p className={dataValue}>{Math.max(task.uptime, 0).toFixed(0)}s</p>
           </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Recording
-            </p>
-            <p>
+          <div className="space-y-1">
+            <p className={dataLabel}>Recording</p>
+            <p className={dataValue}>
               {task.recording?.isRecording
                 ? `Recording · ${task.recording.duration}s`
                 : "Idle"}
@@ -111,7 +100,7 @@ export function ActiveTaskPanel({
               onClick={() => onPauseTask(task.id)}
               size="sm"
               variant="secondary"
-              className="px-2 py-1"
+              className="px-3 py-1.5 text-xs"
             >
               {task.status === TaskStatus.PAUSED ? (
                 <>
@@ -130,7 +119,7 @@ export function ActiveTaskPanel({
               onClick={() => onStopTask(task.id)}
               size="sm"
               variant="secondary"
-              className="px-2 py-1"
+              className="px-3 py-1.5 text-xs"
             >
               <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
               Stop
@@ -145,7 +134,7 @@ export function ActiveTaskPanel({
                 }
                 size="sm"
                 variant="secondary"
-                className="px-2 py-1"
+                className="px-3 py-1.5 text-xs"
               >
                 {task.recording?.isRecording ? (
                   <>

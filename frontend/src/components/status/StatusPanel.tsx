@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DataStreamStatus } from "../../api";
 import { BistResult } from "../../types/diagnostics";
 import { Task } from "../../types/sdr";
+import { moduleLabel, panelChrome } from "../../styles/panelStyles";
 import { HealthStatus } from "../layout/CompactHeader";
 import { DiagnosticsTab } from "./DiagnosticsTab";
 import { OverviewTab } from "./OverviewTab";
@@ -37,44 +38,51 @@ export function StatusPanel({
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Tab Navigation - Sticky */}
-      <div className="sticky top-0 z-10 flex border-b border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900">
-        <TabButton
-          active={activeTab === "overview"}
-          onClick={() => setActiveTab("overview")}
-        >
-          Overview
-        </TabButton>
-        <TabButton
-          active={activeTab === "diagnostics"}
-          onClick={() => setActiveTab("diagnostics")}
-        >
-          Diagnostics
-        </TabButton>
-      </div>
+    <div className="flex h-full flex-col gap-4 p-4 text-sm">
+      <div className={[panelChrome, "flex h-full min-h-0 flex-col overflow-hidden"].join(" ")}>
+        {/* Tab Navigation */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border/60 bg-muted/60 px-4 py-3 backdrop-blur-sm">
+          <div className={[moduleLabel, "flex-1"].join(" ")}>
+            System Console
+          </div>
+          <div className="inline-flex rounded-md border border-border/60 bg-card/90 p-0.5 shadow-sm">
+            <TabButton
+              active={activeTab === "overview"}
+              onClick={() => setActiveTab("overview")}
+            >
+              Overview
+            </TabButton>
+            <TabButton
+              active={activeTab === "diagnostics"}
+              onClick={() => setActiveTab("diagnostics")}
+            >
+              Diagnostics
+            </TabButton>
+          </div>
+        </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
-        {activeTab === "overview" && (
-          <div className="animate-in fade-in slide-in-from-right-2 duration-150">
-            <OverviewTab
-              dataFps={dataFps}
-              renderFps={renderFps}
-              totalTasks={totalTasks}
-              operatorTasks={operatorTasks}
-              selectedTask={selectedTask}
-              streamStatus={streamStatus}
-              streamError={streamError}
-              healthStatus={healthStatus}
-            />
-          </div>
-        )}
-        {activeTab === "diagnostics" && (
-          <div className="animate-in fade-in slide-in-from-right-2 duration-150">
-            <DiagnosticsTab bistResult={bistResult} />
-          </div>
-        )}
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto bg-card/95">
+          {activeTab === "overview" && (
+            <div className="animate-in fade-in slide-in-from-right-2 duration-150">
+              <OverviewTab
+                dataFps={dataFps}
+                renderFps={renderFps}
+                totalTasks={totalTasks}
+                operatorTasks={operatorTasks}
+                selectedTask={selectedTask}
+                streamStatus={streamStatus}
+                streamError={streamError}
+                healthStatus={healthStatus}
+              />
+            </div>
+          )}
+          {activeTab === "diagnostics" && (
+            <div className="animate-in fade-in slide-in-from-right-2 duration-150">
+              <DiagnosticsTab bistResult={bistResult} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -91,10 +99,10 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-all duration-150 ease-in-out ${
+      className={`rounded-sm px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.26em] transition ${
         active
-          ? "border-slate-400 text-slate-900 dark:border-white/40 dark:text-white"
-          : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          ? "bg-muted/80 text-foreground shadow-inner"
+          : "text-muted-foreground hover:text-foreground"
       }`}
     >
       {children}

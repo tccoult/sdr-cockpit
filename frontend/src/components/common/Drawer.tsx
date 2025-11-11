@@ -91,19 +91,19 @@ export function Drawer({
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border-r border-slate-200 bg-white shadow-lg dark:border-white/10 dark:bg-slate-900 dark:shadow-black/60`}
+        className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border-r border-border/60 bg-muted/80 text-foreground shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-border/50 dark:bg-muted/80 dark:shadow-black/60`}
         style={{ width, top: offsetTop, height: appliedHeight }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-slate-950/50">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/70 px-4 py-3.5">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             {title}
           </h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onTogglePin}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-card/80 hover:text-foreground"
               title={isPinned ? 'Unpin drawer' : 'Pin drawer'}
               aria-label={isPinned ? 'Unpin drawer' : 'Pin drawer'}
             >
@@ -112,7 +112,7 @@ export function Drawer({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-card/80 hover:text-foreground"
               title="Close drawer"
               aria-label="Close drawer"
             >

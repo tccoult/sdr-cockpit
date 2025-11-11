@@ -41,7 +41,7 @@ describe('CockpitLayout', () => {
     expect(getByTestId('header').className).toContain('lg:col-span-full')
     expect(getByTestId('left').className).toContain('order-2')
     expect(getByTestId('center').className).toContain('order-3')
-    expect(getByTestId('spotlight').className).toContain('rounded-sm')
+    expect(getByTestId('spotlight').className).toContain('rounded-lg')
     expect(getByTestId('roster').className).toContain('flex-1')
     expect(getByTestId('telemetry').className).toContain('sm:grid-cols-2')
   })

@@ -175,7 +175,7 @@ function App() {
 
   return (
     <>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-slate-100 dark:bg-cockpit-surface">
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
         {/* Compact Header */}
         <CompactHeader
           selectedTask={selectedTask}
@@ -192,7 +192,7 @@ function App() {
 
         {/* Main Content Area */}
         <main
-          className="relative flex-1 overflow-hidden transition-all duration-200"
+          className="relative flex-1 overflow-hidden bg-muted/80 px-3 py-3 transition-all duration-200 sm:px-4 sm:py-4"
           style={{
             marginLeft: mainMarginLeft,
             marginRight: mainMarginRight,
@@ -201,7 +201,7 @@ function App() {
           {/* Desktop View: Visualization only */}
           <div className="hidden h-full lg:block">
             {selectedTask ? (
-              <div className="flex h-full w-full flex-col p-2">
+              <div className="flex h-full w-full flex-col">
                 <VisualizationView
                   taskId={selectedTask.id}
                   centerFreq={selectedTask.frequency}
@@ -214,14 +214,14 @@ function App() {
                 />
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
-                <div className="text-6xl">📡</div>
+              <div className="flex h-full flex-col items-center justify-center gap-6 rounded-lg border border-border/50 bg-card/95 text-center text-muted-foreground shadow-sm">
+                <div className="text-5xl">📡</div>
                 <div>
-                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                  <p className="text-lg font-semibold text-foreground">
                     No Task Selected
                   </p>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    Select a task from the roster to view spectrum activity.
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Select a task from the roster to drive the cockpit visualization.
                   </p>
                 </div>
                 <Button
@@ -240,7 +240,7 @@ function App() {
             {mobileView === 'visualization' && (
               <>
                 {selectedTask ? (
-                  <div className="flex h-full w-full flex-col p-2">
+                  <div className="flex h-full w-full flex-col">
                     <VisualizationView
                       taskId={selectedTask.id}
                       centerFreq={selectedTask.frequency}
@@ -253,13 +253,13 @@ function App() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
-                    <div className="text-6xl">📡</div>
+                  <div className="flex h-full flex-col items-center justify-center gap-6 rounded-lg border border-border/50 bg-card/95 text-center text-muted-foreground shadow-sm">
+                    <div className="text-5xl">📡</div>
                     <div>
-                      <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                      <p className="text-lg font-semibold text-foreground">
                         No Task Selected
                       </p>
-                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                      <p className="mt-2 text-sm text-muted-foreground">
                         Select a task from the Tasks view.
                       </p>
                     </div>
@@ -269,8 +269,8 @@ function App() {
             )}
 
             {mobileView === 'tasks' && (
-              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900">
-                <div className="border-b border-slate-200 p-4 dark:border-white/10">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/50 bg-muted/70">
+                <div className="border-b border-border/50 p-4">
                   <ActiveTaskPanel
                     task={selectedTask}
                     onPauseTask={pauseTask}
@@ -279,7 +279,7 @@ function App() {
                     onStopRecording={stopRecording}
                   />
                 </div>
-                <div className="flex flex-1 min-h-0 overflow-hidden">
+                <div className="flex min-h-0 flex-1 overflow-hidden">
                   <TaskRosterPanel
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
@@ -292,7 +292,7 @@ function App() {
             )}
 
             {mobileView === 'status' && (
-              <div className="h-full overflow-auto bg-white dark:bg-slate-900">
+              <div className="h-full overflow-auto rounded-lg border border-border/50 bg-muted/70">
                 <StatusPanel
                   dataFps={fps}
                   renderFps={renderFps}
@@ -333,7 +333,7 @@ function App() {
             />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-white/10">
+          <div className="border-t border-border/50">
             <TaskRosterPanel
               tasks={tasks}
               selectedTaskId={selectedTaskId}
