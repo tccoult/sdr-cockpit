@@ -1,8 +1,8 @@
 import { ReactNode } from 'react'
-import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload } from 'lucide-react'
+import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload, ExternalLink } from 'lucide-react'
 import { SettingsMenuItem } from '../settings/SettingsMenu'
 
-export type MobileView = 'visualization' | 'tasks' | 'status'
+export type MobileView = 'visualization' | 'tasks' | 'health'
 
 export interface MobileNavProps {
   isOpen: boolean
@@ -50,18 +50,38 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
 interface SettingsItemProps {
   icon: ReactNode
   label: string
-  onClick: () => void
+  onClick?: () => void
+  href?: string
 }
 
-function SettingsItem({ icon, label, onClick }: SettingsItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-    >
+function SettingsItem({ icon, label, onClick, href }: SettingsItemProps) {
+  const className =
+    'flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+
+  const content = (
+    <>
       <span className="text-slate-500 dark:text-slate-400">{icon}</span>
       <span className="font-medium">{label}</span>
+    </>
+  )
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+        className={className}
+      >
+        {content}
+      </a>
+    )
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
     </button>
   )
 }
@@ -81,6 +101,11 @@ export function MobileNav({
   healthIndicator,
 }: MobileNavProps) {
   if (!isOpen) return null
+
+  const grafanaUrl =
+    typeof window === 'undefined'
+      ? 'http://localhost:3000'
+      : `http://${window.location.hostname}:3000`
 
   const handleViewChange = (view: MobileView) => {
     onViewChange(view)
@@ -152,9 +177,9 @@ export function MobileNav({
             />
             <NavItem
               icon={<Activity size={20} />}
-              label="Status"
-              isActive={currentView === 'status'}
-              onClick={() => handleViewChange('status')}
+              label="Health"
+              isActive={currentView === 'health'}
+              onClick={() => handleViewChange('health')}
             />
           </div>
 
@@ -182,6 +207,12 @@ export function MobileNav({
               icon={<Upload size={20} />}
               label="System Update"
               onClick={() => handleSettingsClick('update')}
+            />
+            <SettingsItem
+              icon={<ExternalLink size={20} />}
+              label="Open Grafana Dashboard"
+              href={grafanaUrl}
+              onClick={onClose}
             />
             <button
               type="button"

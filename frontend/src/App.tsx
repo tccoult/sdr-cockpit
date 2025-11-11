@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
 import { Drawer } from "./components/common/Drawer";
 import { MobileNav, MobileView } from "./components/layout/MobileNav";
-import { StatusPanel } from "./components/status/StatusPanel";
+import { SystemHealthPanel } from "./components/system-health/SystemHealthPanel";
 import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
@@ -22,7 +22,7 @@ import { useTheme } from "./components/app/useTheme";
 import { getHealthIndicator } from "./styles/themeColors";
 
 const TASK_DRAWER_WIDTH = 300;
-const STATUS_PANEL_WIDTH = 300;
+const SYSTEM_HEALTH_PANEL_WIDTH = 300;
 const HEADER_HEIGHT = 48;
 
 function App() {
@@ -32,9 +32,9 @@ function App() {
   // UI state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
-  const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false);
+  const [isSystemHealthPanelOpen, setIsSystemHealthPanelOpen] = useState(false);
   const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
-  const [isStatusPanelPinned, setIsStatusPanelPinned] = useState(false);
+  const [isSystemHealthPanelPinned, setIsSystemHealthPanelPinned] = useState(false);
   const [renderFps, setRenderFps] = useState(0);
 
   // Mobile navigation state
@@ -77,7 +77,6 @@ function App() {
   });
 
   const totalTasks = tasks.length;
-  const operatorTasks = tasks.filter((task) => task.owner === "self").length;
 
   // Determine health status (placeholder logic)
   const healthStatus: HealthStatus = streamError
@@ -120,8 +119,8 @@ function App() {
           setIsUpdateWizardOpen(false);
         } else if (isMobileNavOpen) {
           setIsMobileNavOpen(false);
-        } else if (!isStatusPanelPinned && isStatusPanelOpen) {
-          setIsStatusPanelOpen(false);
+        } else if (!isSystemHealthPanelPinned && isSystemHealthPanelOpen) {
+          setIsSystemHealthPanelOpen(false);
         } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
           setIsTaskDrawerOpen(false);
         }
@@ -130,7 +129,15 @@ function App() {
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [activeSettingsPanel, isUpdateWizardOpen, isMobileNavOpen, isStatusPanelOpen, isStatusPanelPinned, isTaskDrawerOpen, isTaskDrawerPinned]);
+  }, [
+    activeSettingsPanel,
+    isUpdateWizardOpen,
+    isMobileNavOpen,
+    isSystemHealthPanelOpen,
+    isSystemHealthPanelPinned,
+    isTaskDrawerOpen,
+    isTaskDrawerPinned,
+  ]);
 
   // Close unpinned drawers when selecting a task
   const handleSelectTask = (taskId: string) => {
@@ -166,8 +173,8 @@ function App() {
     : "0";
   const mainMarginRight = isMobile
     ? "0"
-    : isStatusPanelPinned && isStatusPanelOpen
-    ? `${STATUS_PANEL_WIDTH}px`
+    : isSystemHealthPanelPinned && isSystemHealthPanelOpen
+    ? `${SYSTEM_HEALTH_PANEL_WIDTH}px`
     : "0";
 
   // Get health indicator for mobile nav
@@ -183,10 +190,10 @@ function App() {
           renderFps={renderFps}
           totalTasks={totalTasks}
           healthStatus={healthStatus}
-          isStatusPanelOpen={isStatusPanelOpen}
+          isHealthPanelOpen={isSystemHealthPanelOpen}
           isMobile={isMobile}
           onToggleTaskDrawer={handleToggleMenu}
-          onToggleStatusPanel={() => setIsStatusPanelOpen((prev) => !prev)}
+          onToggleHealthPanel={() => setIsSystemHealthPanelOpen((prev) => !prev)}
           onOpenSettings={handleSettingsSelect}
         />
 
@@ -291,19 +298,9 @@ function App() {
               </div>
             )}
 
-            {mobileView === 'status' && (
+            {mobileView === 'health' && (
               <div className="h-full overflow-auto bg-white dark:bg-slate-900">
-                <StatusPanel
-                  dataFps={fps}
-                  renderFps={renderFps}
-                  totalTasks={totalTasks}
-                  operatorTasks={operatorTasks}
-                  selectedTask={selectedTask}
-                  streamStatus={streamStatus}
-                  streamError={streamError}
-                  healthStatus={healthStatus}
-                  bistResult={bistResult}
-                />
+                <SystemHealthPanel bistResult={bistResult} />
               </div>
             )}
           </div>
@@ -344,28 +341,18 @@ function App() {
           </div>
         </Drawer>
 
-        {/* Status Panel Drawer */}
+        {/* System Health Drawer */}
         <Drawer
-          isOpen={isStatusPanelOpen}
-          onClose={() => setIsStatusPanelOpen(false)}
+          isOpen={isSystemHealthPanelOpen}
+          onClose={() => setIsSystemHealthPanelOpen(false)}
           position="right"
-          title="System Status"
-          isPinned={isStatusPanelPinned}
-          onTogglePin={() => setIsStatusPanelPinned((prev) => !prev)}
-          width={`${STATUS_PANEL_WIDTH}px`}
+          title="System Health"
+          isPinned={isSystemHealthPanelPinned}
+          onTogglePin={() => setIsSystemHealthPanelPinned((prev) => !prev)}
+          width={`${SYSTEM_HEALTH_PANEL_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <StatusPanel
-            dataFps={fps}
-            renderFps={renderFps}
-            totalTasks={totalTasks}
-            operatorTasks={operatorTasks}
-            selectedTask={selectedTask}
-            streamStatus={streamStatus}
-            streamError={streamError}
-            healthStatus={healthStatus}
-            bistResult={bistResult}
-          />
+          <SystemHealthPanel bistResult={bistResult} />
         </Drawer>
       </div>
 

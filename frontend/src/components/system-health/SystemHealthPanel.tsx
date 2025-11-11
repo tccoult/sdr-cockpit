@@ -11,7 +11,7 @@ import {
 import { Button } from "../common/Button";
 import { TreeNodeData, TreeView } from "../common/TreeView";
 
-export interface DiagnosticsTabProps {
+export interface SystemHealthPanelProps {
   bistResult: BistResult | null;
 }
 
@@ -70,7 +70,7 @@ const STATUS_TOKENS: Record<
   },
 };
 
-export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
+export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
   const [view, setView] = useState<PanelView>("tests");
   const [expandState, setExpandState] = useState<"auto" | "all" | "none">(
     "auto"

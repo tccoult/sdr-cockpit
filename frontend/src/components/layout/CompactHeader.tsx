@@ -14,10 +14,10 @@ export interface CompactHeaderProps {
   renderFps: number
   totalTasks: number
   healthStatus: HealthStatus
-  isStatusPanelOpen?: boolean
+  isHealthPanelOpen?: boolean
   isMobile?: boolean
   onToggleTaskDrawer: () => void
-  onToggleStatusPanel: () => void
+  onToggleHealthPanel: () => void
   onOpenSettings: (item: SettingsMenuItem) => void
 }
 
@@ -31,10 +31,10 @@ export function CompactHeader({
   renderFps,
   totalTasks,
   healthStatus,
-  isStatusPanelOpen = false,
+  isHealthPanelOpen = false,
   isMobile = false,
   onToggleTaskDrawer,
-  onToggleStatusPanel,
+  onToggleHealthPanel,
   onOpenSettings,
 }: CompactHeaderProps) {
   const taskStatusLabel = getTaskStatusLabel(selectedTask)
@@ -123,30 +123,30 @@ export function CompactHeader({
         {/* Divider - hidden on mobile */}
         <div className="hidden h-6 w-px bg-slate-200 dark:bg-white/20 lg:block" />
 
-        {/* Status - Button on desktop, Bubble only on mobile */}
+        {/* Health - Button on desktop, Bubble only on mobile */}
         <button
           type="button"
-          onClick={onToggleStatusPanel}
+          onClick={onToggleHealthPanel}
           className={`flex h-8 items-center gap-1 rounded-md border px-3 transition-all duration-150 ease-in-out hover:brightness-110 lg:gap-1 lg:px-3`}
           style={{
-            borderColor: isStatusPanelOpen && !isMobile
+            borderColor: isHealthPanelOpen && !isMobile
               ? healthIndicator.dotColor
               : healthIndicator.borderColor,
             backgroundColor: healthIndicator.bgColor,
-            boxShadow: isStatusPanelOpen && !isMobile
+            boxShadow: isHealthPanelOpen && !isMobile
               ? `0 0 0 2px ${healthIndicator.dotColor}40`
               : undefined,
           }}
-          title={`System status: ${healthStatus}`}
-          aria-label={`System status: ${healthStatus}`}
+          title={`System health: ${healthStatus}`}
+          aria-label={`System health: ${healthStatus}`}
         >
           <span className="hidden text-xs font-medium text-slate-700 dark:text-slate-300 lg:inline">
-            Status
+            Health
           </span>
           <ChevronDown
             size={12}
             className={`hidden text-slate-500 transition-transform duration-150 ease-in-out dark:text-slate-400 lg:inline ${
-              isStatusPanelOpen ? 'rotate-180' : ''
+              isHealthPanelOpen ? 'rotate-180' : ''
             }`}
           />
           <span

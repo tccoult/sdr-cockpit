@@ -1,5 +1,5 @@
-import { Info, Monitor, Settings, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ExternalLink, Info, Monitor, Settings, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type SettingsMenuItem = "system" | "display" | "version" | "update";
 
@@ -15,6 +15,13 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const grafanaUrl = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "http://localhost:3000";
+    }
+
+    return `http://${window.location.hostname}:3000`;
+  }, []);
 
   // Close on click outside
   useEffect(() => {
@@ -94,6 +101,15 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
               label="System Update"
               onClick={() => handleSelectItem("update")}
             />
+
+            <div className="my-1 h-px bg-slate-200 dark:bg-white/10" />
+
+            <MenuItem
+              icon={<ExternalLink size={16} />}
+              label="Open Grafana Dashboard"
+              href={grafanaUrl}
+              onClick={() => setIsOpen(false)}
+            />
           </div>
         </div>
       )}
@@ -106,15 +122,15 @@ interface MenuItemProps {
   label: string;
   onClick: () => void;
   iconRight?: React.ReactNode;
+  href?: string;
 }
 
-function MenuItem({ icon, label, onClick, iconRight }: MenuItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-700 transition-all duration-150 ease-in-out hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-    >
+function MenuItem({ icon, label, onClick, iconRight, href }: MenuItemProps) {
+  const className =
+    "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-700 transition-all duration-150 ease-in-out hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800";
+
+  const content = (
+    <>
       <span className="flex-shrink-0 text-slate-500 transition-all duration-150 ease-in-out group-hover:brightness-125 dark:text-slate-400">
         {icon}
       </span>
@@ -124,6 +140,26 @@ function MenuItem({ icon, label, onClick, iconRight }: MenuItemProps) {
           {iconRight}
         </span>
       )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+        className={className}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
     </button>
   );
 }
