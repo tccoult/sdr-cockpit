@@ -1,6 +1,6 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'subtle' | 'icon'
+export type ButtonVariant = 'primary' | 'secondary' | 'subtle' | 'ghost' | 'icon'
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -14,17 +14,19 @@ const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ')
 
 const BASE_CLASSES =
-  'inline-flex items-center justify-center gap-2 rounded-md border font-medium transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60 disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex items-center justify-center gap-2 rounded-md border font-medium transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50'
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     'border-transparent bg-slate-900 text-white hover:bg-slate-800 dark:border-white/30 dark:bg-cockpit-accent/40 dark:hover:bg-cockpit-accent/50',
   secondary:
-    'border-slate-300 bg-white text-slate-900 hover:bg-slate-100 dark:border-white/20 dark:bg-white/10 dark:text-slate-100 dark:hover:border-white/30 dark:hover:bg-white/15',
+    'border-border bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
   subtle:
-    'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10',
+    'border-border/60 bg-muted text-muted-foreground hover:bg-muted/80',
+  ghost:
+    'border-transparent bg-transparent text-foreground hover:bg-ghost hover:text-foreground',
   icon:
-    'rounded-md border-slate-300 bg-white p-0 text-slate-600 hover:bg-slate-100 dark:border-white/20 dark:bg-white/10 dark:text-slate-100 dark:hover:border-white/30 dark:hover:bg-white/15',
+    'rounded-md border-border/70 bg-card p-0 text-muted-foreground hover:bg-muted/70 hover:text-foreground',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
