@@ -41,9 +41,9 @@ export function TaskRosterPanel({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white text-slate-900 dark:bg-slate-950/30 dark:text-slate-100">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-transparent">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+    <div className="flex min-h-0 flex-1 flex-col bg-muted/50 text-foreground dark:bg-muted/20">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/70 px-4 py-3 text-muted-foreground backdrop-blur-md dark:border-border/50 dark:bg-muted/25">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em]">
           Tasks
         </h2>
         <Button
@@ -51,12 +51,13 @@ export function TaskRosterPanel({
           variant="icon"
           title="Create new task"
           aria-label="Create new task"
+          className="h-8 w-8"
         >
           <Plus size={16} />
         </Button>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-transparent">
+      <div className="flex gap-2 border-b border-border/60 bg-muted/60 px-4 py-3 dark:border-border/50 dark:bg-muted/20">
         {FILTER_OPTIONS.map((option) => {
           const isActive = option === filter;
           return (
@@ -65,10 +66,10 @@ export function TaskRosterPanel({
               type="button"
               onClick={() => setFilter(option)}
               className={[
-                "flex-1 rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition",
+                "flex-1 rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] transition",
                 isActive
-                  ? "border-slate-400 bg-slate-200 text-slate-900 dark:border-white/40 dark:bg-cockpit-accent/20 dark:text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:border-white/20 dark:hover:text-slate-100",
+                  ? "border-border/60 bg-card/90 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                  : "border-border/40 bg-card/40 text-muted-foreground hover:border-border/60 hover:bg-card/50 hover:text-foreground",
               ].join(" ")}
             >
               {option}
@@ -77,34 +78,39 @@ export function TaskRosterPanel({
         })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         {isDiscovering && tasks.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-300">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <div className="animate-spin text-3xl">⟳</div>
             <p className="text-sm font-medium">Discovering tasks...</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-muted-foreground/80">
               Scanning SDR system
             </p>
           </div>
         ) : sortedTasks.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-500 dark:text-slate-300">
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
             <div className="text-4xl">📡</div>
-            <div className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
               No {filter !== "all" ? filter.toUpperCase() : ""} tasks
             </div>
-            <div className="max-w-[200px] text-xs text-slate-400 dark:text-slate-500">
+            <div className="max-w-[220px] text-xs text-muted-foreground/80">
               {filter === "all"
                 ? "Create a receive task to start monitoring RF spectrum"
                 : `No ${filter.toUpperCase()} tasks available`}
             </div>
             {filter === "all" && (
-              <Button onClick={onCreateTask} variant="secondary" size="sm">
+              <Button
+                onClick={onCreateTask}
+                variant="secondary"
+                size="sm"
+                className="mt-2 px-4 text-[11px] uppercase tracking-[0.2em]"
+              >
                 + Create Task
               </Button>
             )}
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             {sortedTasks.map((task) => (
               <TaskCard
                 key={task.id}

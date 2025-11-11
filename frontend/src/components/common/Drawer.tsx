@@ -91,19 +91,19 @@ export function Drawer({
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border-r border-slate-200 bg-white shadow-lg dark:border-white/10 dark:bg-slate-900 dark:shadow-black/60`}
+        className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border-r border-border/60 bg-muted/70 shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-lg dark:border-border/40 dark:bg-muted/20 dark:shadow-[0_24px_48px_rgba(0,0,0,0.55)]`}
         style={{ width, top: offsetTop, height: appliedHeight }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-slate-950/50">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between border-b border-border/60 bg-card/90 px-4 py-3.5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:border-border/40 dark:bg-card/25">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground">
             {title}
           </h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onTogglePin}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="rounded-md border border-transparent p-1.5 text-muted-foreground transition hover:border-border/60 hover:bg-card/70 hover:text-foreground dark:hover:bg-card/35"
               title={isPinned ? 'Unpin drawer' : 'Pin drawer'}
               aria-label={isPinned ? 'Unpin drawer' : 'Pin drawer'}
             >
@@ -112,7 +112,7 @@ export function Drawer({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="rounded-md border border-transparent p-1.5 text-muted-foreground transition hover:border-border/60 hover:bg-card/70 hover:text-foreground dark:hover:bg-card/35"
               title="Close drawer"
               aria-label="Close drawer"
             >

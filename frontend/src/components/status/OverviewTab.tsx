@@ -3,7 +3,7 @@ import { Task } from '../../types/sdr'
 import { HealthStatus } from '../layout/CompactHeader'
 import { DataStreamStatus } from '../../api'
 import { Button } from '../common/Button'
-import { panelChromeMuted } from '../../styles/panelStyles'
+import { panelChrome } from '../../styles/panelStyles'
 
 export interface OverviewTabProps {
   dataFps: number
@@ -36,24 +36,23 @@ export function OverviewTab({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* Overall Status */}
-      <section className={[panelChromeMuted, 'p-4'].join(' ')}>
+    <div className="flex flex-col gap-6 p-4 text-foreground">
+      <section className={[panelChrome, 'p-4'].join(' ')}>
         <div className="flex items-center gap-3">
           {healthStatus === 'healthy' ? (
-            <CheckCircle2 className="h-6 w-6 text-status-success" />
+            <CheckCircle2 className="h-5 w-5 text-status-success" />
           ) : healthStatus === 'warning' ? (
-            <AlertTriangle className="h-6 w-6 text-status-warning" />
+            <AlertTriangle className="h-5 w-5 text-status-warning" />
           ) : healthStatus === 'error' ? (
-            <AlertTriangle className="h-6 w-6 text-status-error" />
+            <AlertTriangle className="h-5 w-5 text-status-error" />
           ) : (
-            <Activity className="h-6 w-6 text-slate-500" />
+            <Activity className="h-5 w-5 text-muted-foreground" />
           )}
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               System Status
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
               {healthStatus === 'healthy'
                 ? 'All systems operational'
                 : healthStatus === 'warning'
@@ -62,14 +61,16 @@ export function OverviewTab({
                 ? 'Critical issues detected'
                 : 'Status unknown'}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Monitoring RF front-end, networking, and telemetry cadence.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Performance */}
-      <section>
+      <section className="space-y-4">
         <SectionHeader icon={<Activity size={16} />} title="Performance" />
-        <div className="space-y-2">
+        <MetricGroup>
           <MetricRow
             label="Data Rate"
             value={`${dataFps} FPS`}
@@ -88,21 +89,25 @@ export function OverviewTab({
                 : 'healthy'
             }
           />
-          <MetricRow label="Latency" value="—" status="unknown" note="Not implemented" />
-        </div>
+          <MetricRow
+            label="Latency"
+            value="—"
+            status="unknown"
+            note="Not instrumented"
+          />
+        </MetricGroup>
       </section>
 
-      {/* Network */}
-      <section>
+      <section className="space-y-4">
         <SectionHeader icon={<Wifi size={16} />} title="Network" />
-        <div className="space-y-2">
+        <MetricGroup>
           <MetricRow
             label="WebSocket"
             value={
               streamStatus === 'connected'
                 ? 'Connected'
                 : streamStatus === 'connecting'
-                ? 'Connecting...'
+                ? 'Connecting…'
                 : streamStatus === 'error'
                 ? 'Error'
                 : 'Disconnected'
@@ -118,35 +123,34 @@ export function OverviewTab({
             }
           />
           {streamError && (
-            <div className="rounded-md border border-status-error/40 bg-status-error/10 p-2 text-xs text-status-error dark:border-status-error/30 dark:bg-status-error/20 dark:text-status-error">
+            <div className="rounded-md border border-status-error/50 bg-status-error/10 px-3 py-2 text-[11px] text-status-error dark:border-status-error/40 dark:bg-status-error/15">
               {streamError}
             </div>
           )}
-          <MetricRow label="Backend" value="—" status="unknown" note="Not implemented" />
-          <MetricRow label="Ping" value="—" status="unknown" note="Not implemented" />
-        </div>
+          <MetricRow label="Backend" value="—" status="unknown" note="Not instrumented" />
+          <MetricRow label="Ping" value="—" status="unknown" note="Not instrumented" />
+        </MetricGroup>
       </section>
 
-      {/* Tasks */}
-      <section>
+      <section className="space-y-4">
         <SectionHeader icon={<Radio size={16} />} title="Tasks" />
-        <div className="space-y-2">
+        <MetricGroup>
           <MetricRow label="Total Tasks" value={totalTasks.toString()} status="healthy" />
-          <MetricRow label="Your Tasks" value={operatorTasks.toString()} status="healthy" />
+          <MetricRow label="Operator Tasks" value={operatorTasks.toString()} status="healthy" />
           <MetricRow
             label="Active Task"
             value={selectedTask ? selectedTask.name : 'None'}
             status={selectedTask ? 'healthy' : 'unknown'}
+            note={selectedTask ? undefined : 'Select a task to drive visualizations'}
           />
-        </div>
+        </MetricGroup>
       </section>
 
-      {/* Grafana Dashboard Link */}
-      <section className="mt-2">
+      <section>
         <Button
           onClick={handleOpenGrafana}
           variant="secondary"
-          className="w-full justify-center gap-2"
+          className="w-full justify-center gap-2 text-[11px] uppercase tracking-[0.2em]"
         >
           <ExternalLink size={14} />
           Open Grafana Dashboard
@@ -163,11 +167,17 @@ interface SectionHeaderProps {
 
 function SectionHeader({ icon, title }: SectionHeaderProps) {
   return (
-    <div className="mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-      {icon}
-      <h3 className="text-sm font-semibold">{title}</h3>
+    <div className="flex items-center gap-2 text-muted-foreground">
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-card/80 text-[11px] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] dark:border-border/50 dark:bg-card/25">
+        {icon}
+      </span>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em]">{title}</h3>
     </div>
   )
+}
+
+function MetricGroup({ children }: { children: React.ReactNode }) {
+  return <div className="space-y-2">{children}</div>
 }
 
 interface MetricRowProps {
@@ -179,21 +189,23 @@ interface MetricRowProps {
 
 function MetricRow({ label, value, status, note }: MetricRowProps) {
   const statusColor = {
-    healthy: 'text-status-success dark:text-status-success',
-    warning: 'text-status-warning dark:text-status-warning',
-    error: 'text-status-error dark:text-status-error',
-    unknown: 'text-slate-500 dark:text-slate-400',
+    healthy: 'text-status-success',
+    warning: 'text-status-warning',
+    error: 'text-status-error',
+    unknown: 'text-muted-foreground',
   }[status]
 
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-slate-900/50">
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      <div className="flex items-center gap-2">
-        {note && (
-          <span className="text-[10px] italic text-slate-400 dark:text-slate-600">{note}</span>
-        )}
-        <span className={`text-xs font-semibold ${statusColor}`}>{value}</span>
+    <div className="rounded-md border border-border/60 bg-card/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:border-border/50 dark:bg-card/25">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </span>
+        <span className={`text-sm font-semibold ${statusColor}`}>{value}</span>
       </div>
+      {note && (
+        <p className="mt-1 text-[10px] text-muted-foreground">{note}</p>
+      )}
     </div>
   )
 }

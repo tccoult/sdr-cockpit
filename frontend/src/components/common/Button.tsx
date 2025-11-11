@@ -14,19 +14,19 @@ const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ')
 
 const BASE_CLASSES =
-  'inline-flex items-center justify-center gap-2 rounded-md border font-medium transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex items-center justify-center gap-2 rounded-md border font-medium transition duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60'
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'border-transparent bg-slate-900 text-white hover:bg-slate-800 dark:border-white/30 dark:bg-cockpit-accent/40 dark:hover:bg-cockpit-accent/50',
+    'border-transparent bg-cockpit-accent/90 text-white shadow-sm hover:bg-cockpit-accent/80 dark:bg-cockpit-accent/60 dark:hover:bg-cockpit-accent/70',
   secondary:
-    'border-border bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+    'border-border/70 bg-card/90 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] hover:bg-card/80 dark:border-border/60 dark:bg-card/40 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]',
   subtle:
-    'border-border/60 bg-muted text-muted-foreground hover:bg-muted/80',
+    'border-border/60 bg-muted/80 text-muted-foreground hover:bg-muted/70 dark:border-border/50 dark:bg-muted/30 dark:hover:bg-muted/40',
   ghost:
-    'border-transparent bg-transparent text-foreground hover:bg-ghost hover:text-foreground',
+    'border-transparent bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:hover:bg-muted/20',
   icon:
-    'rounded-md border-border/70 bg-card p-0 text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+    'rounded-md border-border/70 bg-card/80 p-0 text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] hover:bg-card/70 hover:text-foreground dark:border-border/60 dark:bg-card/30 dark:shadow-none dark:hover:bg-card/40',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

@@ -175,7 +175,7 @@ function App() {
 
   return (
     <>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-slate-100 dark:bg-cockpit-surface">
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
         {/* Compact Header */}
         <CompactHeader
           selectedTask={selectedTask}
@@ -192,7 +192,7 @@ function App() {
 
         {/* Main Content Area */}
         <main
-          className="relative flex-1 overflow-hidden transition-all duration-200"
+          className="relative flex-1 overflow-hidden bg-muted/70 transition-all duration-200 dark:bg-muted/20"
           style={{
             marginLeft: mainMarginLeft,
             marginRight: mainMarginRight,
@@ -201,36 +201,41 @@ function App() {
           {/* Desktop View: Visualization only */}
           <div className="hidden h-full lg:block">
             {selectedTask ? (
-              <div className="flex h-full w-full flex-col p-2">
-                <VisualizationView
-                  taskId={selectedTask.id}
-                  centerFreq={selectedTask.frequency}
-                  sampleRate={selectedTask.sampleRate}
-                  colorMap={colorMap}
-                  visualizationMode={selectedTask.visualizationMode}
-                  dataError={streamError || undefined}
-                  isConnecting={streamStatus === "connecting"}
-                  onRenderFpsChange={setRenderFps}
-                />
+              <div className="flex h-full w-full flex-col gap-4 p-6">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-[0_20px_45px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/50 dark:bg-card/20 dark:shadow-[0_30px_60px_rgba(0,0,0,0.55)]">
+                  <VisualizationView
+                    taskId={selectedTask.id}
+                    centerFreq={selectedTask.frequency}
+                    sampleRate={selectedTask.sampleRate}
+                    colorMap={colorMap}
+                    visualizationMode={selectedTask.visualizationMode}
+                    dataError={streamError || undefined}
+                    isConnecting={streamStatus === "connecting"}
+                    onRenderFpsChange={setRenderFps}
+                  />
+                </div>
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
-                <div className="text-6xl">📡</div>
-                <div>
-                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                    No Task Selected
-                  </p>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    Select a task from the roster to view spectrum activity.
-                  </p>
+              <div className="flex h-full flex-col gap-4 p-6">
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 rounded-2xl border border-border/70 bg-card/95 text-center shadow-[0_18px_40px_rgba(15,23,42,0.15)] backdrop-blur-md dark:border-border/50 dark:bg-card/15 dark:text-foreground dark:shadow-[0_28px_60px_rgba(0,0,0,0.6)]">
+                  <div className="text-6xl">📡</div>
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold tracking-wide text-foreground">
+                      No Task Selected
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Select a task from the roster to drive the cockpit visuals.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsWizardOpen(true)}
+                    variant="secondary"
+                    size="md"
+                    className="px-5"
+                  >
+                    + Create New Task
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => setIsWizardOpen(true)}
-                  variant="secondary"
-                  size="lg"
-                >
-                  + Create New Task
-                </Button>
               </div>
             )}
           </div>
@@ -240,28 +245,32 @@ function App() {
             {mobileView === 'visualization' && (
               <>
                 {selectedTask ? (
-                  <div className="flex h-full w-full flex-col p-2">
-                    <VisualizationView
-                      taskId={selectedTask.id}
-                      centerFreq={selectedTask.frequency}
-                      sampleRate={selectedTask.sampleRate}
-                      colorMap={colorMap}
-                      visualizationMode={selectedTask.visualizationMode}
-                      dataError={streamError || undefined}
-                      isConnecting={streamStatus === "connecting"}
-                      onRenderFpsChange={setRenderFps}
-                    />
+                  <div className="flex h-full w-full flex-col gap-4 p-4">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/50 dark:bg-card/20 dark:shadow-[0_24px_50px_rgba(0,0,0,0.55)]">
+                      <VisualizationView
+                        taskId={selectedTask.id}
+                        centerFreq={selectedTask.frequency}
+                        sampleRate={selectedTask.sampleRate}
+                        colorMap={colorMap}
+                        visualizationMode={selectedTask.visualizationMode}
+                        dataError={streamError || undefined}
+                        isConnecting={streamStatus === "connecting"}
+                        onRenderFpsChange={setRenderFps}
+                      />
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
-                    <div className="text-6xl">📡</div>
-                    <div>
-                      <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                        No Task Selected
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                        Select a task from the Tasks view.
-                      </p>
+                  <div className="flex h-full flex-col gap-4 p-4">
+                    <div className="flex flex-1 flex-col items-center justify-center gap-6 rounded-2xl border border-border/70 bg-card/95 text-center shadow-[0_16px_36px_rgba(15,23,42,0.15)] backdrop-blur-md dark:border-border/50 dark:bg-card/20 dark:text-foreground dark:shadow-[0_24px_50px_rgba(0,0,0,0.55)]">
+                      <div className="text-5xl">📡</div>
+                      <div className="space-y-2">
+                        <p className="text-base font-semibold tracking-wide text-foreground">
+                          No Task Selected
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Select a task from the Tasks view.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -269,8 +278,8 @@ function App() {
             )}
 
             {mobileView === 'tasks' && (
-              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900">
-                <div className="border-b border-slate-200 p-4 dark:border-white/10">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/60 dark:bg-muted/25">
+                <div className="border-b border-border/60 p-4">
                   <ActiveTaskPanel
                     task={selectedTask}
                     onPauseTask={pauseTask}
@@ -279,7 +288,7 @@ function App() {
                     onStopRecording={stopRecording}
                   />
                 </div>
-                <div className="flex flex-1 min-h-0 overflow-hidden">
+                <div className="flex min-h-0 flex-1 overflow-hidden">
                   <TaskRosterPanel
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
@@ -292,7 +301,7 @@ function App() {
             )}
 
             {mobileView === 'status' && (
-              <div className="h-full overflow-auto bg-white dark:bg-slate-900">
+              <div className="h-full overflow-auto bg-muted/60 dark:bg-muted/25">
                 <StatusPanel
                   dataFps={fps}
                   renderFps={renderFps}
@@ -323,7 +332,7 @@ function App() {
           width={`${TASK_DRAWER_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <div className="p-4">
+          <div className="border-b border-border/60 bg-muted/60 p-4 dark:bg-muted/20">
             <ActiveTaskPanel
               task={selectedTask}
               onPauseTask={pauseTask}
@@ -333,7 +342,7 @@ function App() {
             />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-white/10">
+          <div className="border-t border-border/60 bg-muted/70 dark:bg-muted/25">
             <TaskRosterPanel
               tasks={tasks}
               selectedTaskId={selectedTaskId}

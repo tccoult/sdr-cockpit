@@ -2,6 +2,7 @@ import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { Task, TaskType, TaskStatus } from "../../../types/sdr";
 import { formatFrequency } from "../../../utils/formatters";
 import { Button } from "../../common/Button";
+import { panelChrome } from "../../../styles/panelStyles";
 import { getTaskStatusLabel } from "./taskStatus";
 
 interface ActiveTaskPanelProps {
@@ -46,25 +47,23 @@ export function ActiveTaskPanel({
   })();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+    <div className={[panelChrome, "space-y-5 p-4 text-foreground"].join(" ")}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             Active Task
           </p>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-semibold leading-tight">
             {task ? task.name : "No task selected"}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             {task
-              ? `${formatFrequency(
-                  task.frequency
-                )} · ${task.type.toUpperCase()} task`
+              ? `${formatFrequency(task.frequency)} · ${task.type.toUpperCase()} task`
               : "Select a task from the roster to drive the cockpit visuals."}
           </p>
         </div>
         <div
-          className={`flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold ${badgeClass}`}
+          className={`flex items-center gap-2 rounded-md border border-border/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] dark:border-border/50 dark:bg-card/20 ${badgeClass}`}
         >
           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
           {statusLabel}
@@ -72,36 +71,30 @@ export function ActiveTaskPanel({
       </div>
 
       {task && (
-        <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-300">
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Sample Rate
-            </p>
-            <p>{task.sampleRate.toLocaleString()} sps</p>
+        <dl className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm text-muted-foreground">
+          <div className="space-y-1">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em]">Sample Rate</dt>
+            <dd className="text-foreground">
+              {task.sampleRate.toLocaleString()} sps
+            </dd>
           </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Owner
-            </p>
-            <p>{task.ownerName}</p>
+          <div className="space-y-1">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em]">Owner</dt>
+            <dd className="text-foreground">{task.ownerName}</dd>
           </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Uptime
-            </p>
-            <p>{Math.max(task.uptime, 0).toFixed(0)}s</p>
+          <div className="space-y-1">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em]">Uptime</dt>
+            <dd className="text-foreground">{Math.max(task.uptime, 0).toFixed(0)}s</dd>
           </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Recording
-            </p>
-            <p>
+          <div className="space-y-1">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em]">Recording</dt>
+            <dd className="text-foreground">
               {task.recording?.isRecording
                 ? `Recording · ${task.recording.duration}s`
                 : "Idle"}
-            </p>
+            </dd>
           </div>
-        </div>
+        </dl>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -111,17 +104,17 @@ export function ActiveTaskPanel({
               onClick={() => onPauseTask(task.id)}
               size="sm"
               variant="secondary"
-              className="px-2 py-1"
+              className="px-3"
             >
               {task.status === TaskStatus.PAUSED ? (
                 <>
-                  <Play aria-hidden className="mr-1 h-3.5 w-3.5" />
-                  Resume
+                  <Play aria-hidden className="h-3.5 w-3.5" />
+                  <span className="text-[11px] uppercase tracking-[0.16em]">Resume</span>
                 </>
               ) : (
                 <>
-                  <Pause aria-hidden className="mr-1 h-3.5 w-3.5" />
-                  Pause
+                  <Pause aria-hidden className="h-3.5 w-3.5" />
+                  <span className="text-[11px] uppercase tracking-[0.16em]">Pause</span>
                 </>
               )}
             </Button>
@@ -130,10 +123,10 @@ export function ActiveTaskPanel({
               onClick={() => onStopTask(task.id)}
               size="sm"
               variant="secondary"
-              className="px-2 py-1"
+              className="px-3"
             >
-              <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-              Stop
+              <Square aria-hidden className="h-3.5 w-3.5" />
+              <span className="text-[11px] uppercase tracking-[0.16em]">Stop</span>
             </Button>
 
             {task.type === TaskType.RX && (
@@ -145,17 +138,17 @@ export function ActiveTaskPanel({
                 }
                 size="sm"
                 variant="secondary"
-                className="px-2 py-1"
+                className="px-3"
               >
                 {task.recording?.isRecording ? (
                   <>
-                    <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Stop Recording
+                    <Square aria-hidden className="h-3.5 w-3.5" />
+                    <span className="text-[11px] uppercase tracking-[0.16em]">Stop Rec</span>
                   </>
                 ) : (
                   <>
-                    <CircleDot aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Record
+                    <CircleDot aria-hidden className="h-3.5 w-3.5" />
+                    <span className="text-[11px] uppercase tracking-[0.16em]">Record</span>
                   </>
                 )}
               </Button>

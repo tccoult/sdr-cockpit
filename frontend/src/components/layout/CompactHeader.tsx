@@ -42,13 +42,13 @@ export function CompactHeader({
   const healthIndicator = getHealthIndicator(healthStatus)
 
   return (
-    <header className="relative z-[60] flex h-12 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 dark:border-white/10 dark:bg-slate-900/95">
+    <header className="relative z-[60] flex h-12 items-center justify-between gap-4 border-b border-border/60 bg-muted/70 px-4 text-foreground backdrop-blur-md dark:bg-muted/20">
       {/* Left: Menu + Title + Task Info */}
       <div className="flex items-center gap-3 overflow-hidden">
         <button
           type="button"
           onClick={onToggleTaskDrawer}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-card/80 text-muted-foreground transition hover:bg-card/70 hover:text-foreground dark:border-border/50 dark:bg-card/30 dark:hover:bg-card/40"
           aria-label="Toggle task drawer"
           title="Toggle task drawer"
         >
@@ -56,24 +56,24 @@ export function CompactHeader({
         </button>
 
         <div className="flex items-center gap-2 overflow-hidden">
-          <h1 className="whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-white">
+          <h1 className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             SDR Cockpit
           </h1>
 
           {selectedTask && (
             <>
-              <span className="text-slate-400 dark:text-slate-600">|</span>
-              <div className="flex items-center gap-2 overflow-hidden text-xs">
-                <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+              <span className="text-border/70">|</span>
+              <div className="flex items-center gap-2 overflow-hidden text-[11px] text-muted-foreground">
+                <span className="truncate font-semibold uppercase tracking-[0.18em] text-foreground">
                   {selectedTask.name}
                 </span>
-                <span className="text-slate-400 dark:text-slate-600">•</span>
-                <span className="whitespace-nowrap text-slate-600 dark:text-slate-400">
+                <span className="text-border/70">•</span>
+                <span className="whitespace-nowrap text-muted-foreground">
                   {formatFrequency(selectedTask.frequency)} @ {formatSampleRate(selectedTask.sampleRate)}
                 </span>
-                <span className="text-slate-400 dark:text-slate-600">•</span>
+                <span className="text-border/70">•</span>
                 <span
-                  className={`whitespace-nowrap font-medium ${getStatusColor(selectedTask.status)}`}
+                  className={`whitespace-nowrap font-semibold ${getStatusColor(selectedTask.status)}`}
                 >
                   {taskStatusLabel}
                 </span>
@@ -86,28 +86,28 @@ export function CompactHeader({
       {/* Right: Telemetry + Settings + Theme + Divider + Status */}
       <div className="flex items-center gap-3">
         {/* FPS Badge - hidden on mobile */}
-        <div className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-white/10 dark:bg-slate-800/50 lg:flex">
-          <span className="font-semibold text-slate-900 dark:text-white">
+        <div className="hidden items-center gap-1.5 rounded-md border border-border/60 bg-card/80 px-2.5 py-1.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:border-border/50 dark:bg-card/30 lg:flex">
+          <span className="font-semibold text-foreground">
             {dataFps}
           </span>
-          <span className="text-slate-300 dark:text-slate-600">/</span>
-          <span className="font-semibold text-slate-900 dark:text-white">
+          <span className="text-border/70">/</span>
+          <span className="font-semibold text-foreground">
             {renderFps > 0 ? renderFps.toFixed(0) : '—'}
           </span>
-          <span className="text-slate-500 dark:text-slate-400">FPS</span>
+          <span>FPS</span>
         </div>
 
         {/* Task Count Badge - hidden on mobile */}
         <button
           type="button"
           onClick={onToggleTaskDrawer}
-          className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800/50 dark:hover:bg-slate-800 lg:flex"
+          className="hidden items-center gap-1.5 rounded-md border border-border/60 bg-card/80 px-2.5 py-1.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition hover:bg-card/70 hover:text-foreground dark:border-border/50 dark:bg-card/30 dark:hover:bg-card/40 lg:flex"
           title="View tasks"
         >
-          <span className="font-semibold text-slate-900 dark:text-white">
+          <span className="font-semibold text-foreground">
             {totalTasks}
           </span>
-          <span className="text-slate-500 dark:text-slate-400">Tasks</span>
+          <span>Tasks</span>
         </button>
 
         {/* Settings Menu - hidden on mobile */}
@@ -121,31 +121,30 @@ export function CompactHeader({
         </div>
 
         {/* Divider - hidden on mobile */}
-        <div className="hidden h-6 w-px bg-slate-200 dark:bg-white/20 lg:block" />
+        <div className="hidden h-6 w-px bg-border/70 lg:block" />
 
         {/* Status - Button on desktop, Bubble only on mobile */}
         <button
           type="button"
           onClick={onToggleStatusPanel}
-          className={`flex h-8 items-center gap-1 rounded-md border px-3 transition-all duration-150 ease-in-out hover:brightness-110 lg:gap-1 lg:px-3`}
+          className={`flex h-8 items-center gap-1 rounded-md border px-3 text-[11px] uppercase tracking-[0.16em] transition-all duration-150 ease-in-out lg:gap-1 lg:px-3`}
           style={{
             borderColor: isStatusPanelOpen && !isMobile
               ? healthIndicator.dotColor
               : healthIndicator.borderColor,
             backgroundColor: healthIndicator.bgColor,
             boxShadow: isStatusPanelOpen && !isMobile
-              ? `0 0 0 2px ${healthIndicator.dotColor}40`
-              : undefined,
+              ? `0 0 0 2px ${healthIndicator.dotColor}33`
+              : 'inset 0 1px 0 rgba(255,255,255,0.45)',
+            color: isStatusPanelOpen ? healthIndicator.dotColor : undefined,
           }}
           title={`System status: ${healthStatus}`}
           aria-label={`System status: ${healthStatus}`}
         >
-          <span className="hidden text-xs font-medium text-slate-700 dark:text-slate-300 lg:inline">
-            Status
-          </span>
+          <span className="hidden font-semibold lg:inline">Status</span>
           <ChevronDown
             size={12}
-            className={`hidden text-slate-500 transition-transform duration-150 ease-in-out dark:text-slate-400 lg:inline ${
+            className={`hidden text-muted-foreground transition-transform duration-150 ease-in-out lg:inline ${
               isStatusPanelOpen ? 'rotate-180' : ''
             }`}
           />

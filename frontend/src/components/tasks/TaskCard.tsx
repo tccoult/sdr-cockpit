@@ -60,11 +60,11 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         }
       }}
       className={[
-        "group rounded-sm border px-2.5 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/60 relative",
-        "backdrop-blur-sm bg-white text-slate-900 hover:bg-cockpit-accent/5 dark:bg-slate-900/40 dark:text-slate-100 dark:hover:bg-slate-900/55",
+        "group relative rounded-lg border px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50",
+        "bg-card/80 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:bg-card/25",
         isSelected
-          ? "border-cockpit-accent/40 bg-cockpit-accent/5 ring-1 ring-cockpit-accent/30 z-10 dark:border-cockpit-accent/40 dark:bg-slate-900/50 dark:shadow-lg dark:shadow-black/40 dark:ring-cockpit-accent/40"
-          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:hover:border-white/20",
+          ? "border-cockpit-accent/60 bg-cockpit-accent/10 ring-1 ring-cockpit-accent/40 z-10"
+          : "border-border/60 hover:border-border/80 hover:bg-card/70",
       ].join(" ")}
     >
       <div className="flex items-center gap-2.5">
@@ -76,16 +76,16 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
           ].join(" ")}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <p className="truncate text-sm font-semibold">
             {task.name}
           </p>
-          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             {formatFrequency(task.frequency)} · {task.type.toUpperCase()}
           </p>
         </div>
         <span
           className={[
-            "whitespace-nowrap rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
+            "whitespace-nowrap rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.22em]",
             statusStyles.badge,
           ].join(" ")}
         >
@@ -93,27 +93,27 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="font-medium text-slate-600 dark:text-slate-400">
+          <span className="font-medium text-muted-foreground/80">
             Owner
           </span>
-          <span className="text-slate-700 dark:text-slate-300">
+          <span className="text-foreground">
             {task.ownerName}
           </span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="font-medium text-slate-600 dark:text-slate-400">
+          <span className="font-medium text-muted-foreground/80">
             Uptime
           </span>
-          <span className="text-slate-700 dark:text-slate-300">
+          <span className="text-foreground">
             {formatDuration(task.uptime)}
           </span>
         </span>
         {task.recording && (
           <span
             className={[
-              "rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide",
+              "rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.22em]",
               RECORDING_BADGE,
             ].join(" ")}
           >
