@@ -7,3 +7,9 @@ export const panelChrome =
 
 export const panelChromeMuted =
   "rounded-sm border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-slate-800/50";
+
+export const panelSurface =
+  "rounded-xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5";
+
+export const panelSubtle =
+  "rounded-lg border border-border/50 bg-muted/50 shadow-sm dark:border-white/5 dark:bg-white/5";

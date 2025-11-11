@@ -1,9 +1,11 @@
 import { Activity, AlertTriangle, Wifi, Radio, CheckCircle2, ExternalLink } from 'lucide-react'
-import { Task } from '../../types/sdr'
-import { HealthStatus } from '../layout/CompactHeader'
+import { cloneElement } from 'react'
+
 import { DataStreamStatus } from '../../api'
+import { panelSubtle, panelSurface } from '../../styles/panelStyles'
+import { Task } from '../../types/sdr'
 import { Button } from '../common/Button'
-import { panelChromeMuted } from '../../styles/panelStyles'
+import { HealthStatus } from '../layout/CompactHeader'
 
 export interface OverviewTabProps {
   dataFps: number
@@ -36,24 +38,26 @@ export function OverviewTab({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-6 p-4 pb-6 text-sm text-foreground">
       {/* Overall Status */}
-      <section className={[panelChromeMuted, 'p-4'].join(' ')}>
+      <section className={[panelSurface, 'flex items-center justify-between gap-4 p-4'].join(' ')}>
         <div className="flex items-center gap-3">
-          {healthStatus === 'healthy' ? (
-            <CheckCircle2 className="h-6 w-6 text-status-success" />
-          ) : healthStatus === 'warning' ? (
-            <AlertTriangle className="h-6 w-6 text-status-warning" />
-          ) : healthStatus === 'error' ? (
-            <AlertTriangle className="h-6 w-6 text-status-error" />
-          ) : (
-            <Activity className="h-6 w-6 text-slate-500" />
-          )}
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/60 text-accent dark:bg-white/10">
+            {healthStatus === 'healthy' ? (
+              <CheckCircle2 className="h-5 w-5 text-status-success" />
+            ) : healthStatus === 'warning' ? (
+              <AlertTriangle className="h-5 w-5 text-status-warning" />
+            ) : healthStatus === 'error' ? (
+              <AlertTriangle className="h-5 w-5 text-status-error" />
+            ) : (
+              <Activity className="h-5 w-5 text-muted-foreground" />
+            )}
+          </span>
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               System Status
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            </p>
+            <h3 className="mt-1 text-base font-semibold">
               {healthStatus === 'healthy'
                 ? 'All systems operational'
                 : healthStatus === 'warning'
@@ -61,15 +65,25 @@ export function OverviewTab({
                 : healthStatus === 'error'
                 ? 'Critical issues detected'
                 : 'Status unknown'}
-            </p>
+            </h3>
           </div>
         </div>
+        {selectedTask && (
+          <div className="hidden text-right md:block">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Active Task
+            </p>
+            <p className="mt-1 text-sm font-medium text-muted-foreground">
+              {selectedTask.name}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Performance */}
       <section>
         <SectionHeader icon={<Activity size={16} />} title="Performance" />
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <MetricRow
             label="Data Rate"
             value={`${dataFps} FPS`}
@@ -95,7 +109,7 @@ export function OverviewTab({
       {/* Network */}
       <section>
         <SectionHeader icon={<Wifi size={16} />} title="Network" />
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <MetricRow
             label="WebSocket"
             value={
@@ -118,7 +132,7 @@ export function OverviewTab({
             }
           />
           {streamError && (
-            <div className="rounded-md border border-status-error/40 bg-status-error/10 p-2 text-xs text-status-error dark:border-status-error/30 dark:bg-status-error/20 dark:text-status-error">
+            <div className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs font-medium text-status-error shadow-sm dark:border-status-error/40 dark:bg-status-error/15">
               {streamError}
             </div>
           )}
@@ -130,7 +144,7 @@ export function OverviewTab({
       {/* Tasks */}
       <section>
         <SectionHeader icon={<Radio size={16} />} title="Tasks" />
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <MetricRow label="Total Tasks" value={totalTasks.toString()} status="healthy" />
           <MetricRow label="Your Tasks" value={operatorTasks.toString()} status="healthy" />
           <MetricRow
@@ -145,7 +159,7 @@ export function OverviewTab({
       <section className="mt-2">
         <Button
           onClick={handleOpenGrafana}
-          variant="secondary"
+          variant="ghost"
           className="w-full justify-center gap-2"
         >
           <ExternalLink size={14} />
@@ -157,15 +171,17 @@ export function OverviewTab({
 }
 
 interface SectionHeaderProps {
-  icon: React.ReactNode
+  icon: React.ReactElement
   title: string
 }
 
 function SectionHeader({ icon, title }: SectionHeaderProps) {
   return (
-    <div className="mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-      {icon}
-      <h3 className="text-sm font-semibold">{title}</h3>
+    <div className="mb-3 flex items-center gap-3">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60 text-accent shadow-sm dark:bg-white/10">
+        {cloneElement(icon, { className: 'h-4 w-4' })}
+      </span>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h3>
     </div>
   )
 }
@@ -177,23 +193,42 @@ interface MetricRowProps {
   note?: string
 }
 
+const STATUS_TOKENS = {
+  healthy: {
+    badge: 'bg-status-success/15 text-status-success dark:bg-status-success/20',
+    dot: 'bg-status-success',
+  },
+  warning: {
+    badge: 'bg-status-warning/20 text-status-warning dark:bg-status-warning/20',
+    dot: 'bg-status-warning',
+  },
+  error: {
+    badge: 'bg-status-error/15 text-status-error dark:bg-status-error/20',
+    dot: 'bg-status-error',
+  },
+  unknown: {
+    badge: 'bg-muted/70 text-muted-foreground dark:bg-white/10 dark:text-muted-foreground',
+    dot: 'bg-muted-foreground/60 dark:bg-white/50',
+  },
+} as const
+
 function MetricRow({ label, value, status, note }: MetricRowProps) {
-  const statusColor = {
-    healthy: 'text-status-success dark:text-status-success',
-    warning: 'text-status-warning dark:text-status-warning',
-    error: 'text-status-error dark:text-status-error',
-    unknown: 'text-slate-500 dark:text-slate-400',
-  }[status]
+  const tokens = STATUS_TOKENS[status]
 
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-slate-900/50">
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      <div className="flex items-center gap-2">
+    <div className={[panelSubtle, 'flex items-center justify-between gap-4 border-transparent bg-muted/40 px-3 py-3 text-sm dark:bg-white/5'].join(' ')}>
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
         {note && (
-          <span className="text-[10px] italic text-slate-400 dark:text-slate-600">{note}</span>
+          <p className="mt-1 text-[11px] text-muted-foreground/80 dark:text-muted-foreground/70">{note}</p>
         )}
-        <span className={`text-xs font-semibold ${statusColor}`}>{value}</span>
       </div>
+      <span
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${tokens.badge}`}
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${tokens.dot}`} />
+        {value}
+      </span>
     </div>
   )
 }

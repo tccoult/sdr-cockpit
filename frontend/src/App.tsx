@@ -279,7 +279,7 @@ function App() {
                     onStopRecording={stopRecording}
                   />
                 </div>
-                <div className="flex flex-1 min-h-0 overflow-hidden">
+                <div className="flex flex-1 min-h-0 overflow-hidden px-3 pb-3">
                   <TaskRosterPanel
                     tasks={tasks}
                     selectedTaskId={selectedTaskId}
@@ -333,7 +333,7 @@ function App() {
             />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-white/10">
+          <div className="px-4 pb-4">
             <TaskRosterPanel
               tasks={tasks}
               selectedTaskId={selectedTaskId}
