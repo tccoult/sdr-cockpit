@@ -64,21 +64,16 @@ export function ActiveTaskPanel({
   const statusTokens = STATUS_BADGE_TOKENS[statusKey];
 
   return (
-    <section
-      className={cn(
-        "flex flex-col overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm",
-        className
-      )}
-    >
-      <div className="flex items-start justify-between gap-3 px-4 py-4">
+    <section className={cn("flex flex-col gap-4", className)}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/90">
             Active Task
           </p>
           <h2 className="text-base font-semibold text-foreground">
             {task ? task.name : "No task selected"}
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground/80">
             {task
               ? `${formatFrequency(task.frequency)} · ${task.type.toUpperCase()} task`
               : "Select a task from the roster to drive the cockpit visuals."}
@@ -104,7 +99,7 @@ export function ActiveTaskPanel({
       </div>
 
       {task && (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border/70 px-4 py-4 text-sm text-foreground">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm text-foreground">
           <Detail label="Sample Rate" value={`${task.sampleRate.toLocaleString()} sps`} />
           <Detail label="Owner" value={task.ownerName} />
           <Detail label="Uptime" value={`${Math.max(task.uptime, 0).toFixed(0)} s`} />
@@ -120,7 +115,7 @@ export function ActiveTaskPanel({
       )}
 
       {task && (
-        <div className="flex flex-wrap gap-2 border-t border-border/70 px-4 py-3">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={() => onPauseTask(task.id)} size="sm" variant="subtle">
             {task.status === TaskStatus.PAUSED ? (
               <>
@@ -177,7 +172,7 @@ interface DetailProps {
 function Detail({ label, value }: DetailProps) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/90">
         {label}
       </p>
       <p className="mt-1 text-sm font-medium text-foreground">{value}</p>

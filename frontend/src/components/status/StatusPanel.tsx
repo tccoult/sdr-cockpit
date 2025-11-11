@@ -5,6 +5,7 @@ import { Task } from "../../types/sdr";
 import { HealthStatus } from "../layout/CompactHeader";
 import { DiagnosticsTab } from "./DiagnosticsTab";
 import { OverviewTab } from "./OverviewTab";
+import { panelChrome } from "../../styles/panelStyles";
 
 const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");
@@ -42,12 +43,7 @@ export function StatusPanel({
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   return (
-    <div
-      className={cn(
-        "flex h-full flex-col overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm",
-        className
-      )}
-    >
+    <div className={cn(panelChrome, "flex h-full flex-col overflow-hidden", className)}>
       <div className="sticky top-0 z-10 flex border-b border-border/70 bg-card/95 px-2 py-1 backdrop-blur">
         <TabButton
           active={activeTab === "overview"}

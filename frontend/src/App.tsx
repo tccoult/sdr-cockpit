@@ -20,6 +20,7 @@ import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
 import { X } from "lucide-react";
 import { useTheme } from "./components/app/useTheme";
 import { getHealthIndicator } from "./styles/themeColors";
+import { panelChrome } from "./styles/panelStyles";
 
 const TASK_DRAWER_WIDTH = 300;
 const STATUS_PANEL_WIDTH = 300;
@@ -269,22 +270,26 @@ function App() {
             )}
 
             {mobileView === 'tasks' && (
-              <div className="flex h-full flex-col gap-4 bg-background px-4 py-4">
-                <ActiveTaskPanel
-                  task={selectedTask}
-                  onPauseTask={pauseTask}
-                  onStopTask={stopTask}
-                  onRecordTask={startRecording}
-                  onStopRecording={stopRecording}
-                />
-                <TaskRosterPanel
-                  tasks={tasks}
-                  selectedTaskId={selectedTaskId}
-                  isDiscovering={isDiscovering}
-                  onSelectTask={selectTask}
-                  onCreateTask={() => setIsWizardOpen(true)}
-                  className="flex-1"
-                />
+              <div className="flex h-full flex-col bg-background px-4 py-4">
+                <div className={`${panelChrome} flex h-full flex-col`}>
+                  <div className="flex flex-1 flex-col gap-6 px-5 py-5">
+                    <ActiveTaskPanel
+                      task={selectedTask}
+                      onPauseTask={pauseTask}
+                      onStopTask={stopTask}
+                      onRecordTask={startRecording}
+                      onStopRecording={stopRecording}
+                    />
+                    <TaskRosterPanel
+                      tasks={tasks}
+                      selectedTaskId={selectedTaskId}
+                      isDiscovering={isDiscovering}
+                      onSelectTask={selectTask}
+                      onCreateTask={() => setIsWizardOpen(true)}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -321,25 +326,26 @@ function App() {
           width={`${TASK_DRAWER_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <div className="p-4">
-            <ActiveTaskPanel
-              task={selectedTask}
-              onPauseTask={pauseTask}
-              onStopTask={stopTask}
-              onRecordTask={startRecording}
-              onStopRecording={stopRecording}
-            />
-          </div>
-
-          <div className="px-4 pb-4">
-            <TaskRosterPanel
-              tasks={tasks}
-              selectedTaskId={selectedTaskId}
-              isDiscovering={isDiscovering}
-              onSelectTask={handleSelectTask}
-              onCreateTask={() => setIsWizardOpen(true)}
-              className="h-full"
-            />
+          <div className="flex h-full flex-col gap-4 px-4 py-4">
+            <div className={`${panelChrome} flex h-full flex-col`}>
+              <div className="flex flex-1 flex-col gap-6 px-5 py-5">
+                <ActiveTaskPanel
+                  task={selectedTask}
+                  onPauseTask={pauseTask}
+                  onStopTask={stopTask}
+                  onRecordTask={startRecording}
+                  onStopRecording={stopRecording}
+                />
+                <TaskRosterPanel
+                  tasks={tasks}
+                  selectedTaskId={selectedTaskId}
+                  isDiscovering={isDiscovering}
+                  onSelectTask={handleSelectTask}
+                  onCreateTask={() => setIsWizardOpen(true)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
           </div>
         </Drawer>
 

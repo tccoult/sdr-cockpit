@@ -1,11 +1,4 @@
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  ExternalLink,
-  Radio,
-  Wifi,
-} from 'lucide-react'
+import { Activity, ExternalLink, Radio, Wifi } from 'lucide-react'
 import { Task } from '../../types/sdr'
 import { HealthStatus } from '../layout/CompactHeader'
 import { DataStreamStatus } from '../../api'
@@ -47,35 +40,25 @@ const STATUS_TOKENS: Record<
 const HEALTH_TOKENS: Record<
   HealthStatus,
   {
-    icon: typeof CheckCircle2
-    tone: string
     label: string
     description: string
   }
 > = {
   healthy: {
-    icon: CheckCircle2,
-    tone: 'text-status-success',
     label: 'Operational',
-    description: 'All systems operational',
+    description: 'All systems stable',
   },
   warning: {
-    icon: AlertTriangle,
-    tone: 'text-status-warning',
     label: 'Degraded',
     description: 'Minor issues detected',
   },
   error: {
-    icon: AlertTriangle,
-    tone: 'text-status-error',
     label: 'Critical Fault',
     description: 'Critical issues detected',
   },
   unknown: {
-    icon: Activity,
-    tone: 'text-muted-foreground',
     label: 'Unknown',
-    description: 'Status unknown',
+    description: 'Awaiting telemetry',
   },
 }
 
@@ -110,115 +93,125 @@ export function OverviewTab({
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
-      <SystemStatusCard healthStatus={healthStatus} />
+    <div className="flex h-full flex-col px-5 py-5">
+      <div className="flex flex-col gap-5">
+        <SystemStatusSummary healthStatus={healthStatus} />
 
-      <OverviewSection
-        icon={<Activity className="h-4 w-4" />}
-        title="Performance"
-        eyebrow="Telemetry"
-        footer={
-          <Button
-            onClick={handleOpenGrafana}
-            variant="secondary"
-            size="sm"
-            className="w-full justify-center gap-2"
-          >
-            <ExternalLink size={14} />
-            Open Grafana Dashboard
-          </Button>
-        }
-      >
-        <MetricGroup>
-          <MetricRow
-            label="Data Rate"
-            value={`${dataFps} FPS`}
-            status={
-              dataFps === 0 ? 'error' : dataFps < 30 ? 'warning' : 'healthy'
-            }
-          />
-          <MetricRow
-            label="Render Rate"
-            value={renderFps > 0 ? `${renderFps.toFixed(1)} FPS` : '—'}
-            status={
-              renderFps === 0
-                ? 'unknown'
-                : renderFps < 30
-                ? 'warning'
-                : 'healthy'
-            }
-          />
-          <MetricRow
-            label="Latency"
-            value="—"
-            status="unknown"
-            note="Not instrumented"
-          />
-        </MetricGroup>
-      </OverviewSection>
+        <OverviewSection
+          icon={<Activity className="h-4 w-4" />}
+          eyebrow="Telemetry"
+          title="Performance"
+          action={
+            <Button
+              onClick={handleOpenGrafana}
+              variant="secondary"
+              size="sm"
+              className="gap-2"
+            >
+              <ExternalLink size={14} />
+              Open Grafana
+            </Button>
+          }
+        >
+          <MetricGroup>
+            <MetricRow
+              label="Data Rate"
+              value={`${dataFps} FPS`}
+              status={
+                dataFps === 0 ? 'error' : dataFps < 30 ? 'warning' : 'healthy'
+              }
+            />
+            <MetricRow
+              label="Render Rate"
+              value={renderFps > 0 ? `${renderFps.toFixed(1)} FPS` : '—'}
+              status={
+                renderFps === 0
+                  ? 'unknown'
+                  : renderFps < 30
+                  ? 'warning'
+                  : 'healthy'
+              }
+            />
+            <MetricRow
+              label="Latency"
+              value="—"
+              status="unknown"
+              note="Not instrumented"
+            />
+          </MetricGroup>
+        </OverviewSection>
 
-      <OverviewSection icon={<Wifi className="h-4 w-4" />} title="Network" eyebrow="Connectivity">
-        <MetricGroup>
-          <MetricRow
-            label="WebSocket"
-            value={
-              streamStatus === 'connected'
-                ? 'Connected'
-                : streamStatus === 'connecting'
-                ? 'Connecting'
-                : streamStatus === 'error'
-                ? 'Error'
-                : 'Disconnected'
-            }
-            status={
-              streamStatus === 'connected'
-                ? 'healthy'
-                : streamStatus === 'connecting'
-                ? 'warning'
-                : streamStatus === 'error'
-                ? 'error'
-                : 'unknown'
-            }
-          />
-          <MetricRow
-            label="Backend"
-            value="—"
-            status="unknown"
-            note="Telemetry pending"
-          />
-          <MetricRow
-            label="Ping"
-            value="—"
-            status="unknown"
-            note="Telemetry pending"
-          />
-        </MetricGroup>
-        {streamError && (
-          <div className="border-t border-border/70 bg-status-error/10 px-4 py-2 text-[11px] font-medium text-status-error">
-            {streamError}
-          </div>
-        )}
-      </OverviewSection>
+        <OverviewSection
+          icon={<Wifi className="h-4 w-4" />}
+          eyebrow="Connectivity"
+          title="Network"
+        >
+          <MetricGroup>
+            <MetricRow
+              label="WebSocket"
+              value={
+                streamStatus === 'connected'
+                  ? 'Connected'
+                  : streamStatus === 'connecting'
+                  ? 'Connecting'
+                  : streamStatus === 'error'
+                  ? 'Error'
+                  : 'Disconnected'
+              }
+              status={
+                streamStatus === 'connected'
+                  ? 'healthy'
+                  : streamStatus === 'connecting'
+                  ? 'warning'
+                  : streamStatus === 'error'
+                  ? 'error'
+                  : 'unknown'
+              }
+            />
+            <MetricRow
+              label="Backend"
+              value="—"
+              status="unknown"
+              note="Telemetry pending"
+            />
+            <MetricRow
+              label="Ping"
+              value="—"
+              status="unknown"
+              note="Telemetry pending"
+            />
+          </MetricGroup>
+          {streamError && (
+            <p className="text-[11px] font-medium text-status-error">
+              {streamError}
+            </p>
+          )}
+        </OverviewSection>
 
-      <OverviewSection icon={<Radio className="h-4 w-4" />} title="Tasks" eyebrow="Operations">
-        <MetricGroup>
-          <MetricRow
-            label="Total Tasks"
-            value={totalTasks.toString()}
-            status={totalTasks > 0 ? 'healthy' : 'unknown'}
-          />
-          <MetricRow
-            label="Your Tasks"
-            value={operatorTasks.toString()}
-            status={operatorTasks > 0 ? 'healthy' : 'unknown'}
-          />
-          <MetricRow
-            label="Active Task"
-            value={selectedTask ? selectedTask.name : 'None'}
-            status={selectedTask ? 'healthy' : 'unknown'}
-          />
-        </MetricGroup>
-      </OverviewSection>
+        <OverviewSection
+          icon={<Radio className="h-4 w-4" />}
+          eyebrow="Operations"
+          title="Tasks"
+        >
+          <MetricGroup>
+            <MetricRow
+              label="Total Tasks"
+              value={totalTasks.toString()}
+              status={totalTasks > 0 ? 'healthy' : 'unknown'}
+            />
+            <MetricRow
+              label="Your Tasks"
+              value={operatorTasks.toString()}
+              status={operatorTasks > 0 ? 'healthy' : 'unknown'}
+            />
+            <MetricRow
+              label="Active Task"
+              value={selectedTask ? selectedTask.name : 'None'}
+              status={selectedTask ? 'healthy' : 'unknown'}
+            />
+          </MetricGroup>
+        </OverviewSection>
+      </div>
     </div>
   )
 }
@@ -232,22 +225,24 @@ interface MetricRowProps {
 
 function MetricRow({ label, value, status, note }: MetricRowProps) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
       <div className="flex items-center gap-2">
         <span
           className={cn('h-1.5 w-1.5 rounded-full', STATUS_TOKENS[status].dot)}
         />
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/90">
           {label}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        {note && (
-          <span className="text-[10px] text-muted-foreground">{note}</span>
-        )}
-        <span className={cn('text-sm font-semibold', STATUS_TOKENS[status].text)}>
+      <div className="flex flex-col items-end gap-1 text-right">
+        <span className={cn('text-sm font-semibold leading-5', STATUS_TOKENS[status].text)}>
           {value}
         </span>
+        {note && (
+          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/80">
+            {note}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -258,7 +253,7 @@ interface MetricGroupProps {
 }
 
 function MetricGroup({ children }: MetricGroupProps) {
-  return <div className="divide-y divide-border/70">{children}</div>
+  return <div className="space-y-2.5">{children}</div>
 }
 
 interface OverviewSectionProps {
@@ -266,44 +261,39 @@ interface OverviewSectionProps {
   title: string
   eyebrow?: string
   children: React.ReactNode
-  footer?: React.ReactNode
+  action?: React.ReactNode
 }
 
-function OverviewSection({ icon, title, eyebrow, children, footer }: OverviewSectionProps) {
+function OverviewSection({ icon, title, eyebrow, children, action }: OverviewSectionProps) {
   return (
-    <section className="overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted/70 text-muted-foreground">
-          {icon}
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-muted/70 text-muted-foreground/90">
+            {icon}
+          </div>
+          <div>
+            {eyebrow && (
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/90">
+                {eyebrow}
+              </p>
+            )}
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          </div>
         </div>
-        <div>
-          {eyebrow && (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              {eyebrow}
-            </p>
-          )}
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        </div>
+        {action}
       </div>
-      <div className="border-t border-border/70" />
-      <div className="py-1">{children}</div>
-      {footer && (
-        <>
-          <div className="border-t border-border/70" />
-          <div className="px-4 py-3">{footer}</div>
-        </>
-      )}
+      {children}
     </section>
   )
 }
 
-interface SystemStatusCardProps {
+interface SystemStatusSummaryProps {
   healthStatus: HealthStatus
 }
 
-function SystemStatusCard({ healthStatus }: SystemStatusCardProps) {
+function SystemStatusSummary({ healthStatus }: SystemStatusSummaryProps) {
   const tokens = HEALTH_TOKENS[healthStatus]
-  const Icon = tokens.icon
   const badgeStatus: MetricStatus =
     healthStatus === 'healthy'
       ? 'healthy'
@@ -314,19 +304,13 @@ function SystemStatusCard({ healthStatus }: SystemStatusCardProps) {
       : 'unknown'
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
-      <div className="flex items-center justify-between gap-4 px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted/70 text-muted-foreground">
-            <Icon className={cn('h-5 w-5', tokens.tone)} />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              System Status
-            </p>
-            <p className="text-sm font-semibold text-foreground">{tokens.label}</p>
-            <p className="text-xs text-muted-foreground">{tokens.description}</p>
-          </div>
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/90">
+            System Status
+          </p>
+          <p className="text-sm font-semibold text-foreground">{tokens.description}</p>
         </div>
         <span
           className={cn(

@@ -46,15 +46,10 @@ export function TaskRosterPanel({
   );
 
   return (
-    <section
-      className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm",
-        className
-      )}
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+    <section className={cn("flex min-h-0 flex-1 flex-col gap-4", className)}>
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/90">
             Task Roster
           </p>
           <h2 className="text-sm font-semibold text-foreground">Tasks</h2>
@@ -69,32 +64,28 @@ export function TaskRosterPanel({
         </Button>
       </div>
 
-      <div className="border-b border-border/70 bg-muted/50 px-4 py-2.5">
-        <div className="inline-flex rounded-md border border-border/70 bg-card/60 p-0.5 shadow-sm">
-          {FILTER_OPTIONS.map((option, index) => {
-            const isActive = option === filter;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setFilter(option)}
-                className={cn(
-                  "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition",
-                  "rounded-none first:rounded-l-md last:rounded-r-md",
-                  index > 0 && "-ml-px",
-                  isActive
-                    ? "bg-accent/20 text-foreground"
-                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                )}
-              >
-                {option.toUpperCase()}
-              </button>
-            );
-          })}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {FILTER_OPTIONS.map((option) => {
+          const isActive = option === filter;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setFilter(option)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition",
+                isActive
+                  ? "bg-accent/20 text-foreground"
+                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              )}
+            >
+              {option.toUpperCase()}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {isDiscovering && tasks.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <div className="animate-spin text-3xl">⟳</div>
@@ -119,7 +110,7 @@ export function TaskRosterPanel({
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {sortedTasks.map((task) => (
               <TaskCard
                 key={task.id}

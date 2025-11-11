@@ -12,38 +12,36 @@ type TaskCardProps = {
 
 const STATUS_STYLES: Record<
   Task["status"],
-  { dot: string; badge: string; label: string; glow?: string }
+  { dot: string; badge: string; label: string }
 > = {
   live: {
     dot: "bg-status-success",
     badge:
-      "border border-status-success/40 bg-status-success/15 text-status-success",
+      "border border-status-success/45 bg-status-success/15 text-status-success",
     label: "Live",
-    glow: "shadow-[0_0_12px_rgba(76,228,179,0.4)]",
   },
   transmitting: {
     dot: "bg-status-transmit",
     badge:
-      "border border-status-transmit/40 bg-status-transmit/15 text-status-transmit",
+      "border border-status-transmit/45 bg-status-transmit/15 text-status-transmit",
     label: "Transmitting",
-    glow: "shadow-[0_0_12px_rgba(110,201,255,0.4)]",
   },
   paused: {
     dot: "bg-status-warning",
     badge:
-      "border border-status-warning/40 bg-status-warning/15 text-status-warning",
+      "border border-status-warning/45 bg-status-warning/15 text-status-warning",
     label: "Paused",
   },
   stopped: {
     dot: "bg-status-stopped",
     badge:
-      "border border-status-stopped/40 bg-status-stopped/15 text-status-stopped",
+      "border border-status-stopped/45 bg-status-stopped/15 text-status-stopped",
     label: "Stopped",
   },
 };
 
 const RECORDING_BADGE =
-  "border border-status-recording/40 bg-status-recording/15 text-status-recording";
+  "border border-status-recording/45 bg-status-recording/15 text-status-recording";
 
 export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
   const statusStyles = STATUS_STYLES[task.status];
@@ -65,11 +63,11 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         }
       }}
       className={cn(
-        "group relative rounded-md border border-border/70 bg-card/80 px-3 py-2 transition-colors",
+        "group relative rounded-md px-3 py-2 transition-colors",
         "focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-offset-0",
         isSelected
-          ? "border-accent/60 bg-accent/10 shadow-[0_0_0_1px_rgba(148,163,184,0.2)]"
-          : "hover:border-border hover:bg-muted/60"
+          ? "bg-accent/15 ring-1 ring-accent/40"
+          : "hover:bg-muted/70"
       )}
     >
       <div className="flex items-center gap-3">
@@ -77,13 +75,12 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
           className={cn(
             "h-2 w-2 flex-shrink-0 rounded-full",
             isRecording && "animate-pulse",
-            statusStyles.dot,
-            statusStyles.glow
+            statusStyles.dot
           )}
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{task.name}</p>
-          <p className="truncate text-[11px] text-muted-foreground">
+          <p className="truncate text-[11px] text-muted-foreground/90">
             {formatFrequency(task.frequency)} · {task.type.toUpperCase()}
           </p>
         </div>
@@ -97,13 +94,13 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground/80">
         <span className="flex items-center gap-1">
-          <span className="font-semibold text-muted-foreground/80">Owner</span>
+          <span className="font-semibold text-muted-foreground/90">Owner</span>
           <span className="text-foreground">{task.ownerName}</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="font-semibold text-muted-foreground/80">Uptime</span>
+          <span className="font-semibold text-muted-foreground/90">Uptime</span>
           <span className="text-foreground">{formatDuration(task.uptime)}</span>
         </span>
         {task.recording && (
