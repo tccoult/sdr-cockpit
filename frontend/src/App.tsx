@@ -269,30 +269,27 @@ function App() {
             )}
 
             {mobileView === 'tasks' && (
-              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900">
-                <div className="border-b border-slate-200 p-4 dark:border-white/10">
-                  <ActiveTaskPanel
-                    task={selectedTask}
-                    onPauseTask={pauseTask}
-                    onStopTask={stopTask}
-                    onRecordTask={startRecording}
-                    onStopRecording={stopRecording}
-                  />
-                </div>
-                <div className="flex flex-1 min-h-0 overflow-hidden">
-                  <TaskRosterPanel
-                    tasks={tasks}
-                    selectedTaskId={selectedTaskId}
-                    isDiscovering={isDiscovering}
-                    onSelectTask={selectTask}
-                    onCreateTask={() => setIsWizardOpen(true)}
-                  />
-                </div>
+              <div className="flex h-full flex-col gap-4 bg-background px-4 py-4">
+                <ActiveTaskPanel
+                  task={selectedTask}
+                  onPauseTask={pauseTask}
+                  onStopTask={stopTask}
+                  onRecordTask={startRecording}
+                  onStopRecording={stopRecording}
+                />
+                <TaskRosterPanel
+                  tasks={tasks}
+                  selectedTaskId={selectedTaskId}
+                  isDiscovering={isDiscovering}
+                  onSelectTask={selectTask}
+                  onCreateTask={() => setIsWizardOpen(true)}
+                  className="flex-1"
+                />
               </div>
             )}
 
             {mobileView === 'status' && (
-              <div className="h-full overflow-auto bg-white dark:bg-slate-900">
+              <div className="h-full overflow-auto bg-background px-4 py-4">
                 <StatusPanel
                   dataFps={fps}
                   renderFps={renderFps}
@@ -303,6 +300,7 @@ function App() {
                   streamError={streamError}
                   healthStatus={healthStatus}
                   bistResult={bistResult}
+                  className="h-full"
                 />
               </div>
             )}
@@ -333,13 +331,14 @@ function App() {
             />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-white/10">
+          <div className="px-4 pb-4">
             <TaskRosterPanel
               tasks={tasks}
               selectedTaskId={selectedTaskId}
               isDiscovering={isDiscovering}
               onSelectTask={handleSelectTask}
               onCreateTask={() => setIsWizardOpen(true)}
+              className="h-full"
             />
           </div>
         </Drawer>
@@ -355,17 +354,20 @@ function App() {
           width={`${STATUS_PANEL_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <StatusPanel
-            dataFps={fps}
-            renderFps={renderFps}
-            totalTasks={totalTasks}
-            operatorTasks={operatorTasks}
-            selectedTask={selectedTask}
-            streamStatus={streamStatus}
-            streamError={streamError}
-            healthStatus={healthStatus}
-            bistResult={bistResult}
-          />
+          <div className="p-4">
+            <StatusPanel
+              dataFps={fps}
+              renderFps={renderFps}
+              totalTasks={totalTasks}
+              operatorTasks={operatorTasks}
+              selectedTask={selectedTask}
+              streamStatus={streamStatus}
+              streamError={streamError}
+              healthStatus={healthStatus}
+              bistResult={bistResult}
+              className="h-full"
+            />
+          </div>
         </Drawer>
       </div>
 

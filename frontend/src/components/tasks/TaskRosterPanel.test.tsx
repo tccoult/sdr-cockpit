@@ -88,7 +88,7 @@ describe('TaskRosterPanel', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'tx' }))
+    fireEvent.click(screen.getByRole('button', { name: 'TX' }))
 
     expect(screen.getByText('No TX tasks')).toBeInTheDocument()
     expect(screen.getByText('No TX tasks available')).toBeInTheDocument()

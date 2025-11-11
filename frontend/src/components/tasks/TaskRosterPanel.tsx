@@ -4,6 +4,9 @@ import { Task, TaskType } from "../../types/sdr";
 import { Button } from "../common/Button";
 import { TaskCard } from "./TaskCard";
 
+const cn = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(" ");
+
 type FilterType = "all" | TaskType;
 
 export interface TaskRosterPanelProps {
@@ -12,6 +15,7 @@ export interface TaskRosterPanelProps {
   isDiscovering: boolean;
   onSelectTask: (taskId: string) => void;
   onCreateTask: () => void;
+  className?: string;
 }
 
 const FILTER_OPTIONS: FilterType[] = ["all", TaskType.RX, TaskType.TX];
@@ -22,6 +26,7 @@ export function TaskRosterPanel({
   isDiscovering,
   onSelectTask,
   onCreateTask,
+  className,
 }: TaskRosterPanelProps) {
   const [filter, setFilter] = useState<FilterType>("all");
 
@@ -41,11 +46,19 @@ export function TaskRosterPanel({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white text-slate-900 dark:bg-slate-950/30 dark:text-slate-100">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-transparent">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
-          Tasks
-        </h2>
+    <section
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm",
+        className
+      )}
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Task Roster
+          </p>
+          <h2 className="text-sm font-semibold text-foreground">Tasks</h2>
+        </div>
         <Button
           onClick={onCreateTask}
           variant="icon"
@@ -56,43 +69,45 @@ export function TaskRosterPanel({
         </Button>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-transparent">
-        {FILTER_OPTIONS.map((option) => {
-          const isActive = option === filter;
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setFilter(option)}
-              className={[
-                "flex-1 rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition",
-                isActive
-                  ? "border-slate-400 bg-slate-200 text-slate-900 dark:border-white/40 dark:bg-cockpit-accent/20 dark:text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:border-white/20 dark:hover:text-slate-100",
-              ].join(" ")}
-            >
-              {option}
-            </button>
-          );
-        })}
+      <div className="border-b border-border/70 bg-muted/50 px-4 py-2.5">
+        <div className="inline-flex rounded-md border border-border/70 bg-card/60 p-0.5 shadow-sm">
+          {FILTER_OPTIONS.map((option, index) => {
+            const isActive = option === filter;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setFilter(option)}
+                className={cn(
+                  "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition",
+                  "rounded-none first:rounded-l-md last:rounded-r-md",
+                  index > 0 && "-ml-px",
+                  isActive
+                    ? "bg-accent/20 text-foreground"
+                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                {option.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         {isDiscovering && tasks.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-300">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <div className="animate-spin text-3xl">⟳</div>
-            <p className="text-sm font-medium">Discovering tasks...</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Scanning SDR system
-            </p>
+            <p className="text-sm font-medium text-foreground">Discovering tasks...</p>
+            <p className="text-xs text-muted-foreground">Scanning SDR system</p>
           </div>
         ) : sortedTasks.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-500 dark:text-slate-300">
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
             <div className="text-4xl">📡</div>
-            <div className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
-              No {filter !== "all" ? filter.toUpperCase() : ""} tasks
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              No {filter !== "all" ? `${filter.toUpperCase()} ` : ""}tasks
             </div>
-            <div className="max-w-[200px] text-xs text-slate-400 dark:text-slate-500">
+            <div className="max-w-[220px] text-xs text-muted-foreground">
               {filter === "all"
                 ? "Create a receive task to start monitoring RF spectrum"
                 : `No ${filter.toUpperCase()} tasks available`}
@@ -104,7 +119,7 @@ export function TaskRosterPanel({
             )}
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             {sortedTasks.map((task) => (
               <TaskCard
                 key={task.id}
@@ -116,6 +131,6 @@ export function TaskRosterPanel({
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
