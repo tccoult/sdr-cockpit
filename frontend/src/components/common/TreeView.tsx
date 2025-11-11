@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 export interface TreeNodeData {
@@ -14,6 +14,7 @@ export interface TreeViewProps<T extends TreeNodeData> {
   level?: number
   className?: string
   isLastChild?: boolean
+  forcedExpandIds?: string[]
 }
 
 /**
@@ -28,9 +29,17 @@ export function TreeView<T extends TreeNodeData>({
   level = 0,
   className = '',
   isLastChild = false,
+  forcedExpandIds,
 }: TreeViewProps<T>) {
   const shouldAutoExpand = autoExpandCondition?.(data) ?? defaultExpanded
-  const [isExpanded, setIsExpanded] = useState(shouldAutoExpand)
+  const isForcedExpanded = forcedExpandIds?.includes(data.id) ?? false
+  const [isExpanded, setIsExpanded] = useState(shouldAutoExpand || isForcedExpanded)
+
+  useEffect(() => {
+    if (isForcedExpanded && !isExpanded) {
+      setIsExpanded(true)
+    }
+  }, [isForcedExpanded, isExpanded])
 
   const hasChildren = data.children && data.children.length > 0
   const indent = level * 8 // 8px per level
@@ -107,6 +116,7 @@ export function TreeView<T extends TreeNodeData>({
               autoExpandCondition={autoExpandCondition}
               level={level + 1}
               isLastChild={index === data.children!.length - 1}
+              forcedExpandIds={forcedExpandIds}
             />
           ))}
         </div>

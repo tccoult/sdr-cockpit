@@ -1,5 +1,5 @@
-import { Maximize2, Minimize2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { MoreVertical } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   BistResult,
@@ -78,13 +78,45 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
     function: [],
     hardware: [],
   })
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const [forcedExpand, setForcedExpand] = useState<{
+    scope: keyof HighlightState
+    ids: string[]
+  } | null>(null)
+  const [focusRequest, setFocusRequest] = useState<{
+    scope: keyof HighlightState
+    nodeId: string
+  } | null>(null)
 
   useEffect(() => {
-    setView('tests')
     setActiveTestId(null)
     setHighlighted({ function: [], hardware: [] })
-    setExpandState('auto')
+    setForcedExpand(null)
+    setFocusRequest(null)
   }, [bistResult?.timestamp])
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   const testsById = useMemo(() => {
     if (!bistResult) return new Map<string, BistTest>()
@@ -126,12 +158,12 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
     }
   }
 
-  const toggleNodeHighlight = (scope: keyof HighlightState, nodeId: string) => {
+  const handleFocusNode = (scope: keyof HighlightState, nodeId: string) => {
+    if (!bistResult) return
+
     setHighlighted((prev) => {
       const current = new Set(prev[scope])
-      if (current.has(nodeId)) {
-        current.delete(nodeId)
-      } else {
+      if (!current.has(nodeId)) {
         current.add(nodeId)
       }
       return {
@@ -139,6 +171,17 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
         [scope]: Array.from(current),
       }
     })
+
+    const nextView = scope === 'function' ? 'function' : 'hardware'
+    setView(nextView)
+    setExpandState('auto')
+
+    const tree = scope === 'function' ? bistResult.functionTree : bistResult.hardwareTree
+    const path = findNodePath(tree, nodeId)
+    if (path) {
+      setForcedExpand({ scope, ids: path })
+      setFocusRequest({ scope, nodeId })
+    }
   }
 
   const sortedTests = useMemo(() => {
@@ -193,27 +236,62 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               </Button>
             ))}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="relative" ref={menuRef}>
             <Button
               variant="ghost"
               size="sm"
-              disabled={view === 'tests'}
-              onClick={() => setExpandState('all')}
-              title="Expand all nodes"
               className="h-8 w-8 p-0"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((prev) => !prev)}
             >
-              <Maximize2 className="h-4 w-4" />
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Built-In Test actions</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={view === 'tests'}
-              onClick={() => setExpandState('none')}
-              title="Collapse all nodes"
-              className="h-8 w-8 p-0"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
+            {menuOpen && (
+              <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-md border border-border/70 bg-card shadow-lg">
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition',
+                    view === 'tests'
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'hover:bg-muted/70 hover:text-foreground'
+                  )}
+                  onClick={() => {
+                    if (view === 'tests') return
+                    setExpandState('all')
+                    setForcedExpand(null)
+                    setFocusRequest(null)
+                    setMenuOpen(false)
+                  }}
+                  aria-disabled={view === 'tests'}
+                >
+                  Expand all
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">⇲</span>
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition',
+                    view === 'tests'
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'hover:bg-muted/70 hover:text-foreground'
+                  )}
+                  onClick={() => {
+                    if (view === 'tests') return
+                    setExpandState('none')
+                    setForcedExpand(null)
+                    setFocusRequest(null)
+                    setMenuOpen(false)
+                  }}
+                  aria-disabled={view === 'tests'}
+                >
+                  Collapse all
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">⇱</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div className="border-t border-border/70" />
@@ -226,8 +304,8 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               functionLookup={functionLookup}
               hardwareLookup={hardwareLookup}
               highlighted={highlighted}
-              onSelectTest={(testId) => handleSelectTest(testId)}
-              onToggleNodeHighlight={toggleNodeHighlight}
+              onSelectTest={handleSelectTest}
+              onFocusNode={handleFocusNode}
             />
           )}
           {view !== 'tests' && currentTree && (
@@ -239,6 +317,20 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               activeTestId={activeTestId}
               testsById={testsById}
               onFocusTest={(testId) => handleSelectTest(testId, true)}
+              forcedExpandIds={
+                forcedExpand && forcedExpand.scope === view ? forcedExpand.ids : []
+              }
+              focusNodeId={
+                focusRequest && focusRequest.scope === view ? focusRequest.nodeId : null
+              }
+              onClearFocus={() => {
+                if (focusRequest && focusRequest.scope === view) {
+                  setFocusRequest(null)
+                }
+                if (forcedExpand && forcedExpand.scope === view) {
+                  setForcedExpand(null)
+                }
+              }}
             />
           )}
         </div>
@@ -255,7 +347,7 @@ interface TestsViewProps {
   hardwareLookup: Record<string, BistTreeNode>
   highlighted: HighlightState
   onSelectTest: (testId: string) => void
-  onToggleNodeHighlight: (scope: keyof HighlightState, nodeId: string) => void
+  onFocusNode: (scope: keyof HighlightState, nodeId: string) => void
 }
 
 function TestsView({
@@ -266,73 +358,100 @@ function TestsView({
   hardwareLookup,
   highlighted,
   onSelectTest,
-  onToggleNodeHighlight,
+  onFocusNode,
 }: TestsViewProps) {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="px-4 pb-3 pt-4">
         <SummaryBanner summary={summary} />
       </div>
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <div className="space-y-3">
-          {tests.map((test) => {
-            const isActive = test.id === activeTestId
-            return (
-              <button
-                key={test.id}
-                type="button"
-                onClick={() => onSelectTest(test.id)}
-                title={test.description}
-                className={cn(
-                  'w-full rounded-md border border-transparent bg-card/60 p-3 text-left transition',
-                  'hover:border-border hover:bg-muted/70',
-                  isActive && 'border-accent/40 bg-accent/10 ring-1 ring-accent/50'
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                        STATUS_TOKENS[test.status].dot
-                      )}
-                    />
-                    <span className="text-sm font-medium text-foreground">
-                      {test.name}
-                    </span>
+      <div className="flex-1 overflow-y-auto px-2 pb-4">
+        <div className="overflow-hidden rounded-md border border-border/60 bg-card/40">
+          <div className="divide-y divide-border/70">
+            {tests.map((test) => {
+              const isActive = test.id === activeTestId
+              const statusTokens = STATUS_TOKENS[test.status]
+              const lastRunLabel =
+                typeof test.lastRun === 'number'
+                  ? `Last run ${formatRelativeTimestamp(test.lastRun)}`
+                  : null
+              const durationLabel =
+                typeof test.durationMs === 'number'
+                  ? `Duration ${(test.durationMs / 1000).toFixed(1)}s`
+                  : null
+
+              const metadata = [lastRunLabel, durationLabel].filter(Boolean).join(' · ')
+
+              return (
+                <div
+                  key={test.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectTest(test.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onSelectTest(test.id)
+                    }
+                  }}
+                  className={cn(
+                    'group relative cursor-pointer px-3 py-2 outline-none transition-all duration-150 ease-in-out',
+                    'focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-offset-0',
+                    isActive
+                      ? 'bg-accent/10'
+                      : 'hover:bg-muted/60 focus-visible:bg-muted/60'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'h-2 w-2 flex-shrink-0 rounded-full',
+                          statusTokens.dot
+                        )}
+                      />
+                      <span className="text-sm font-medium text-foreground">{test.name}</span>
+                    </div>
+                    <StatusBadge status={test.status} />
                   </div>
-                  <StatusBadge status={test.status} />
+                  <div
+                    className="max-h-0 overflow-hidden opacity-0 transition-all duration-150 ease-in-out group-hover:max-h-48 group-hover:opacity-100 group-focus-within:max-h-48 group-focus-within:opacity-100"
+                  >
+                    <div className="pt-2 text-xs text-muted-foreground">
+                      {test.description && (
+                        <p className="leading-snug text-muted-foreground">{test.description}</p>
+                      )}
+                      {metadata && (
+                        <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/90">
+                          {metadata}
+                        </p>
+                      )}
+                      <TagGroup
+                        label="Function"
+                        scope="function"
+                        testId={test.id}
+                        nodeIds={test.functionNodes}
+                        lookup={functionLookup}
+                        highlighted={highlighted.function}
+                        onSelectTest={onSelectTest}
+                        onFocusNode={onFocusNode}
+                      />
+                      <TagGroup
+                        label="Hardware"
+                        scope="hardware"
+                        testId={test.id}
+                        nodeIds={test.hardwareNodes}
+                        lookup={hardwareLookup}
+                        highlighted={highlighted.hardware}
+                        onSelectTest={onSelectTest}
+                        onFocusNode={onFocusNode}
+                      />
+                    </div>
+                  </div>
                 </div>
-                {test.description && (
-                  <p className="mt-1 text-xs text-muted-foreground">{test.description}</p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                  {typeof test.lastRun === 'number' && (
-                    <span>Last run {formatRelativeTimestamp(test.lastRun)}</span>
-                  )}
-                  {typeof test.durationMs === 'number' && (
-                    <span>Duration {(test.durationMs / 1000).toFixed(1)}s</span>
-                  )}
-                </div>
-                <TagGroup
-                  label="Function"
-                  scope="function"
-                  nodeIds={test.functionNodes}
-                  lookup={functionLookup}
-                  highlighted={highlighted.function}
-                  onToggle={onToggleNodeHighlight}
-                />
-                <TagGroup
-                  label="Hardware"
-                  scope="hardware"
-                  nodeIds={test.hardwareNodes}
-                  lookup={hardwareLookup}
-                  highlighted={highlighted.hardware}
-                  onToggle={onToggleNodeHighlight}
-                />
-              </button>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -347,6 +466,9 @@ interface RollupTreeViewProps {
   activeTestId: string | null
   testsById: Map<string, BistTest>
   onFocusTest: (testId: string) => void
+  forcedExpandIds: string[]
+  focusNodeId: string | null
+  onClearFocus: () => void
 }
 
 function RollupTreeView({
@@ -357,6 +479,9 @@ function RollupTreeView({
   activeTestId,
   testsById,
   onFocusTest,
+  forcedExpandIds,
+  focusNodeId,
+  onClearFocus,
 }: RollupTreeViewProps) {
   const autoExpandCondition = useMemo(() => {
     if (expandState !== 'auto') return undefined
@@ -365,17 +490,35 @@ function RollupTreeView({
       (node.status === BistStatus.FAIL || node.status === BistStatus.WARN)
   }, [expandState])
 
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!focusNodeId) return
+    const frame = requestAnimationFrame(() => {
+      if (!containerRef.current) return
+      const target = containerRef.current.querySelector<HTMLElement>(
+        `[data-tree-node-id="${focusNodeId}"]`
+      )
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        onClearFocus()
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [focusNodeId, onClearFocus])
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="px-4 pb-3 pt-4">
         <SummaryBanner summary={summary} />
       </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-4">
+      <div className="flex-1 overflow-y-auto px-2 pb-4" ref={containerRef}>
         <TreeView<RollupDisplayNode>
-          key={`${tree.id}-${expandState}`}
+          key={`${tree.id}-${expandState}-${forcedExpandIds.join('|')}`}
           data={tree}
           defaultExpanded={expandState === 'all'}
           autoExpandCondition={autoExpandCondition}
+          forcedExpandIds={forcedExpandIds}
           renderNode={(node) => (
             <RollupTreeNode
               node={node}
@@ -414,6 +557,7 @@ function RollupTreeNode({
         type="button"
         onClick={() => onFocusTest(node.testId!)}
         title={test?.description}
+        data-tree-node-id={node.testId}
         className={cn(
           'w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition',
           'hover:border-border hover:bg-muted/70',
@@ -448,6 +592,7 @@ function RollupTreeNode({
         isHighlighted && 'border border-accent/40 bg-accent/10',
         !isHighlighted && containsActiveTest && 'bg-accent/10'
       )}
+      data-tree-node-id={node.id}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -468,28 +613,32 @@ function RollupTreeNode({
 interface TagGroupProps {
   label: string
   scope: keyof HighlightState
+  testId: string
   nodeIds: string[]
   lookup: Record<string, BistTreeNode>
   highlighted: string[]
-  onToggle: (scope: keyof HighlightState, nodeId: string) => void
+  onSelectTest: (testId: string) => void
+  onFocusNode: (scope: keyof HighlightState, nodeId: string) => void
 }
 
 function TagGroup({
   label,
   scope,
+  testId,
   nodeIds,
   lookup,
   highlighted,
-  onToggle,
+  onSelectTest,
+  onFocusNode,
 }: TagGroupProps) {
   if (!nodeIds.length) return null
 
   return (
-    <div className="mt-3">
+    <div className="mt-2">
       <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}:
+        {label}
       </span>
-      <div className="mt-1 flex flex-wrap gap-1">
+      <div className="mt-1 flex flex-wrap gap-1.5">
         {nodeIds.map((nodeId) => {
           const node = lookup[nodeId]
           const isHighlighted = highlighted.includes(nodeId)
@@ -498,13 +647,14 @@ function TagGroup({
               type="button"
               key={`${scope}-${nodeId}`}
               className={cn(
-                'inline-flex items-center gap-1 rounded-full border border-transparent bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition',
-                'hover:border-border hover:bg-muted/80 hover:text-foreground',
-                isHighlighted && 'border-accent/40 bg-accent/10 text-foreground'
+                'inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-[11px] font-medium transition',
+                'bg-muted/70 text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground',
+                isHighlighted && 'border-accent/40 bg-accent/10 text-foreground shadow-sm'
               )}
               onClick={(event) => {
                 event.stopPropagation()
-                onToggle(scope, nodeId)
+                onSelectTest(testId)
+                onFocusNode(scope, nodeId)
               }}
               title={node ? `${label} node: ${node.name}` : nodeId}
             >
@@ -624,6 +774,21 @@ function createDisplayTree(
     tests: node.tests,
     children: children.length > 0 ? children : undefined,
   }
+}
+
+function findNodePath(node: BistTreeNode, targetId: string): string[] | null {
+  if (node.id === targetId) {
+    return [node.id]
+  }
+
+  for (const child of node.children ?? []) {
+    const childPath = findNodePath(child, targetId)
+    if (childPath) {
+      return [node.id, ...childPath]
+    }
+  }
+
+  return null
 }
 
 function formatRelativeTimestamp(timestamp: number) {
