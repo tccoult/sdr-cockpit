@@ -1,5 +1,5 @@
 import { MoreVertical } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   BistResult,
@@ -88,12 +88,17 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
     scope: keyof HighlightState
     nodeId: string
   } | null>(null)
+  const [testFocusRequest, setTestFocusRequest] = useState<{
+    testId: string
+    token: number
+  } | null>(null)
 
   useEffect(() => {
     setActiveTestId(null)
     setHighlighted({ function: [], hardware: [] })
     setForcedExpand(null)
     setFocusRequest(null)
+    setTestFocusRequest(null)
   }, [bistResult?.timestamp])
 
   useEffect(() => {
@@ -143,29 +148,51 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
     return createDisplayTree(bistResult.hardwareTree, testsById)
   }, [bistResult, testsById])
 
+  const consumeTestFocusRequest = useCallback(() => setTestFocusRequest(null), [])
+
   const handleSelectTest = (testId: string, focusTestsView = false) => {
     const test = testsById.get(testId)
     if (!test) return
 
+    const directFunctionNodes = bistResult
+      ? getTerminalNodeIds(test.functionNodes, bistResult.functionTree)
+      : []
+    const directHardwareNodes = bistResult
+      ? getTerminalNodeIds(test.hardwareNodes, bistResult.hardwareTree)
+      : []
+
+    const functionHighlight = bistResult
+      ? directFunctionNodes.flatMap((nodeId) =>
+          findNodePath(bistResult.functionTree, nodeId) ?? [nodeId]
+        )
+      : directFunctionNodes
+    const hardwareHighlight = bistResult
+      ? directHardwareNodes.flatMap((nodeId) =>
+          findNodePath(bistResult.hardwareTree, nodeId) ?? [nodeId]
+        )
+      : directHardwareNodes
+
     setActiveTestId(testId)
     setHighlighted({
-      function: Array.from(new Set(test.functionNodes)),
-      hardware: Array.from(new Set(test.hardwareNodes)),
+      function: Array.from(new Set(functionHighlight)),
+      hardware: Array.from(new Set(hardwareHighlight)),
     })
 
     if (focusTestsView) {
       setView('tests')
+      setTestFocusRequest({ testId, token: Date.now() })
     }
   }
 
   const handleFocusNode = (scope: keyof HighlightState, nodeId: string) => {
     if (!bistResult) return
 
+    const tree = scope === 'function' ? bistResult.functionTree : bistResult.hardwareTree
+    const path = findNodePath(tree, nodeId) ?? [nodeId]
+
     setHighlighted((prev) => {
       const current = new Set(prev[scope])
-      if (!current.has(nodeId)) {
-        current.add(nodeId)
-      }
+      path.forEach((id) => current.add(id))
       return {
         ...prev,
         [scope]: Array.from(current),
@@ -176,8 +203,6 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
     setView(nextView)
     setExpandState('auto')
 
-    const tree = scope === 'function' ? bistResult.functionTree : bistResult.hardwareTree
-    const path = findNodePath(tree, nodeId)
     if (path) {
       setForcedExpand({ scope, ids: path })
       setFocusRequest({ scope, nodeId })
@@ -303,9 +328,13 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
               activeTestId={activeTestId}
               functionLookup={functionLookup}
               hardwareLookup={hardwareLookup}
+              functionTree={bistResult.functionTree}
+              hardwareTree={bistResult.hardwareTree}
               highlighted={highlighted}
               onSelectTest={handleSelectTest}
               onFocusNode={handleFocusNode}
+              focusRequest={testFocusRequest}
+              onConsumeFocusRequest={consumeTestFocusRequest}
             />
           )}
           {view !== 'tests' && currentTree && (
@@ -345,9 +374,13 @@ interface TestsViewProps {
   activeTestId: string | null
   functionLookup: Record<string, BistTreeNode>
   hardwareLookup: Record<string, BistTreeNode>
+  functionTree: BistTreeNode
+  hardwareTree: BistTreeNode
   highlighted: HighlightState
   onSelectTest: (testId: string) => void
   onFocusNode: (scope: keyof HighlightState, nodeId: string) => void
+  focusRequest: { testId: string; token: number } | null
+  onConsumeFocusRequest: () => void
 }
 
 function TestsView({
@@ -356,16 +389,57 @@ function TestsView({
   activeTestId,
   functionLookup,
   hardwareLookup,
+  functionTree,
+  hardwareTree,
   highlighted,
   onSelectTest,
   onFocusNode,
+  focusRequest,
+  onConsumeFocusRequest,
 }: TestsViewProps) {
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const [forcedOpenTestId, setForcedOpenTestId] = useState<string | null>(null)
+  const forceTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!focusRequest) return
+
+    const { testId } = focusRequest
+    const target = listRef.current?.querySelector<HTMLElement>(
+      `[data-test-row-id="${testId}"]`
+    )
+
+    if (forceTimerRef.current) {
+      window.clearTimeout(forceTimerRef.current)
+    }
+
+    setForcedOpenTestId(testId)
+
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      target.focus({ preventScroll: true })
+    }
+
+    forceTimerRef.current = window.setTimeout(() => {
+      setForcedOpenTestId((current) => (current === testId ? null : current))
+      forceTimerRef.current = null
+    }, 2200)
+
+    onConsumeFocusRequest()
+  }, [focusRequest, onConsumeFocusRequest])
+
+  useEffect(() => () => {
+    if (forceTimerRef.current) {
+      window.clearTimeout(forceTimerRef.current)
+    }
+  }, [])
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="px-4 pb-3 pt-4">
         <SummaryBanner summary={summary} />
       </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-4">
+      <div className="flex-1 overflow-y-auto px-2 pb-4" ref={listRef}>
         <div className="overflow-hidden rounded-md border border-border/60 bg-card/40">
           <div className="divide-y divide-border/70">
             {tests.map((test) => {
@@ -381,6 +455,15 @@ function TestsView({
                   : null
 
               const metadata = [lastRunLabel, durationLabel].filter(Boolean).join(' · ')
+              const directFunctionNodes = getTerminalNodeIds(
+                test.functionNodes,
+                functionTree
+              ).filter((nodeId) => functionLookup[nodeId])
+              const directHardwareNodes = getTerminalNodeIds(
+                test.hardwareNodes,
+                hardwareTree
+              ).filter((nodeId) => hardwareLookup[nodeId])
+              const shouldForceOpen = forcedOpenTestId === test.id
 
               return (
                 <div
@@ -395,12 +478,13 @@ function TestsView({
                     }
                   }}
                   className={cn(
-                    'group relative cursor-pointer px-3 py-2 outline-none transition-all duration-150 ease-in-out',
+                    'group relative cursor-pointer px-3 py-1.5 outline-none transition-all duration-150 ease-in-out',
                     'focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-offset-0',
                     isActive
                       ? 'bg-accent/10'
                       : 'hover:bg-muted/60 focus-visible:bg-muted/60'
                   )}
+                  data-test-row-id={test.id}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -415,7 +499,13 @@ function TestsView({
                     <StatusBadge status={test.status} />
                   </div>
                   <div
-                    className="max-h-0 overflow-hidden opacity-0 transition-all duration-150 ease-in-out group-hover:max-h-48 group-hover:opacity-100 group-focus-within:max-h-48 group-focus-within:opacity-100"
+                    className={cn(
+                      'overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out',
+                      'delay-[250ms] group-hover:delay-[120ms] group-focus-within:delay-[120ms]',
+                      shouldForceOpen
+                        ? 'max-h-48 opacity-100'
+                        : 'max-h-0 opacity-0 group-hover:max-h-48 group-hover:opacity-100 group-focus-within:max-h-48 group-focus-within:opacity-100'
+                    )}
                   >
                     <div className="pt-2 text-xs text-muted-foreground">
                       {test.description && (
@@ -430,7 +520,7 @@ function TestsView({
                         label="Function"
                         scope="function"
                         testId={test.id}
-                        nodeIds={test.functionNodes}
+                        nodeIds={directFunctionNodes}
                         lookup={functionLookup}
                         highlighted={highlighted.function}
                         onSelectTest={onSelectTest}
@@ -440,7 +530,7 @@ function TestsView({
                         label="Hardware"
                         scope="hardware"
                         testId={test.id}
-                        nodeIds={test.hardwareNodes}
+                        nodeIds={directHardwareNodes}
                         lookup={hardwareLookup}
                         highlighted={highlighted.hardware}
                         onSelectTest={onSelectTest}
@@ -491,21 +581,39 @@ function RollupTreeView({
   }, [expandState])
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const focusClearTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
 
   useEffect(() => {
     if (!focusNodeId) return
     const frame = requestAnimationFrame(() => {
-      if (!containerRef.current) return
+      if (!containerRef.current) {
+        onClearFocus()
+        return
+      }
       const target = containerRef.current.querySelector<HTMLElement>(
         `[data-tree-node-id="${focusNodeId}"]`
       )
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        onClearFocus()
-      }
-    })
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          if (focusClearTimerRef.current) {
+            window.clearTimeout(focusClearTimerRef.current)
+          }
+          focusClearTimerRef.current = window.setTimeout(() => {
+            focusClearTimerRef.current = null
+            onClearFocus()
+          }, 800)
+        } else {
+          onClearFocus()
+        }
+      })
     return () => cancelAnimationFrame(frame)
   }, [focusNodeId, onClearFocus])
+
+  useEffect(() => () => {
+    if (focusClearTimerRef.current) {
+      window.clearTimeout(focusClearTimerRef.current)
+    }
+  }, [])
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -514,7 +622,7 @@ function RollupTreeView({
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-4" ref={containerRef}>
         <TreeView<RollupDisplayNode>
-          key={`${tree.id}-${expandState}-${forcedExpandIds.join('|')}`}
+          key={`${tree.id}-${expandState}`}
           data={tree}
           defaultExpanded={expandState === 'all'}
           autoExpandCondition={autoExpandCondition}
@@ -789,6 +897,29 @@ function findNodePath(node: BistTreeNode, targetId: string): string[] | null {
   }
 
   return null
+}
+
+function getTerminalNodeIds(nodeIds: string[], tree: BistTreeNode): string[] {
+  if (!nodeIds.length) return []
+  const unique = Array.from(new Set(nodeIds))
+  const paths = unique.map((id) => ({ id, path: findNodePath(tree, id) }))
+  const terminals = new Set<string>()
+
+  paths.forEach(({ id, path }) => {
+    if (!path) {
+      terminals.add(id)
+      return
+    }
+    const isAncestor = paths.some(({ id: otherId, path: otherPath }) => {
+      if (otherId === id || !otherPath) return false
+      return otherPath.includes(id)
+    })
+    if (!isAncestor) {
+      terminals.add(id)
+    }
+  })
+
+  return Array.from(terminals)
 }
 
 function formatRelativeTimestamp(timestamp: number) {
