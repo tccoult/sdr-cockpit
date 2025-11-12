@@ -64,7 +64,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-border/70 bg-muted/60 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
         aria-label="Settings"
         title="Settings"
       >

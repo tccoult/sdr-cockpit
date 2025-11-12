@@ -86,7 +86,7 @@ export function CompactHeader({
       {/* Right: Telemetry + Settings + Theme + Divider + Status */}
       <div className="flex items-center gap-3">
         {/* FPS Badge - hidden on mobile */}
-        <div className="hidden items-center gap-1.5 rounded-md border border-border/70 bg-card/70 px-2.5 py-1.5 text-xs text-muted-foreground lg:flex">
+        <div className="hidden items-center gap-1.5 rounded-sm border border-border/80 bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground shadow-sm lg:flex">
           <span className="font-semibold text-foreground">
             {dataFps}
           </span>
@@ -101,7 +101,7 @@ export function CompactHeader({
         <button
           type="button"
           onClick={onToggleTaskDrawer}
-          className="hidden items-center gap-1.5 rounded-md border border-border/70 bg-card/70 px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-border hover:bg-muted/60 hover:text-foreground lg:flex"
+          className="hidden items-center gap-1.5 rounded-sm border border-border/80 bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground shadow-sm transition hover:border-border hover:bg-muted/70 hover:text-foreground lg:flex"
           title="View tasks"
         >
           <span className="font-semibold text-foreground">
