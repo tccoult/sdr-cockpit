@@ -3,9 +3,9 @@
  */
 export function SystemSettings() {
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-6 rounded-sm border border-border/70 bg-card p-4 text-foreground shadow-sm">
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Network
         </h3>
         <div className="space-y-3">
@@ -23,7 +23,7 @@ export function SystemSettings() {
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Data Streaming
         </h3>
         <div className="space-y-3">
@@ -41,7 +41,7 @@ export function SystemSettings() {
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Recording
         </h3>
         <div className="space-y-3">
@@ -58,7 +58,7 @@ export function SystemSettings() {
         </div>
       </section>
 
-      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-300">
+      <div className="rounded-md border border-border/70 bg-muted/60 p-3 text-xs text-muted-foreground">
         ℹ️ Configuration options coming soon
       </div>
     </div>
@@ -73,9 +73,9 @@ interface SettingRowProps {
 
 function SettingRow({ label, value, disabled }: SettingRowProps) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-slate-900/50">
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      <span className={`text-xs font-semibold ${disabled ? 'text-slate-400 dark:text-slate-600' : 'text-slate-900 dark:text-white'}`}>
+    <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className={`text-xs font-semibold ${disabled ? 'text-muted-foreground/80' : 'text-foreground'}`}>
         {value}
       </span>
     </div>

@@ -11,7 +11,7 @@ import {
 import { Button } from "../common/Button";
 import { TreeNodeData, TreeView } from "../common/TreeView";
 
-export interface DiagnosticsTabProps {
+export interface SystemHealthPanelProps {
   bistResult: BistResult | null;
 }
 
@@ -70,7 +70,7 @@ const STATUS_TOKENS: Record<
   },
 };
 
-export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
+export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
   const [view, setView] = useState<PanelView>("tests");
   const [expandState, setExpandState] = useState<"auto" | "all" | "none">(
     "auto"
@@ -244,8 +244,8 @@ export function DiagnosticsTab({ bistResult }: DiagnosticsTabProps) {
     view === "function" ? highlighted.function : highlighted.hardware;
 
   return (
-    <div className="flex h-full flex-col p-4">
-      <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
+    <div className="flex h-full flex-col p-3">
+      <div className="flex h-full flex-col overflow-hidden rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15">
         <div className="px-4 pt-4">
           <h3 className="text-sm font-semibold text-foreground">
             Built-In Test

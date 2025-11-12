@@ -1,8 +1,8 @@
 import { ReactNode } from 'react'
-import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload } from 'lucide-react'
+import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload, ExternalLink } from 'lucide-react'
 import { SettingsMenuItem } from '../settings/SettingsMenu'
 
-export type MobileView = 'visualization' | 'tasks' | 'status'
+export type MobileView = 'visualization' | 'tasks' | 'health'
 
 export interface MobileNavProps {
   isOpen: boolean
@@ -30,18 +30,18 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition ${
+      className={`flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left transition ${
         isActive
-          ? 'bg-slate-100 text-slate-900 dark:bg-cockpit-accent/20 dark:text-white'
-          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+          ? 'border-cockpit-accent/60 bg-cockpit-accent/10 text-foreground shadow-inner'
+          : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/60 hover:text-foreground'
       }`}
     >
-      <span className={isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}>
+      <span className={isActive ? 'text-foreground' : 'text-muted-foreground'}>
         {icon}
       </span>
       <span className="font-medium">{label}</span>
       {isActive && (
-        <span className="ml-auto h-2 w-2 rounded-full bg-slate-900 dark:bg-white" />
+        <span className="ml-auto h-2 w-2 rounded-full bg-foreground" />
       )}
     </button>
   )
@@ -50,18 +50,38 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
 interface SettingsItemProps {
   icon: ReactNode
   label: string
-  onClick: () => void
+  onClick?: () => void
+  href?: string
 }
 
-function SettingsItem({ icon, label, onClick }: SettingsItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-    >
-      <span className="text-slate-500 dark:text-slate-400">{icon}</span>
+function SettingsItem({ icon, label, onClick, href }: SettingsItemProps) {
+  const className =
+    'flex w-full items-center gap-3 rounded-md border border-transparent px-4 py-3 text-left text-muted-foreground transition hover:border-border/70 hover:bg-muted/60 hover:text-foreground'
+
+  const content = (
+    <>
+      <span className="text-muted-foreground">{icon}</span>
       <span className="font-medium">{label}</span>
+    </>
+  )
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+        className={className}
+      >
+        {content}
+      </a>
+    )
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
     </button>
   )
 }
@@ -81,6 +101,11 @@ export function MobileNav({
   healthIndicator,
 }: MobileNavProps) {
   if (!isOpen) return null
+
+  const grafanaUrl =
+    typeof window === 'undefined'
+      ? 'http://localhost:3000'
+      : `http://${window.location.hostname}:3000`
 
   const handleViewChange = (view: MobileView) => {
     onViewChange(view)
@@ -106,11 +131,11 @@ export function MobileNav({
       />
 
       {/* Navigation Drawer */}
-      <div className="fixed left-0 top-0 z-50 h-screen w-[280px] animate-in slide-in-from-left duration-200 flex flex-col overflow-hidden bg-white shadow-lg dark:bg-slate-900 lg:hidden">
+      <div className="fixed left-0 top-0 z-50 flex h-screen w-[280px] animate-in slide-in-from-left flex-col overflow-hidden border border-border/70 bg-card text-foreground shadow-2xl duration-200 lg:hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-slate-950/50">
+        <div className="flex items-center justify-between border-b border-border/70 bg-card/80 px-4 py-3.5">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-900 dark:text-white">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">
               Navigation
             </h2>
             {healthIndicator && (
@@ -126,7 +151,7 @@ export function MobileNav({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
             title="Close menu"
             aria-label="Close menu"
           >
@@ -152,14 +177,14 @@ export function MobileNav({
             />
             <NavItem
               icon={<Activity size={20} />}
-              label="Status"
-              isActive={currentView === 'status'}
-              onClick={() => handleViewChange('status')}
+              label="Health"
+              isActive={currentView === 'health'}
+              onClick={() => handleViewChange('health')}
             />
           </div>
 
           {/* Divider */}
-          <div className="my-3 border-t border-slate-200 dark:border-white/10" />
+          <div className="my-3 border-t border-border/60" />
 
           {/* Settings & Theme */}
           <div className="space-y-1">
@@ -183,12 +208,18 @@ export function MobileNav({
               label="System Update"
               onClick={() => handleSettingsClick('update')}
             />
+            <SettingsItem
+              icon={<ExternalLink size={20} />}
+              label="Open Grafana Dashboard"
+              href={grafanaUrl}
+              onClick={onClose}
+            />
             <button
               type="button"
               onClick={handleThemeToggle}
-              className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="flex w-full items-center gap-3 rounded-md border border-transparent px-4 py-3 text-left text-muted-foreground transition hover:border-border/70 hover:bg-muted/60 hover:text-foreground"
             >
-              <span className="text-slate-500 dark:text-slate-400">
+              <span className="text-muted-foreground">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </span>
               <span className="font-medium">

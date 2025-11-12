@@ -1,28 +1,28 @@
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
+import { useTheme } from "./components/app/useTheme";
+import { Button } from "./components/common/Button";
 import { Drawer } from "./components/common/Drawer";
+import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
 import { MobileNav, MobileView } from "./components/layout/MobileNav";
-import { StatusPanel } from "./components/status/StatusPanel";
+import { DisplaySettings } from "./components/settings/DisplaySettings";
+import { SettingsMenuItem } from "./components/settings/SettingsMenu";
+import { SystemSettings } from "./components/settings/SystemSettings";
+import { SystemUpdateWizard } from "./components/settings/SystemUpdateWizard";
+import { VersionInfo } from "./components/settings/VersionInfo";
+import { SystemHealthPanel } from "./components/system-health/SystemHealthPanel";
 import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
-import { SettingsMenuItem } from "./components/settings/SettingsMenu";
-import { SystemSettings } from "./components/settings/SystemSettings";
-import { DisplaySettings } from "./components/settings/DisplaySettings";
-import { VersionInfo } from "./components/settings/VersionInfo";
-import { SystemUpdateWizard } from "./components/settings/SystemUpdateWizard";
-import { useDataStream, useTasks } from "./hooks";
 import { VisualizationView } from "./components/visualization/VisualizationView";
-import { Button } from "./components/common/Button";
-import { PLASMA } from "./utils/colorMaps";
-import { TaskStatus } from "./types/sdr";
-import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
-import { X } from "lucide-react";
-import { useTheme } from "./components/app/useTheme";
+import { useDataStream, useTasks } from "./hooks";
 import { getHealthIndicator } from "./styles/themeColors";
+import { TaskStatus } from "./types/sdr";
+import { PLASMA } from "./utils/colorMaps";
+import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
 
 const TASK_DRAWER_WIDTH = 300;
-const STATUS_PANEL_WIDTH = 300;
+const SYSTEM_HEALTH_PANEL_WIDTH = 300;
 const HEADER_HEIGHT = 48;
 
 function App() {
@@ -32,18 +32,20 @@ function App() {
   // UI state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
-  const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false);
+  const [isSystemHealthPanelOpen, setIsSystemHealthPanelOpen] = useState(false);
   const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
-  const [isStatusPanelPinned, setIsStatusPanelPinned] = useState(false);
+  const [isSystemHealthPanelPinned, setIsSystemHealthPanelPinned] =
+    useState(false);
   const [renderFps, setRenderFps] = useState(0);
 
   // Mobile navigation state
-  const [mobileView, setMobileView] = useState<MobileView>('visualization');
+  const [mobileView, setMobileView] = useState<MobileView>("visualization");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // Settings modal state
-  const [activeSettingsPanel, setActiveSettingsPanel] = useState<SettingsMenuItem | null>(null);
+  const [activeSettingsPanel, setActiveSettingsPanel] =
+    useState<SettingsMenuItem | null>(null);
   const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
 
   // Mock data
@@ -77,7 +79,6 @@ function App() {
   });
 
   const totalTasks = tasks.length;
-  const operatorTasks = tasks.filter((task) => task.owner === "self").length;
 
   // Determine health status (placeholder logic)
   const healthStatus: HealthStatus = streamError
@@ -96,7 +97,7 @@ function App() {
 
   // Detect mobile screen size (< 1024px)
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
 
     const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsMobile(e.matches);
@@ -106,31 +107,39 @@ function App() {
     handleMediaChange(mediaQuery);
 
     // Listen for changes
-    mediaQuery.addEventListener('change', handleMediaChange);
-    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+    mediaQuery.addEventListener("change", handleMediaChange);
+    return () => mediaQuery.removeEventListener("change", handleMediaChange);
   }, []);
 
   // ESC key handling for modals
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         if (activeSettingsPanel) {
           setActiveSettingsPanel(null);
         } else if (isUpdateWizardOpen) {
           setIsUpdateWizardOpen(false);
         } else if (isMobileNavOpen) {
           setIsMobileNavOpen(false);
-        } else if (!isStatusPanelPinned && isStatusPanelOpen) {
-          setIsStatusPanelOpen(false);
+        } else if (!isSystemHealthPanelPinned && isSystemHealthPanelOpen) {
+          setIsSystemHealthPanelOpen(false);
         } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
           setIsTaskDrawerOpen(false);
         }
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [activeSettingsPanel, isUpdateWizardOpen, isMobileNavOpen, isStatusPanelOpen, isStatusPanelPinned, isTaskDrawerOpen, isTaskDrawerPinned]);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [
+    activeSettingsPanel,
+    isUpdateWizardOpen,
+    isMobileNavOpen,
+    isSystemHealthPanelOpen,
+    isSystemHealthPanelPinned,
+    isTaskDrawerOpen,
+    isTaskDrawerPinned,
+  ]);
 
   // Close unpinned drawers when selecting a task
   const handleSelectTask = (taskId: string) => {
@@ -142,7 +151,7 @@ function App() {
 
   // Handle settings menu selection
   const handleSettingsSelect = (item: SettingsMenuItem) => {
-    if (item === 'update') {
+    if (item === "update") {
       setIsUpdateWizardOpen(true);
     } else {
       setActiveSettingsPanel(item);
@@ -166,8 +175,8 @@ function App() {
     : "0";
   const mainMarginRight = isMobile
     ? "0"
-    : isStatusPanelPinned && isStatusPanelOpen
-    ? `${STATUS_PANEL_WIDTH}px`
+    : isSystemHealthPanelPinned && isSystemHealthPanelOpen
+    ? `${SYSTEM_HEALTH_PANEL_WIDTH}px`
     : "0";
 
   // Get health indicator for mobile nav
@@ -175,7 +184,7 @@ function App() {
 
   return (
     <>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-slate-100 dark:bg-cockpit-surface">
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
         {/* Compact Header */}
         <CompactHeader
           selectedTask={selectedTask}
@@ -183,10 +192,12 @@ function App() {
           renderFps={renderFps}
           totalTasks={totalTasks}
           healthStatus={healthStatus}
-          isStatusPanelOpen={isStatusPanelOpen}
+          isHealthPanelOpen={isSystemHealthPanelOpen}
           isMobile={isMobile}
           onToggleTaskDrawer={handleToggleMenu}
-          onToggleStatusPanel={() => setIsStatusPanelOpen((prev) => !prev)}
+          onToggleHealthPanel={() =>
+            setIsSystemHealthPanelOpen((prev) => !prev)
+          }
           onOpenSettings={handleSettingsSelect}
         />
 
@@ -214,13 +225,13 @@ function App() {
                 />
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
                 <div className="text-6xl">📡</div>
                 <div>
-                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                  <p className="text-xl font-semibold text-foreground">
                     No Task Selected
                   </p>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-sm text-muted-foreground/90">
                     Select a task from the roster to view spectrum activity.
                   </p>
                 </div>
@@ -237,7 +248,7 @@ function App() {
 
           {/* Mobile View: Selected panel only */}
           <div className="h-full lg:hidden">
-            {mobileView === 'visualization' && (
+            {mobileView === "visualization" && (
               <>
                 {selectedTask ? (
                   <div className="flex h-full w-full flex-col p-2">
@@ -253,13 +264,13 @@ function App() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
                     <div className="text-6xl">📡</div>
                     <div>
-                      <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                      <p className="text-xl font-semibold text-foreground">
                         No Task Selected
                       </p>
-                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                      <p className="mt-2 text-sm text-muted-foreground/90">
                         Select a task from the Tasks view.
                       </p>
                     </div>
@@ -268,9 +279,9 @@ function App() {
               </>
             )}
 
-            {mobileView === 'tasks' && (
-              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900">
-                <div className="border-b border-slate-200 p-4 dark:border-white/10">
+            {mobileView === "tasks" && (
+              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+                <div className="border-b border-border/60 bg-card/80 p-3">
                   <ActiveTaskPanel
                     task={selectedTask}
                     onPauseTask={pauseTask}
@@ -291,19 +302,9 @@ function App() {
               </div>
             )}
 
-            {mobileView === 'status' && (
-              <div className="h-full overflow-auto bg-white dark:bg-slate-900">
-                <StatusPanel
-                  dataFps={fps}
-                  renderFps={renderFps}
-                  totalTasks={totalTasks}
-                  operatorTasks={operatorTasks}
-                  selectedTask={selectedTask}
-                  streamStatus={streamStatus}
-                  streamError={streamError}
-                  healthStatus={healthStatus}
-                  bistResult={bistResult}
-                />
+            {mobileView === "health" && (
+              <div className="h-full overflow-auto bg-background">
+                <SystemHealthPanel bistResult={bistResult} />
               </div>
             )}
           </div>
@@ -323,7 +324,7 @@ function App() {
           width={`${TASK_DRAWER_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <div className="p-4">
+          <div className="p-3">
             <ActiveTaskPanel
               task={selectedTask}
               onPauseTask={pauseTask}
@@ -333,7 +334,7 @@ function App() {
             />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-white/10">
+          <div className="border-t border-border/60">
             <TaskRosterPanel
               tasks={tasks}
               selectedTaskId={selectedTaskId}
@@ -344,28 +345,18 @@ function App() {
           </div>
         </Drawer>
 
-        {/* Status Panel Drawer */}
+        {/* System Health Drawer */}
         <Drawer
-          isOpen={isStatusPanelOpen}
-          onClose={() => setIsStatusPanelOpen(false)}
+          isOpen={isSystemHealthPanelOpen}
+          onClose={() => setIsSystemHealthPanelOpen(false)}
           position="right"
-          title="System Status"
-          isPinned={isStatusPanelPinned}
-          onTogglePin={() => setIsStatusPanelPinned((prev) => !prev)}
-          width={`${STATUS_PANEL_WIDTH}px`}
+          title="System Health"
+          isPinned={isSystemHealthPanelPinned}
+          onTogglePin={() => setIsSystemHealthPanelPinned((prev) => !prev)}
+          width={`${SYSTEM_HEALTH_PANEL_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <StatusPanel
-            dataFps={fps}
-            renderFps={renderFps}
-            totalTasks={totalTasks}
-            operatorTasks={operatorTasks}
-            selectedTask={selectedTask}
-            streamStatus={streamStatus}
-            streamError={streamError}
-            healthStatus={healthStatus}
-            bistResult={bistResult}
-          />
+          <SystemHealthPanel bistResult={bistResult} />
         </Drawer>
       </div>
 
@@ -376,7 +367,7 @@ function App() {
         currentView={mobileView}
         onViewChange={setMobileView}
         onOpenSettings={handleSettingsSelect}
-        isDarkMode={theme === 'dark'}
+        isDarkMode={theme === "dark"}
         onToggleTheme={toggleTheme}
         healthIndicator={healthIndicator}
       />
@@ -399,20 +390,20 @@ function App() {
           />
 
           {/* Modal */}
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-sm border border-slate-200 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-sm border border-border/70 bg-card text-foreground shadow-xl shadow-black/20">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {activeSettingsPanel === 'system'
-                  ? 'System Settings'
-                  : activeSettingsPanel === 'display'
-                  ? 'Display Settings'
-                  : 'Version Info'}
+            <div className="flex items-center justify-between border-b border-border/70 p-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                {activeSettingsPanel === "system"
+                  ? "System Settings"
+                  : activeSettingsPanel === "display"
+                  ? "Display Settings"
+                  : "Version Info"}
               </h2>
               <button
                 type="button"
                 onClick={() => setActiveSettingsPanel(null)}
-                className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                className="rounded-md p-1 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
               >
                 <X size={20} />
               </button>
@@ -420,9 +411,9 @@ function App() {
 
             {/* Content */}
             <div className="max-h-[70vh] overflow-y-auto">
-              {activeSettingsPanel === 'system' && <SystemSettings />}
-              {activeSettingsPanel === 'display' && <DisplaySettings />}
-              {activeSettingsPanel === 'version' && (
+              {activeSettingsPanel === "system" && <SystemSettings />}
+              {activeSettingsPanel === "display" && <DisplaySettings />}
+              {activeSettingsPanel === "version" && (
                 <VersionInfo
                   versionTree={systemInfo.versionTree}
                   overallVersion={systemInfo.version}

@@ -26,7 +26,6 @@ export default {
         'ghost-foreground': 'hsl(var(--ghost-foreground) / <alpha-value>)',
         cockpit: {
           surface: '#080b12',
-          panel: 'rgba(16, 20, 32, 0.85)',
           accent: 'rgb(var(--color-cockpit-accent) / <alpha-value>)',
           'accent-hover': 'rgb(var(--color-cockpit-accent-hover) / <alpha-value>)',
         },

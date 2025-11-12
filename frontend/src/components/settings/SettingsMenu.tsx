@@ -1,5 +1,5 @@
-import { Info, Monitor, Settings, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ExternalLink, Info, Monitor, Settings, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type SettingsMenuItem = "system" | "display" | "version" | "update";
 
@@ -15,6 +15,13 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const grafanaUrl = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "http://localhost:3000";
+    }
+
+    return `http://${window.location.hostname}:3000`;
+  }, []);
 
   // Close on click outside
   useEffect(() => {
@@ -57,7 +64,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-border/70 bg-muted/60 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
         aria-label="Settings"
         title="Settings"
       >
@@ -68,7 +75,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute right-0 top-full z-[70] mt-2 w-56 animate-in fade-in slide-in-from-top-1 duration-100 rounded-sm border border-slate-200 bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900"
+          className="absolute right-0 top-full z-[70] mt-2 w-56 animate-in fade-in slide-in-from-top-1 duration-100 rounded-sm border border-border/70 bg-card text-foreground shadow-xl shadow-black/15"
         >
           <div className="p-1 pr-1">
             <MenuItem
@@ -87,12 +94,21 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
               onClick={() => handleSelectItem("version")}
             />
 
-            <div className="my-1 h-px bg-slate-200 dark:bg-white/10" />
+            <div className="my-1 h-px bg-border/60" />
 
             <MenuItem
               icon={<Upload size={16} />}
               label="System Update"
               onClick={() => handleSelectItem("update")}
+            />
+
+            <div className="my-1 h-px bg-border/60" />
+
+            <MenuItem
+              icon={<ExternalLink size={16} />}
+              label="Open Grafana Dashboard"
+              href={grafanaUrl}
+              onClick={() => setIsOpen(false)}
             />
           </div>
         </div>
@@ -106,24 +122,44 @@ interface MenuItemProps {
   label: string;
   onClick: () => void;
   iconRight?: React.ReactNode;
+  href?: string;
 }
 
-function MenuItem({ icon, label, onClick, iconRight }: MenuItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-700 transition-all duration-150 ease-in-out hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-    >
-      <span className="flex-shrink-0 text-slate-500 transition-all duration-150 ease-in-out group-hover:brightness-125 dark:text-slate-400">
+function MenuItem({ icon, label, onClick, iconRight, href }: MenuItemProps) {
+  const className =
+    "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-all duration-150 ease-in-out hover:bg-muted/70 hover:text-foreground";
+
+  const content = (
+    <>
+      <span className="flex-shrink-0 text-muted-foreground transition-all duration-150 ease-in-out group-hover:text-foreground">
         {icon}
       </span>
       <span className="flex-1">{label}</span>
       {iconRight && (
-        <span className="flex-shrink-0 text-slate-400 transition-all duration-150 ease-in-out group-hover:brightness-125 dark:text-slate-500">
+        <span className="flex-shrink-0 text-muted-foreground transition-all duration-150 ease-in-out group-hover:text-foreground">
           {iconRight}
         </span>
       )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+        className={className}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
     </button>
   );
 }

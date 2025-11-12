@@ -15,9 +15,9 @@ export function ThemeToggle() {
       title={isDark ? 'Switch to day mode' : 'Switch to night mode'}
     >
       {isDark ? (
-        <Sun aria-hidden className="h-4 w-4 text-status-warning dark:text-status-warning" />
+        <Sun aria-hidden className="h-4 w-4 text-status-warning" />
       ) : (
-        <Moon aria-hidden className="h-4 w-4 text-slate-600" />
+        <Moon aria-hidden className="h-4 w-4 text-muted-foreground" />
       )}
     </Button>
   )

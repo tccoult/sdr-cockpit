@@ -1,6 +1,5 @@
 import { TreeView } from '../common/TreeView'
 import { SystemVersion } from '../../types/diagnostics'
-import { panelChrome, panelChromeMuted } from '../../styles/panelStyles'
 
 export interface VersionInfoProps {
   versionTree: SystemVersion
@@ -14,9 +13,9 @@ export interface VersionInfoProps {
  */
 export function VersionInfo({ versionTree, overallVersion, buildDate, platform }: VersionInfoProps) {
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-6 rounded-sm border border-border/70 bg-card p-4 text-foreground shadow-sm">
       {/* Overall Info */}
-      <section className={[panelChromeMuted, 'p-4'].join(' ')}>
+      <section className="rounded-sm border border-border/60 bg-muted/40 p-4">
         <div className="space-y-2">
           <InfoRow label="Version" value={overallVersion} highlight />
           <InfoRow label="Build Date" value={buildDate} />
@@ -26,23 +25,23 @@ export function VersionInfo({ versionTree, overallVersion, buildDate, platform }
 
       {/* Component Versions */}
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Component Versions
         </h3>
-        <div className={[panelChrome, 'p-3 bg-white dark:bg-slate-900/50'].join(' ')}>
+        <div className="rounded-sm border border-border/60 bg-muted/40 p-3">
           <TreeView<SystemVersion>
             data={versionTree}
             renderNode={(node) => (
               <div className="flex items-center justify-between gap-4">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                <span className="text-xs font-medium text-foreground/90">
                   {node.name}
                 </span>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-mono text-slate-900 dark:text-white">
+                  <span className="font-mono text-foreground">
                     {node.version}
                   </span>
                   {node.commitHash && (
-                    <span className="font-mono text-slate-400 dark:text-slate-600">
+                    <span className="font-mono text-muted-foreground">
                       {node.commitHash.slice(0, 7)}
                     </span>
                   )}
@@ -66,8 +65,8 @@ interface InfoRowProps {
 function InfoRow({ label, value, highlight }: InfoRowProps) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
-      <span className={`text-xs font-semibold ${highlight ? 'text-status-success dark:text-status-success' : 'text-slate-900 dark:text-white'}`}>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className={`text-xs font-semibold ${highlight ? 'text-status-success' : 'text-foreground'}`}>
         {value}
       </span>
     </div>

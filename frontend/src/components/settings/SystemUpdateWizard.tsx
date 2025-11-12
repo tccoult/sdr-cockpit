@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import { Button } from '../common/Button'
 import { UpdateStatus, UpdateState } from '../../types/diagnostics'
-import { panelChrome, panelChromeMuted } from '../../styles/panelStyles'
 
 export interface SystemUpdateWizardProps {
   isOpen: boolean
@@ -151,19 +150,19 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
 
       {/* Modal */}
       <div
-        className={[panelChrome, 'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2'].join(' ')}
+        className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-sm border border-border/70 bg-card/95 text-foreground shadow-2xl shadow-black/40 backdrop-blur supports-[backdrop-filter]:bg-card/80"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between border-b border-border/70 p-4">
+          <h2 className="text-lg font-semibold text-foreground">
             System Update
           </h2>
           <button
             type="button"
             onClick={handleCancel}
             disabled={isUpdateInProgress}
-            className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            className="rounded-md p-1 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
           >
             <X size={20} />
           </button>
@@ -238,20 +237,20 @@ interface UploadStepProps {
 function UploadStep({ onFileSelect, fileInputRef, onFileChange }: UploadStepProps) {
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600 dark:text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Upload a system update package to install new software or firmware.
       </p>
 
       <div
-        className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-sm border-2 border-dashed border-slate-300 bg-slate-50 p-12 transition hover:border-slate-400 hover:bg-slate-100 dark:border-white/20 dark:bg-slate-800/50 dark:hover:border-white/30 dark:hover:bg-slate-800"
+        className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-sm border-2 border-dashed border-border/60 bg-muted/40 p-12 text-center transition hover:border-border hover:bg-muted/70"
         onClick={onFileSelect}
       >
-        <Upload size={48} className="text-slate-400 dark:text-slate-600" />
+        <Upload size={48} className="text-muted-foreground" />
         <div className="text-center">
-          <p className="text-sm font-medium text-slate-900 dark:text-white">
+          <p className="text-sm font-medium text-foreground">
             Click to upload update file
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             .rpm, .tar.gz, or .zip files
           </p>
         </div>
@@ -278,11 +277,11 @@ interface ValidateStepProps {
 function ValidateStep({ fileName, fileSize, progress, message }: ValidateStepProps) {
   return (
     <div className="space-y-4">
-      <div className={[panelChromeMuted, 'flex items-center gap-3 p-4'].join(' ')}>
-        <Upload size={32} className="text-slate-500" />
+      <div className="flex items-center gap-3 rounded-sm border border-border/60 bg-muted/40 p-4">
+        <Upload size={32} className="text-muted-foreground" />
         <div className="flex-1 overflow-hidden">
-          <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
+          <p className="text-xs text-muted-foreground">
             {(fileSize / 1024 / 1024).toFixed(2)} MB
           </p>
         </div>
@@ -290,10 +289,10 @@ function ValidateStep({ fileName, fileSize, progress, message }: ValidateStepPro
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-700 dark:text-slate-300">{message}</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{progress}%</span>
+          <span className="text-muted-foreground">{message}</span>
+          <span className="font-semibold text-foreground">{progress}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-md bg-slate-200 dark:bg-slate-700">
+        <div className="h-2 overflow-hidden rounded-md bg-muted/60">
           <div
             className="h-full bg-status-success transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -314,28 +313,28 @@ interface ConfirmStepProps {
 function ConfirmStep({ fileName, fileSize, onConfirm, onCancel }: ConfirmStepProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-sm border border-status-success bg-emerald-50 p-4 dark:border-status-success/30 dark:bg-status-success/20">
-        <CheckCircle2 size={24} className="text-status-success dark:text-status-success" />
+      <div className="flex items-center gap-3 rounded-sm border border-status-success/50 bg-status-success/10 p-4">
+        <CheckCircle2 size={24} className="text-status-success" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-status-success dark:text-status-success">
+          <p className="text-sm font-medium text-status-success">
             Update package validated
           </p>
-          <p className="text-xs text-status-success dark:text-status-success">
+          <p className="text-xs text-status-success/80">
             Ready to install
           </p>
         </div>
       </div>
 
-      <div className={[panelChromeMuted, 'space-y-2 p-4'].join(' ')}>
+      <div className="space-y-2 rounded-sm border border-border/60 bg-muted/40 p-4">
         <InfoRow label="File" value={fileName} />
         <InfoRow label="Size" value={`${(fileSize / 1024 / 1024).toFixed(2)} MB`} />
         <InfoRow label="Version" value="1.2.0" />
       </div>
 
-      <div className="rounded-sm border border-status-warning bg-amber-50 p-3 dark:border-status-warning/30 dark:bg-status-warning/20">
+      <div className="rounded-sm border border-status-warning/50 bg-status-warning/10 p-3">
         <div className="flex gap-2">
-          <AlertTriangle size={16} className="flex-shrink-0 text-status-warning dark:text-status-warning" />
-          <p className="text-xs text-status-warning dark:text-status-warning">
+          <AlertTriangle size={16} className="flex-shrink-0 text-status-warning" />
+          <p className="text-xs text-status-warning">
             The system will be unavailable during the update process. Ensure all tasks are stopped.
           </p>
         </div>
@@ -367,10 +366,10 @@ function InstallStep({ progress, message }: InstallStepProps) {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-700 dark:text-slate-300">{message}</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{progress}%</span>
+          <span className="text-muted-foreground">{message}</span>
+          <span className="font-semibold text-foreground">{progress}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-sm bg-slate-200 dark:bg-slate-700">
+        <div className="h-2 overflow-hidden rounded-sm bg-muted/60">
           <div
             className="h-full bg-status-success transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -378,7 +377,7 @@ function InstallStep({ progress, message }: InstallStepProps) {
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-center text-xs text-muted-foreground">
         Do not close this window or power off the device
       </p>
     </div>
@@ -397,10 +396,10 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
       <div className="flex flex-col items-center gap-4 py-6">
         <CheckCircle2 size={64} className="text-status-success" />
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-foreground">
             Update Complete
           </h3>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             The system update has been installed successfully
           </p>
         </div>
@@ -408,30 +407,30 @@ function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps)
 
       {rebootCountdown !== null ? (
         <div className="space-y-3">
-          <div className="rounded-sm border border-status-warning bg-amber-50 p-4 text-center dark:border-status-warning/30 dark:bg-status-warning/20">
-            <p className="text-sm font-medium text-status-warning dark:text-status-warning">
+          <div className="rounded-sm border border-status-warning/50 bg-status-warning/10 p-4 text-center">
+            <p className="text-sm font-medium text-status-warning">
               System rebooting in {rebootCountdown} seconds...
             </p>
           </div>
           {/* Progress bar showing countdown */}
           <div className="space-y-2">
-            <div className="h-2 overflow-hidden rounded-sm bg-slate-200 dark:bg-slate-700">
+            <div className="h-2 overflow-hidden rounded-sm bg-muted/60">
               <div
-                className="h-full bg-status-warning transition-all duration-1000 ease-linear dark:bg-status-warning"
+                className="h-full bg-status-warning transition-all duration-1000 ease-linear"
                 style={{ width: `${(rebootCountdown / 10) * 100}%` }}
               />
             </div>
-            <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-center text-xs text-muted-foreground">
               Rebooting system...
             </p>
           </div>
         </div>
       ) : (
         <>
-          <div className="rounded-sm border border-status-warning bg-amber-50 p-3 dark:border-status-warning/30 dark:bg-status-warning/20">
+          <div className="rounded-sm border border-status-warning/50 bg-status-warning/10 p-3">
             <div className="flex gap-2">
-              <AlertTriangle size={16} className="flex-shrink-0 text-status-warning dark:text-status-warning" />
-              <p className="text-xs text-status-warning dark:text-status-warning">
+              <AlertTriangle size={16} className="flex-shrink-0 text-status-warning" />
+              <p className="text-xs text-status-warning">
                 A system reboot is required to complete the update.
               </p>
             </div>
@@ -459,8 +458,8 @@ interface InfoRowProps {
 function InfoRow({ label, value }: InfoRowProps) {
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-slate-600 dark:text-slate-400">{label}</span>
-      <span className="font-medium text-slate-900 dark:text-white">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
     </div>
   )
 }

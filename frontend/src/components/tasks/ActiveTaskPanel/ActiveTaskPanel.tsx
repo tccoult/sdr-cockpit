@@ -1,5 +1,5 @@
 import { CircleDot, Pause, Play, Square } from "lucide-react";
-import { Task, TaskType, TaskStatus } from "../../../types/sdr";
+import { Task, TaskStatus, TaskType } from "../../../types/sdr";
 import { formatFrequency } from "../../../utils/formatters";
 import { Button } from "../../common/Button";
 import { getTaskStatusLabel } from "./taskStatus";
@@ -22,147 +22,173 @@ export function ActiveTaskPanel({
   const statusLabel = getTaskStatusLabel(task);
 
   const { badgeClass, dotClass } = (() => {
-    if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
+    if (
+      task?.status === TaskStatus.LIVE ||
+      task?.status === TaskStatus.TRANSMITTING
+    ) {
       return {
         badgeClass:
-          "border-status-success/30 bg-status-success/12 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
-        dotClass: "bg-status-success dark:bg-status-success animate-pulse",
+          "border border-status-success/30 bg-status-success/15 text-status-success",
+        dotClass: "bg-status-success animate-pulse",
       };
     }
 
     if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
-          "border-status-warning/30 bg-status-warning/12 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+          "border border-status-warning/30 bg-status-warning/15 text-status-warning",
         dotClass: "bg-status-warning",
       };
     }
 
     return {
-      badgeClass:
-        "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-200",
-      dotClass: "bg-slate-400 dark:bg-slate-300",
+      badgeClass: "border border-border/60 bg-muted/60 text-muted-foreground",
+      dotClass: "bg-muted-foreground/60",
     };
   })();
 
+  const controlButtonBase =
+    "flex h-9 w-9 items-center justify-center rounded-sm p-0";
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Active Task
-          </p>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-            {task ? task.name : "No task selected"}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {task
-              ? `${formatFrequency(
-                  task.frequency
-                )} · ${task.type.toUpperCase()} task`
-              : "Select a task from the roster to drive the cockpit visuals."}
-          </p>
+    <section className="rounded-sm border border-border/70 bg-card/95 p-4 text-foreground shadow-lg shadow-black/15">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Active Task</p>
+            <h2 className="mt-1 text-lg font-semibold text-foreground">
+              {task ? task.name : "No task selected"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {task
+                ? `${formatFrequency(
+                    task.frequency
+                  )} · ${task.type.toUpperCase()} task`
+                : "Select a task from the roster to drive the cockpit visuals."}
+            </p>
+          </div>
+          <div
+            className={`flex items-center gap-2 rounded-md px-3 py-1 text-xs font-semibold ${badgeClass}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+            {statusLabel}
+          </div>
         </div>
-        <div
-          className={`flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold ${badgeClass}`}
-        >
-          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-          {statusLabel}
-        </div>
-      </div>
 
-      {task && (
-        <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-300">
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Sample Rate
-            </p>
-            <p>{task.sampleRate.toLocaleString()} sps</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Owner
-            </p>
-            <p>{task.ownerName}</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Uptime
-            </p>
-            <p>{Math.max(task.uptime, 0).toFixed(0)}s</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Recording
-            </p>
-            <p>
-              {task.recording?.isRecording
-                ? `Recording · ${task.recording.duration}s`
-                : "Idle"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2">
         {task && (
-          <>
-            <Button
-              onClick={() => onPauseTask(task.id)}
-              size="sm"
-              variant="secondary"
-              className="px-2 py-1"
-            >
-              {task.status === TaskStatus.PAUSED ? (
-                <>
-                  <Play aria-hidden className="mr-1 h-3.5 w-3.5" />
-                  Resume
-                </>
-              ) : (
-                <>
-                  <Pause aria-hidden className="mr-1 h-3.5 w-3.5" />
-                  Pause
-                </>
-              )}
-            </Button>
+          <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Sample Rate
+              </p>
+              <p className="text-foreground">
+                {task.sampleRate.toLocaleString()} sps
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Owner
+              </p>
+              <p className="text-foreground">{task.ownerName}</p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Uptime
+              </p>
+              <p className="text-foreground">
+                {Math.max(task.uptime, 0).toFixed(0)}s
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Recording
+              </p>
+              <p className="text-foreground">
+                {task.recording?.isRecording
+                  ? `Recording · ${task.recording.duration}s`
+                  : "Idle"}
+              </p>
+            </div>
+          </div>
+        )}
 
-            <Button
-              onClick={() => onStopTask(task.id)}
-              size="sm"
-              variant="secondary"
-              className="px-2 py-1"
-            >
-              <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-              Stop
-            </Button>
-
-            {task.type === TaskType.RX && (
+        <div className="flex flex-wrap gap-2">
+          {task && (
+            <>
               <Button
-                onClick={() =>
-                  task.recording?.isRecording
-                    ? onStopRecording(task.id)
-                    : onRecordTask(task.id)
-                }
+                onClick={() => onPauseTask(task.id)}
                 size="sm"
-                variant="secondary"
-                className="px-2 py-1"
+                variant={
+                  task.status === TaskStatus.PAUSED ? "secondary" : "primary"
+                }
+                className={controlButtonBase}
+                title={
+                  task.status === TaskStatus.PAUSED
+                    ? "Resume task"
+                    : "Pause task"
+                }
+                aria-label={
+                  task.status === TaskStatus.PAUSED
+                    ? "Resume task"
+                    : "Pause task"
+                }
               >
-                {task.recording?.isRecording ? (
-                  <>
-                    <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Stop Recording
-                  </>
+                {task.status === TaskStatus.PAUSED ? (
+                  <Play aria-hidden className="h-5 w-5" />
                 ) : (
-                  <>
-                    <CircleDot aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Record
-                  </>
+                  <Pause aria-hidden className="h-5 w-5" />
                 )}
               </Button>
-            )}
-          </>
-        )}
+
+              <Button
+                onClick={() => onStopTask(task.id)}
+                size="sm"
+                variant="secondary"
+                className={`${controlButtonBase} text-status-recording hover:bg-status-recording/10`}
+                title="Stop task"
+                aria-label="Stop task"
+              >
+                <Square aria-hidden className="h-5 w-5 text-foreground" />
+              </Button>
+
+              {task.type === TaskType.RX && (
+                <Button
+                  onClick={() =>
+                    task.recording?.isRecording
+                      ? onStopRecording(task.id)
+                      : onRecordTask(task.id)
+                  }
+                  size="sm"
+                  variant={
+                    task.recording?.isRecording ? "primary" : "secondary"
+                  }
+                  className={`${controlButtonBase} ${
+                    task.recording?.isRecording
+                      ? "bg-status-recording/15 text-status-recording"
+                      : ""
+                  }`}
+                  title={
+                    task.recording?.isRecording
+                      ? "Stop recording"
+                      : "Start recording"
+                  }
+                  aria-label={
+                    task.recording?.isRecording
+                      ? "Stop recording"
+                      : "Start recording"
+                  }
+                >
+                  {task.recording?.isRecording ? (
+                    <CircleDot aria-hidden className="h-5 w-5" />
+                  ) : (
+                    <CircleDot aria-hidden className="h-5 w-5" />
+                  )}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
