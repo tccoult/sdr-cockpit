@@ -15,6 +15,11 @@ export interface TaskRosterPanelProps {
 }
 
 const FILTER_OPTIONS: FilterType[] = ["all", TaskType.RX, TaskType.TX];
+const FILTER_LABELS: Record<FilterType, string> = {
+  all: "All",
+  [TaskType.RX]: "RX",
+  [TaskType.TX]: "TX",
+};
 
 export function TaskRosterPanel({
   tasks,
@@ -44,9 +49,7 @@ export function TaskRosterPanel({
     <div className="flex min-h-0 flex-1 flex-col p-4">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-card text-foreground shadow-sm">
         <div className="flex items-center justify-between px-4 pb-2 pt-4">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Tasks
-          </h2>
+          <h3 className="text-sm font-semibold text-foreground">Tasks Roster</h3>
           <Button
             onClick={onCreateTask}
             variant="icon"
@@ -58,30 +61,27 @@ export function TaskRosterPanel({
           </Button>
         </div>
 
-        <div className="border-y border-border/70 bg-muted/40 px-4 pb-3 pt-2">
-          <div className="grid grid-cols-3 gap-2">
-            {FILTER_OPTIONS.map((option) => {
-              const isActive = option === filter;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setFilter(option)}
-                  className={[
-                    "rounded-md border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition",
-                    isActive
-                      ? "border-border bg-card text-foreground shadow-sm"
-                      : "border-transparent bg-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/80 hover:text-foreground",
-                  ].join(" ")}
-                >
-                  {option}
-                </button>
-              );
-            })}
+        <div className="px-4 pb-3 pt-2">
+          <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
+            {FILTER_OPTIONS.map((option, index) => (
+              <Button
+                key={option}
+                variant={filter === option ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setFilter(option)}
+                className={cn(
+                  "px-3 text-xs font-medium transition",
+                  "rounded-none first:rounded-l-md last:rounded-r-md",
+                  index > 0 && "-ml-px"
+                )}
+              >
+                {FILTER_LABELS[option]}
+              </Button>
+            ))}
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3">
           {isDiscovering && tasks.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
               <div className="animate-spin text-3xl">⟳</div>
@@ -110,7 +110,7 @@ export function TaskRosterPanel({
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {sortedTasks.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -125,4 +125,8 @@ export function TaskRosterPanel({
       </div>
     </div>
   );
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }
