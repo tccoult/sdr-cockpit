@@ -34,7 +34,6 @@ export const VisualizationView = memo(function VisualizationView({
   onRenderFpsChange,
 }: VisualizationViewProps) {
   const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fftContainerRef = useRef<HTMLDivElement>(null);
@@ -207,9 +206,7 @@ export const VisualizationView = memo(function VisualizationView({
 
   const surfaceClasses = [
     "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border px-3 py-3 text-sm sm:px-4 sm:py-4",
-    isDark
-      ? "bg-viz-bg-dark border-white/5 text-slate-100 shadow-viz-surface-dark"
-      : "bg-viz-bg-light border-slate-200 text-slate-900 shadow-viz-surface-light",
+    "shadow-viz-surface",
   ].join(" ");
 
   const sectionBaseClasses =
@@ -220,12 +217,8 @@ export const VisualizationView = memo(function VisualizationView({
       return null;
     }
 
-    const overlayClasses = [
-      "absolute inset-0 z-20 flex items-center justify-center rounded-sm border backdrop-blur-sm",
-      isDark
-        ? "border-white/5 bg-viz-bg-dark/85 text-slate-100"
-        : "border-slate-200 bg-viz-bg-light/90 text-slate-900",
-    ].join(" ");
+    const overlayClasses =
+      "viz-overlay absolute inset-0 z-20 flex items-center justify-center rounded-sm border backdrop-blur-sm";
 
     return (
       <div className={overlayClasses}>
@@ -235,7 +228,7 @@ export const VisualizationView = memo(function VisualizationView({
               <div className="text-base font-semibold sm:text-lg">
                 Connecting to data stream...
               </div>
-              <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+              <div className="mt-2 text-xs text-viz-text/70 sm:text-sm">
                 Please wait
               </div>
             </>
@@ -244,7 +237,7 @@ export const VisualizationView = memo(function VisualizationView({
               <div className="text-base font-semibold text-status-error sm:text-lg">
                 Unable to retrieve data
               </div>
-              <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+              <div className="mt-2 text-xs text-viz-text/70 sm:text-sm">
                 {dataError || "Connection to data stream failed"}
               </div>
             </>

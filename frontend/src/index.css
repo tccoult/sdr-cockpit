@@ -43,6 +43,25 @@ html {
   --color-cockpit-accent: 124 131 255;
   --color-cockpit-accent-hover: 104 112 255;
 
+  /* Visualization palette */
+  --viz-bg: 252 253 255;
+  --viz-text: 31 41 55;
+  --viz-border: 226 232 240;
+  --viz-border-alpha: 1;
+  --viz-grid: rgba(15, 23, 42, 0.08);
+  --viz-axis: rgba(15, 23, 42, 0.65);
+  --viz-cursor: rgba(31, 41, 55, 0.35);
+  --viz-trace: var(--color-cockpit-accent);
+  --viz-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --viz-tooltip-border: rgba(124, 131, 255, 0.2);
+  --viz-tooltip-text: #1f2937;
+  --viz-scale-bg: rgba(255, 255, 255, 0.92);
+  --viz-scale-text: #1f2937;
+  --viz-overlay-bg: rgba(252, 253, 255, 0.9);
+  --viz-overlay-border: rgba(0, 0, 0, 0.08);
+  --viz-divider: rgba(0, 0, 0, 0.08);
+  --viz-surface-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -89,6 +108,25 @@ html {
   /* Cockpit accent - dark mode (RGB format for Tailwind opacity support) */
   --color-cockpit-accent: 156 138 255;
   --color-cockpit-accent-hover: 178 160 255;
+
+  /* Visualization palette */
+  --viz-bg: 14 16 24;
+  --viz-text: 229 231 235;
+  --viz-border: 255 255 255;
+  --viz-border-alpha: 0.08;
+  --viz-grid: rgba(255, 255, 255, 0.05);
+  --viz-axis: rgba(255, 255, 255, 0.3);
+  --viz-cursor: rgba(255, 255, 255, 0.25);
+  --viz-trace: 80 210 255;
+  --viz-tooltip-bg: rgba(14, 16, 24, 0.95);
+  --viz-tooltip-border: rgba(124, 131, 255, 0.35);
+  --viz-tooltip-text: #f8fafc;
+  --viz-scale-bg: rgba(14, 16, 24, 0.85);
+  --viz-scale-text: #f8fafc;
+  --viz-overlay-bg: rgba(14, 16, 24, 0.9);
+  --viz-overlay-border: rgba(255, 255, 255, 0.08);
+  --viz-divider: rgba(255, 255, 255, 0.08);
+  --viz-surface-shadow: 0 0 18px rgba(15, 23, 42, 0.75);
 }
 
 * {
@@ -109,6 +147,18 @@ body {
   width: 100%;
   min-height: 100vh;
   height: 100%;
+}
+
+.viz-surface {
+  background-color: rgb(var(--viz-bg) / 1);
+  color: rgb(var(--viz-text) / 1);
+  border-color: rgb(var(--viz-border) / var(--viz-border-alpha));
+}
+
+.viz-overlay {
+  background-color: var(--viz-overlay-bg);
+  border-color: var(--viz-overlay-border);
+  color: rgb(var(--viz-text) / 1);
 }
 
 /* Scrollbar styling */
