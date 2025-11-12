@@ -75,7 +75,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute right-0 top-full z-[70] mt-2 w-56 animate-in fade-in slide-in-from-top-1 duration-100 rounded-sm border border-slate-200 bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-900"
+          className="absolute right-0 top-full z-[70] mt-2 w-56 animate-in fade-in slide-in-from-top-1 duration-100 rounded-sm border border-border/70 bg-card text-foreground shadow-xl shadow-black/15"
         >
           <div className="p-1 pr-1">
             <MenuItem
@@ -94,7 +94,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
               onClick={() => handleSelectItem("version")}
             />
 
-            <div className="my-1 h-px bg-slate-200 dark:bg-white/10" />
+            <div className="my-1 h-px bg-border/60" />
 
             <MenuItem
               icon={<Upload size={16} />}
@@ -102,7 +102,7 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
               onClick={() => handleSelectItem("update")}
             />
 
-            <div className="my-1 h-px bg-slate-200 dark:bg-white/10" />
+            <div className="my-1 h-px bg-border/60" />
 
             <MenuItem
               icon={<ExternalLink size={16} />}
@@ -127,16 +127,16 @@ interface MenuItemProps {
 
 function MenuItem({ icon, label, onClick, iconRight, href }: MenuItemProps) {
   const className =
-    "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-700 transition-all duration-150 ease-in-out hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800";
+    "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-all duration-150 ease-in-out hover:bg-muted/70 hover:text-foreground";
 
   const content = (
     <>
-      <span className="flex-shrink-0 text-slate-500 transition-all duration-150 ease-in-out group-hover:brightness-125 dark:text-slate-400">
+      <span className="flex-shrink-0 text-muted-foreground transition-all duration-150 ease-in-out group-hover:text-foreground">
         {icon}
       </span>
       <span className="flex-1">{label}</span>
       {iconRight && (
-        <span className="flex-shrink-0 text-slate-400 transition-all duration-150 ease-in-out group-hover:brightness-125 dark:text-slate-500">
+        <span className="flex-shrink-0 text-muted-foreground transition-all duration-150 ease-in-out group-hover:text-foreground">
           {iconRight}
         </span>
       )}

@@ -225,13 +225,13 @@ function App() {
                 />
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
                 <div className="text-6xl">📡</div>
                 <div>
-                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                  <p className="text-xl font-semibold text-foreground">
                     No Task Selected
                   </p>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-sm text-muted-foreground/90">
                     Select a task from the roster to view spectrum activity.
                   </p>
                 </div>
@@ -264,13 +264,13 @@ function App() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-slate-500 dark:text-slate-300">
+                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
                     <div className="text-6xl">📡</div>
                     <div>
-                      <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                      <p className="text-xl font-semibold text-foreground">
                         No Task Selected
                       </p>
-                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                      <p className="mt-2 text-sm text-muted-foreground/90">
                         Select a task from the Tasks view.
                       </p>
                     </div>
@@ -390,10 +390,10 @@ function App() {
           />
 
           {/* Modal */}
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-sm border border-slate-200 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-sm border border-border/70 bg-card text-foreground shadow-xl shadow-black/20">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-border/70 p-4">
+              <h2 className="text-lg font-semibold text-foreground">
                 {activeSettingsPanel === "system"
                   ? "System Settings"
                   : activeSettingsPanel === "display"
@@ -403,7 +403,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setActiveSettingsPanel(null)}
-                className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                className="rounded-md p-1 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
               >
                 <X size={20} />
               </button>

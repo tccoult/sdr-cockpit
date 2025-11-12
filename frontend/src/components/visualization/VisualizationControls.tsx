@@ -32,8 +32,8 @@ export function VisualizationControls({
   const inputClasses = [
     "h-8 w-16 rounded-md border px-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 sm:h-9 sm:w-20 sm:text-sm",
     isDark
-      ? "border-white/15 bg-[#0E1018] text-slate-100 placeholder:text-slate-500 focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/20"
-      : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/30",
+      ? "border-white/20 bg-[#E1018] text-slate-100 placeholder:text-slate-500 focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/20"
+      : "border-border/70 bg-card text-foreground placeholder:text-muted-foreground focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/30",
   ].join(" ");
 
   const dockClasses = [
@@ -68,8 +68,7 @@ export function VisualizationControls({
   const sharedButtonBase =
     "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
 
-  const buttonActiveClasses =
-    "border-border bg-card text-foreground shadow-sm";
+  const buttonActiveClasses = "border-border bg-card text-foreground shadow-sm";
 
   const buttonDefaultClasses =
     "border-border/60 bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground";
