@@ -1,10 +1,12 @@
 import { HTMLAttributes, ReactNode, forwardRef } from 'react'
-import { panelChrome } from '../../styles/panelStyles'
 
 type DivProps = HTMLAttributes<HTMLDivElement> & { children: ReactNode }
 
 const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ')
+
+const PANEL_BASE =
+  'rounded-sm border border-border/70 bg-card text-foreground shadow-sm'
 
 interface CockpitLayoutProps extends DivProps {
   /**
@@ -33,7 +35,7 @@ export function CockpitLayout({
   return (
     <div
       className={cn(
-        'min-h-screen w-full bg-slate-100 text-slate-900 dark:bg-cockpit-surface dark:text-slate-100',
+        'min-h-screen w-full bg-background text-foreground',
         'overflow-y-auto overflow-x-hidden',
         'lg:h-screen lg:overflow-y-auto',
         'font-sans',
@@ -65,8 +67,8 @@ export const CockpitHeaderZone = forwardRef<HTMLDivElement, DivProps>(
     <header
       ref={ref}
       className={cn(
-        panelChrome,
-        'order-1 bg-white/80 p-4 backdrop-blur dark:bg-white/5',
+        PANEL_BASE,
+        'order-1 p-4 backdrop-blur supports-[backdrop-filter]:bg-card/80',
         'lg:col-span-full',
         className
       )}
@@ -127,7 +129,7 @@ export function CockpitSpotlightSection({
 }: DivProps) {
   return (
     <section
-      className={cn(panelChrome, 'flex-none p-4 backdrop-blur-sm dark:bg-slate-900/70', className)}
+      className={cn(PANEL_BASE, 'flex-none p-4 backdrop-blur-sm supports-[backdrop-filter]:bg-card/80', className)}
       {...props}
     >
       {children}
@@ -146,7 +148,7 @@ export function CockpitRosterSection({
 }: DivProps) {
   return (
     <section
-      className={cn(panelChrome, 'flex flex-1 flex-col overflow-hidden backdrop-blur-sm min-h-0', className)}
+      className={cn(PANEL_BASE, 'flex flex-1 flex-col overflow-hidden min-h-0', className)}
       {...props}
     >
       {children}
