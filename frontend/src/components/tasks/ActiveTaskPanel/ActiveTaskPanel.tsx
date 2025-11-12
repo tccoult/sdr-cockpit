@@ -1,5 +1,5 @@
 import { CircleDot, Pause, Play, Square } from "lucide-react";
-import { Task, TaskType, TaskStatus } from "../../../types/sdr";
+import { Task, TaskStatus, TaskType } from "../../../types/sdr";
 import { formatFrequency } from "../../../utils/formatters";
 import { Button } from "../../common/Button";
 import { getTaskStatusLabel } from "./taskStatus";
@@ -22,7 +22,10 @@ export function ActiveTaskPanel({
   const statusLabel = getTaskStatusLabel(task);
 
   const { badgeClass, dotClass } = (() => {
-    if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
+    if (
+      task?.status === TaskStatus.LIVE ||
+      task?.status === TaskStatus.TRANSMITTING
+    ) {
       return {
         badgeClass:
           "border border-status-success/30 bg-status-success/15 text-status-success",
@@ -39,8 +42,7 @@ export function ActiveTaskPanel({
     }
 
     return {
-      badgeClass:
-        "border border-border/60 bg-muted/60 text-muted-foreground",
+      badgeClass: "border border-border/60 bg-muted/60 text-muted-foreground",
       dotClass: "bg-muted-foreground/60",
     };
   })();
@@ -79,7 +81,9 @@ export function ActiveTaskPanel({
               <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
                 Sample Rate
               </p>
-              <p className="text-foreground">{task.sampleRate.toLocaleString()} sps</p>
+              <p className="text-foreground">
+                {task.sampleRate.toLocaleString()} sps
+              </p>
             </div>
             <div>
               <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -91,7 +95,9 @@ export function ActiveTaskPanel({
               <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
                 Uptime
               </p>
-              <p className="text-foreground">{Math.max(task.uptime, 0).toFixed(0)}s</p>
+              <p className="text-foreground">
+                {Math.max(task.uptime, 0).toFixed(0)}s
+              </p>
             </div>
             <div>
               <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -112,10 +118,20 @@ export function ActiveTaskPanel({
               <Button
                 onClick={() => onPauseTask(task.id)}
                 size="sm"
-                variant={task.status === TaskStatus.PAUSED ? "secondary" : "primary"}
+                variant={
+                  task.status === TaskStatus.PAUSED ? "secondary" : "primary"
+                }
                 className={controlButtonBase}
-                title={task.status === TaskStatus.PAUSED ? "Resume task" : "Pause task"}
-                aria-label={task.status === TaskStatus.PAUSED ? "Resume task" : "Pause task"}
+                title={
+                  task.status === TaskStatus.PAUSED
+                    ? "Resume task"
+                    : "Pause task"
+                }
+                aria-label={
+                  task.status === TaskStatus.PAUSED
+                    ? "Resume task"
+                    : "Pause task"
+                }
               >
                 {task.status === TaskStatus.PAUSED ? (
                   <Play aria-hidden className="h-5 w-5" />
@@ -127,12 +143,12 @@ export function ActiveTaskPanel({
               <Button
                 onClick={() => onStopTask(task.id)}
                 size="sm"
-                variant="ghost"
-                className={`${controlButtonBase} border border-border/70 bg-card text-status-recording hover:bg-status-recording/10`}
+                variant="secondary"
+                className={`${controlButtonBase} text-status-recording hover:bg-status-recording/10`}
                 title="Stop task"
                 aria-label="Stop task"
               >
-                <Square aria-hidden className="h-5 w-5" />
+                <Square aria-hidden className="h-5 w-5 text-foreground" />
               </Button>
 
               {task.type === TaskType.RX && (
