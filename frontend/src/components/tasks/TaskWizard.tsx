@@ -2,7 +2,6 @@ import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
 import { Button } from '../common/Button'
 import { Input } from '../common/Input'
 import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr'
-import { panelChrome } from '../../styles/panelStyles'
 
 type TaskMode = 'select' | 'rx' | 'tx'
 
@@ -14,11 +13,11 @@ interface TaskWizardProps {
 }
 
 const labelClass =
-  'mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+  'mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground'
 const selectClass =
-  'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 transition focus:border-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50 dark:border-white/15 dark:bg-white/10 dark:text-slate-100 dark:focus:border-white/40 dark:focus-visible:ring-white/40'
+  'h-11 w-full rounded-md border border-border/60 bg-card px-3 text-sm text-foreground transition focus:border-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40'
 const checkboxClass =
-  'h-4 w-4 rounded-sm border-slate-300 bg-white text-cockpit-accent accent-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50 dark:border-white/30 dark:bg-slate-900/70 dark:focus-visible:ring-white/40'
+  'h-4 w-4 rounded-sm border border-border/60 bg-card text-cockpit-accent accent-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40'
 
 export function TaskWizard({
   isOpen,
@@ -126,21 +125,21 @@ export function TaskWizard({
       onClick={handleClose}
     >
       <div
-        className={[panelChrome, 'w-full max-w-xl overflow-hidden p-6 dark:bg-slate-950/90'].join(' ')}
+        className="w-full max-w-xl overflow-hidden rounded-sm border border-border/70 bg-card/95 p-6 text-foreground shadow-2xl shadow-black/40 backdrop-blur supports-[backdrop-filter]:bg-card/80"
         onClick={(event) => event.stopPropagation()}
       >
         {mode === 'select' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Create New Task</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Create New Task</h2>
 
             <div className="grid gap-4">
               <button
                 type="button"
                 onClick={() => setMode('rx')}
-                className="rounded-sm border border-slate-200 bg-slate-100 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
+                className="rounded-sm border border-border/70 bg-muted/50 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40"
               >
-                <div className="text-xl font-semibold text-slate-900 dark:text-white">📡 Receive Signal</div>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                <div className="text-xl font-semibold text-foreground">📡 Receive Signal</div>
+                <p className="mt-2 text-sm text-muted-foreground">
                   Monitor and analyze RF signals in real time.
                 </p>
               </button>
@@ -148,10 +147,10 @@ export function TaskWizard({
               <button
                 type="button"
                 onClick={() => setMode('tx')}
-                className="rounded-sm border border-slate-200 bg-slate-100 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
+                className="rounded-sm border border-border/70 bg-muted/50 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40"
               >
-                <div className="text-xl font-semibold text-slate-900 dark:text-white">📤 Transmit File</div>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                <div className="text-xl font-semibold text-foreground">📤 Transmit File</div>
+                <p className="mt-2 text-sm text-muted-foreground">
                   Playback an existing SigMF recording over the air.
                 </p>
               </button>
@@ -165,7 +164,7 @@ export function TaskWizard({
 
         {mode === 'rx' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Create Receive Task</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Create Receive Task</h2>
 
             <div className="space-y-5">
               <div>
@@ -271,7 +270,7 @@ export function TaskWizard({
 
         {mode === 'tx' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Transmit SigMF File</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Transmit SigMF File</h2>
 
             <div className="space-y-5">
               <div>
@@ -293,7 +292,7 @@ export function TaskWizard({
                 <div
                   tabIndex={0}
                   role="button"
-                  className="rounded-sm border-2 border-dashed border-slate-300 bg-slate-100 p-6 text-center text-slate-600 transition hover:border-cockpit-accent/50 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40 dark:border-white/20 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/30 dark:hover:bg-white/10 dark:focus-visible:ring-white/40"
+                  className="rounded-sm border-2 border-dashed border-border/60 bg-muted/40 p-6 text-center text-muted-foreground transition hover:border-cockpit-accent/50 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40"
                   onClick={handleFilePicker}
                   onKeyDown={handleFilePickerKeyDown}
                 >
@@ -306,24 +305,24 @@ export function TaskWizard({
                   />
                   {txFile ? (
                     <div>
-                      <p className="text-lg font-semibold text-slate-900 dark:text-white">✓ {txFile.name}</p>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-lg font-semibold text-foreground">✓ {txFile.name}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {(txFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
                   ) : (
                     <div>
-                      <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                      <p className="text-lg font-semibold text-foreground">
                         Drop file or click to browse
                       </p>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">SigMF files only</p>
+                      <p className="mt-1 text-sm text-muted-foreground">SigMF files only</p>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={txUseOriginalFreq}
@@ -351,7 +350,7 @@ export function TaskWizard({
                 )}
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={txLoop}
