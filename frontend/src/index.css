@@ -18,16 +18,16 @@ html {
   --card-foreground: 222.2 47.4% 11.2%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 47.4% 11.2%;
-  --muted: 215 25% 94%;
-  --muted-foreground: 215.4 14% 40%;
+  --muted: 220 18% 92%;
+  --muted-foreground: 220 12% 36%;
   --accent: 226 70% 55%;
   --accent-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
+  --border: 220 16% 85%;
+  --input: 220 16% 85%;
   --ring: 226 70% 55%;
-  --secondary: 215 25% 94%;
+  --secondary: 220 20% 88%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  --ghost: 210 20% 96%;
+  --ghost: 0 0% 100%;
   --ghost-foreground: 222.2 47.4% 11.2%;
 
   /* Status colors - light mode (RGB format for Tailwind opacity support) */
@@ -59,22 +59,22 @@ html {
   --text-color: #f1f5f9;
   --scroll-track: #1f2937;
   --scroll-thumb: #334155;
-  --background: 222 47% 3.5%;
+  --background: 222 47% 3%;
   --foreground: 210 40% 98%;
-  --card: 222 40% 10%;
+  --card: 222 38% 12%;
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 5%;
   --popover-foreground: 210 40% 98%;
-  --muted: 217 25% 18%;
-  --muted-foreground: 215 18% 70%;
+  --muted: 220 24% 20%;
+  --muted-foreground: 215 18% 72%;
   --accent: 226 70% 65%;
   --accent-foreground: 222.2 47.4% 11.2%;
-  --border: 217 28% 22%;
-  --input: 217 28% 22%;
+  --border: 220 26% 26%;
+  --input: 220 26% 26%;
   --ring: 226 70% 65%;
-  --secondary: 222 38% 16%;
+  --secondary: 222 30% 24%;
   --secondary-foreground: 210 40% 96%;
-  --ghost: 217 28% 24%;
+  --ghost: 220 18% 18%;
   --ghost-foreground: 210 40% 96%;
 
   /* Status colors - dark mode (RGB format for Tailwind opacity support) */
