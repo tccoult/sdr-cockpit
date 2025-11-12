@@ -182,7 +182,7 @@ function App() {
 
   return (
     <>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-slate-100 dark:bg-cockpit-surface">
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
         {/* Compact Header */}
         <CompactHeader
           selectedTask={selectedTask}
