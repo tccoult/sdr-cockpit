@@ -277,7 +277,7 @@ function App() {
 
             {mobileView === 'tasks' && (
               <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-                <div className="border-b border-border/60 bg-card/80 p-4">
+                <div className="border-b border-border/60 bg-card/80 p-3">
                   <ActiveTaskPanel
                     task={selectedTask}
                     onPauseTask={pauseTask}
@@ -320,7 +320,7 @@ function App() {
           width={`${TASK_DRAWER_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <div className="p-4">
+          <div className="p-3">
             <ActiveTaskPanel
               task={selectedTask}
               onPauseTask={pauseTask}

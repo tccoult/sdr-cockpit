@@ -46,7 +46,7 @@ export function TaskRosterPanel({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col p-4">
+    <div className="flex min-h-0 flex-1 flex-col p-3">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border border-border/70 bg-card text-foreground shadow-lg shadow-black/15">
         <div className="flex items-center justify-between px-4 pb-2 pt-4">
           <h3 className="text-sm font-semibold text-foreground">Tasks Roster</h3>
