@@ -55,7 +55,7 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
       textColor: "#E5E7EB",
       axisColor: "rgba(255, 255, 255, 0.30)",
       cursorLineColor: "rgba(255, 255, 255, 0.25)",
-      traceColor: accentColor,
+      traceColor: "#50D2FF",
       tooltipBackground: "rgba(14, 16, 24, 0.95)",
       tooltipBorder: "rgba(124, 131, 255, 0.35)",
       tooltipText: "#F8FAFC",

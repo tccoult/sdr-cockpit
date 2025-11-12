@@ -67,11 +67,11 @@ html {
   --popover-foreground: 210 40% 98%;
   --muted: 220 24% 20%;
   --muted-foreground: 215 18% 72%;
-  --accent: 226 70% 65%;
+  --accent: 260 65% 65%;
   --accent-foreground: 222.2 47.4% 11.2%;
   --border: 220 26% 26%;
   --input: 220 26% 26%;
-  --ring: 226 70% 65%;
+  --ring: 260 65% 65%;
   --secondary: 222 30% 24%;
   --secondary-foreground: 210 40% 96%;
   --ghost: 220 18% 18%;
@@ -87,8 +87,8 @@ html {
   --color-status-stopped: 100 116 139;
 
   /* Cockpit accent - dark mode (RGB format for Tailwind opacity support) */
-  --color-cockpit-accent: 124 131 255;
-  --color-cockpit-accent-hover: 157 162 255;
+  --color-cockpit-accent: 156 138 255;
+  --color-cockpit-accent-hover: 178 160 255;
 }
 
 * {
