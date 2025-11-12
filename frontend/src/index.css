@@ -8,30 +8,29 @@ html {
 
 :root {
   color-scheme: light;
+
+  /* --- Core UI --- */
   --bg-body: #fafafa;
   --text-color: #0f172a;
-  --scroll-track: #f5f5f5;
-  --scroll-thumb: #d4d4d4;
+
   --background: 222 33% 97%;
   --foreground: 222.2 47.4% 11.2%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 47.4% 11.2%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 47.4% 11.2%;
   --muted: 220 18% 92%;
   --muted-foreground: 220 12% 36%;
-  --accent: 237 100% 74%;
-  --accent-foreground: 210 40% 98%;
-  --accent-rgb: 124 131 255;
-  --border: 220 16% 85%;
-  --input: 220 16% 85%;
-  --ring: 226 70% 55%;
   --secondary: 220 20% 88%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  --ghost: 0 0% 100%;
-  --ghost-foreground: 222.2 47.4% 11.2%;
+  --border: 220 16% 85%;
+  --input: 220 16% 85%;
 
-  /* Status colors - light mode (RGB format for Tailwind opacity support) */
+  /* --- Accent (violet-blue) --- */
+  --accent: 258 75% 65%;
+  --accent-foreground: 210 40% 98%;
+  --accent-rgb: 148 132 255;
+  --ring: 258 75% 65%;
+
+  /* --- Status (RGB for Tailwind opacity) --- */
   --color-status-success: 0 183 122;
   --color-status-warning: 224 181 0;
   --color-status-error: 229 57 53;
@@ -40,17 +39,17 @@ html {
   --color-status-recording: 229 57 53;
   --color-status-stopped: 94 98 112;
 
-  /* Visualization palette */
-  --viz-bg: 252 253 255;
+  /* --- Visualization Palette (light) --- */
+  --viz-bg: 250 251 255;                     /* near-white with cool tint */
   --viz-text: 31 41 55;
-  --viz-border: 226 232 240;
-  --viz-border-alpha: 1;
+  --viz-border: 15 23 42;
+  --viz-border-alpha: 0.08;
   --viz-grid: rgba(15, 23, 42, 0.08);
-  --viz-axis: rgba(15, 23, 42, 0.65);
+  --viz-axis: rgba(15, 23, 42, 0.55);
   --viz-cursor: rgba(31, 41, 55, 0.35);
-  --viz-trace: var(--accent-rgb);
+  --viz-trace: 64 180 230;                   /* soft cyan trace */
   --viz-tooltip-bg: rgba(255, 255, 255, 0.96);
-  --viz-tooltip-border: rgba(124, 131, 255, 0.2);
+  --viz-tooltip-border: rgba(148, 132, 255, 0.25);
   --viz-tooltip-text: #1f2937;
   --viz-scale-bg: rgba(255, 255, 255, 0.92);
   --viz-scale-text: #1f2937;
@@ -59,42 +58,40 @@ html {
   --viz-divider: rgba(0, 0, 0, 0.08);
   --viz-surface-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 
+  /* --- Scrollbars --- */
+  --scroll-track: #f5f5f5;
+  --scroll-thumb: #d4d4d4;
+
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .dark {
   color-scheme: dark;
+
+  /* --- Structural Frame --- */
   --bg-body: radial-gradient(circle at 20% 20%, #131826 0%, #080b10 50%, #05070b 100%);
   --text-color: #f1f5f9;
-  --scroll-track: #1f2937;
-  --scroll-thumb: #334155;
+
   --background: 222 47% 3%;
   --foreground: 210 40% 98%;
-  --card: 222 38% 12%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 5%;
-  --popover-foreground: 210 40% 98%;
-  --muted: 220 24% 20%;
+  --card: 222 36% 10%;
+  --card-foreground: 210 40% 96%;
+  --muted: 220 22% 18%;
   --muted-foreground: 215 18% 72%;
-  --accent: 249 100% 77%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --accent-rgb: 156 138 255;
+  --secondary: 222 28% 20%;
+  --secondary-foreground: 210 40% 96%;
   --border: 220 26% 26%;
   --input: 220 26% 26%;
-  --ring: 260 65% 65%;
-  --secondary: 222 30% 24%;
-  --secondary-foreground: 210 40% 96%;
-  --ghost: 220 18% 18%;
-  --ghost-foreground: 210 40% 96%;
 
-  /* Status colors - dark mode (RGB format for Tailwind opacity support) */
+  /* --- Accent (violet-blue) --- */
+  --accent: 258 75% 70%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent-rgb: 156 138 255;
+  --ring: 258 75% 70%;
+
+  /* --- Status (RGB for Tailwind opacity) --- */
   --color-status-success: 76 228 179;
   --color-status-warning: 226 193 90;
   --color-status-error: 255 76 76;
@@ -103,24 +100,29 @@ html {
   --color-status-recording: 255 107 157;
   --color-status-stopped: 100 116 139;
 
-  /* Visualization palette */
-  --viz-bg: 14 16 24;
+  /* --- Visualization Palette (dark) --- */
+  /* --viz-bg: 16 18 28; */
+  --viz-bg: 12 14 24;
   --viz-text: 229 231 235;
   --viz-border: 255 255 255;
   --viz-border-alpha: 0.08;
   --viz-grid: rgba(255, 255, 255, 0.05);
   --viz-axis: rgba(255, 255, 255, 0.3);
   --viz-cursor: rgba(255, 255, 255, 0.25);
-  --viz-trace: var(--accent-rgb);
-  --viz-tooltip-bg: rgba(14, 16, 24, 0.95);
-  --viz-tooltip-border: rgba(124, 131, 255, 0.35);
+  --viz-trace: 80 210 255;                  /* luminous cyan FFT trace */
+  --viz-tooltip-bg: rgba(12, 14, 24, 0.95);
+  --viz-tooltip-border: rgba(156, 138, 255, 0.35);
   --viz-tooltip-text: #f8fafc;
-  --viz-scale-bg: rgba(14, 16, 24, 0.85);
+  --viz-scale-bg: rgba(12, 14, 24, 0.85);
   --viz-scale-text: #f8fafc;
-  --viz-overlay-bg: rgba(14, 16, 24, 0.9);
+  --viz-overlay-bg: rgba(12, 14, 24, 0.9);
   --viz-overlay-border: rgba(255, 255, 255, 0.08);
   --viz-divider: rgba(255, 255, 255, 0.08);
   --viz-surface-shadow: 0 0 18px rgba(15, 23, 42, 0.75);
+
+  /* --- Scrollbars --- */
+  --scroll-track: #1f2937;
+  --scroll-thumb: #334155;
 }
 
 * {
@@ -153,6 +155,62 @@ body {
   background-color: var(--viz-overlay-bg);
   border-color: var(--viz-overlay-border);
   color: rgb(var(--viz-text) / 1);
+}
+
+.viz-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+
+  /* Base: dark tinted glass with depth */
+  background: radial-gradient(
+      circle at 50% 30%,
+      rgba(32, 40, 60, 0.9) 0%,
+      rgba(10, 12, 20, 0.95) 80%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(60, 70, 100, 0.12) 0%,
+      rgba(10, 12, 20, 0.96) 100%
+    );
+  background-blend-mode: overlay;
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 8px rgba(100, 120, 255, 0.05),
+    0 0 20px rgba(100, 120, 255, 0.03);
+}
+
+.viz-panel .viz-glass-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.7; /* slightly reduced overall sheen */
+
+  background:
+    /* Narrower cool-tinted highlight near top */
+    radial-gradient(
+      ellipse at 50% -20%,
+      rgba(180, 200, 255, 0.07) 0%,       /* lower peak brightness */
+      rgba(100, 120, 180, 0.04) 30%,      /* quicker falloff */
+      transparent 60%
+    ),
+    /* Softer vertical light gradient */
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.015) 0%,      /* barely-there white at top */
+      rgba(0, 0, 0, 0.12) 100%            /* slightly deeper fade to anchor bottom */
+    ),
+    /* Reinforced vignette for darker edges */
+    radial-gradient(
+      circle at 50% 120%,
+      transparent 0%,
+      rgba(0, 0, 0, 0.3) 75%
+    );
+  background-blend-mode: screen, overlay;
 }
 
 /* Scrollbar styling */

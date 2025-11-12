@@ -17,10 +17,7 @@ export function rgbStringToHex(rgb: string): string {
   const [r, g, b] = rgb.split(" ").map(Number);
   if (isNaN(r) || isNaN(g) || isNaN(b)) return "";
   return (
-    "#" +
-    [r, g, b]
-      .map((value) => value.toString(16).padStart(2, "0"))
-      .join("")
+    "#" + [r, g, b].map((value) => value.toString(16).padStart(2, "0")).join("")
   );
 }
 
@@ -71,9 +68,13 @@ function resolveMode(input: boolean | "dark" | "light"): boolean {
   return input === "dark";
 }
 
-export function getVisualizationTheme(mode: boolean | "dark" | "light"): VisualizationTheme {
+export function getVisualizationTheme(
+  mode: boolean | "dark" | "light"
+): VisualizationTheme {
   const isDark = resolveMode(mode);
-  const fallback = isDark ? DARK_VISUALIZATION_THEME : LIGHT_VISUALIZATION_THEME;
+  const fallback = isDark
+    ? DARK_VISUALIZATION_THEME
+    : LIGHT_VISUALIZATION_THEME;
 
   const background =
     rgbStringToHex(getCSSVariable("--viz-bg")) || fallback.background;
@@ -87,8 +88,7 @@ export function getVisualizationTheme(mode: boolean | "dark" | "light"): Visuali
     gridColor: getCSSVariable("--viz-grid") || fallback.gridColor,
     textColor,
     axisColor: getCSSVariable("--viz-axis") || fallback.axisColor,
-    cursorLineColor:
-      getCSSVariable("--viz-cursor") || fallback.cursorLineColor,
+    cursorLineColor: getCSSVariable("--viz-cursor") || fallback.cursorLineColor,
     traceColor,
     tooltipBackground:
       getCSSVariable("--viz-tooltip-bg") || fallback.tooltipBackground,
@@ -128,25 +128,37 @@ export function getPlotTheme(mode: boolean | "dark" | "light"): PlotTheme {
 export const themeColors = {
   status: {
     get success() {
-      return rgbStringToHex(getCSSVariable("--color-status-success")) || "#00b77a";
+      return (
+        rgbStringToHex(getCSSVariable("--color-status-success")) || "#00b77a"
+      );
     },
     get warning() {
-      return rgbStringToHex(getCSSVariable("--color-status-warning")) || "#e0b500";
+      return (
+        rgbStringToHex(getCSSVariable("--color-status-warning")) || "#e0b500"
+      );
     },
     get error() {
-      return rgbStringToHex(getCSSVariable("--color-status-error")) || "#e53935";
+      return (
+        rgbStringToHex(getCSSVariable("--color-status-error")) || "#e53935"
+      );
     },
     get info() {
       return rgbStringToHex(getCSSVariable("--color-status-info")) || "#2979ff";
     },
     get transmit() {
-      return rgbStringToHex(getCSSVariable("--color-status-transmit")) || "#2979ff";
+      return (
+        rgbStringToHex(getCSSVariable("--color-status-transmit")) || "#2979ff"
+      );
     },
     get recording() {
-      return rgbStringToHex(getCSSVariable("--color-status-recording")) || "#e53935";
+      return (
+        rgbStringToHex(getCSSVariable("--color-status-recording")) || "#e53935"
+      );
     },
     get stopped() {
-      return rgbStringToHex(getCSSVariable("--color-status-stopped")) || "#5e6270";
+      return (
+        rgbStringToHex(getCSSVariable("--color-status-stopped")) || "#5e6270"
+      );
     },
   },
   accent: {
@@ -163,7 +175,9 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function getHealthIndicator(status: "healthy" | "warning" | "error" | "unknown") {
+export function getHealthIndicator(
+  status: "healthy" | "warning" | "error" | "unknown"
+) {
   const colorMap = {
     healthy: themeColors.status.success,
     warning: themeColors.status.warning,

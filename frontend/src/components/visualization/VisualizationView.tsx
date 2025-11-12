@@ -6,11 +6,14 @@ import {
   VisualizationMode,
 } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
-import { FFTDisplay } from "./FFTDisplay";
-import { WaterfallDisplay } from "./WaterfallDisplay";
-import { SpectrogramDisplay } from "./SpectrogramDisplay";
-import { VisualizationControls, InteractionMode } from "./VisualizationControls";
 import { useTheme } from "../app/useTheme";
+import { FFTDisplay } from "./FFTDisplay";
+import { SpectrogramDisplay } from "./SpectrogramDisplay";
+import {
+  InteractionMode,
+  VisualizationControls,
+} from "./VisualizationControls";
+import { WaterfallDisplay } from "./WaterfallDisplay";
 
 interface VisualizationViewProps {
   taskId: string;
@@ -96,7 +99,11 @@ export const VisualizationView = memo(function VisualizationView({
           nextMax = Math.max(nextMax, value);
         }
       }
-      if (Number.isFinite(nextMin) && Number.isFinite(nextMax) && nextMax > nextMin) {
+      if (
+        Number.isFinite(nextMin) &&
+        Number.isFinite(nextMax) &&
+        nextMax > nextMin
+      ) {
         const range = nextMax - nextMin;
         const padding = range * 0.1;
         setMinDb(Math.floor(nextMin - padding));
@@ -195,8 +202,10 @@ export const VisualizationView = memo(function VisualizationView({
     const targets: Element[] = [];
     if (containerRef.current) targets.push(containerRef.current);
     if (fftContainerRef.current) targets.push(fftContainerRef.current);
-    if (waterfallContainerRef.current) targets.push(waterfallContainerRef.current);
-    if (spectrogramContainerRef.current) targets.push(spectrogramContainerRef.current);
+    if (waterfallContainerRef.current)
+      targets.push(waterfallContainerRef.current);
+    if (spectrogramContainerRef.current)
+      targets.push(spectrogramContainerRef.current);
 
     targets.forEach((element) => observer.observe(element));
     updateSizes();
@@ -268,7 +277,8 @@ export const VisualizationView = memo(function VisualizationView({
   ].join(" ");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="viz-panel relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/* Matte surface content (FFT, waterfall, spectrogram, controls) */}
       <div ref={containerRef} className={surfaceClasses}>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
           {showFFT && (
@@ -289,7 +299,10 @@ export const VisualizationView = memo(function VisualizationView({
           )}
 
           {showWaterfall && (
-            <div ref={waterfallContainerRef} className={waterfallSectionClasses}>
+            <div
+              ref={waterfallContainerRef}
+              className={waterfallSectionClasses}
+            >
               <WaterfallDisplay
                 width={Math.max(waterfallSize.width, 0)}
                 height={waterfallSize.height > 0 ? waterfallSize.height : 240}
@@ -308,7 +321,10 @@ export const VisualizationView = memo(function VisualizationView({
           )}
 
           {showSpectrogram && (
-            <div ref={spectrogramContainerRef} className={spectrogramSectionClasses}>
+            <div
+              ref={spectrogramContainerRef}
+              className={spectrogramSectionClasses}
+            >
               <SpectrogramDisplay
                 width={Math.max(spectrogramSize.width, 0)}
                 height={Math.max(spectrogramSize.height, 360)}
@@ -324,6 +340,7 @@ export const VisualizationView = memo(function VisualizationView({
               />
             </div>
           )}
+
           <VisualizationControls
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
@@ -334,9 +351,11 @@ export const VisualizationView = memo(function VisualizationView({
             onAutoRange={autoRange}
           />
         </div>
-
-        {renderStatusOverlay()}
       </div>
+      {/* Overlay layers */}
+      {renderStatusOverlay()} {/* Always above the glass */}
+      {/* Reflective glass sheen */}
+      <div className="viz-glass-overlay" />
     </div>
   );
 });
