@@ -66,15 +66,13 @@ export function VisualizationControls({
   ].join(" ");
 
   const sharedButtonBase =
-    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
+    "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
 
-  const buttonActiveClasses = isDark
-    ? "border-slate-500 bg-slate-700 text-white shadow-sm"
-    : "border-slate-300 bg-slate-200 text-slate-900 shadow-sm";
+  const buttonActiveClasses =
+    "border-border bg-card text-foreground shadow-sm";
 
-  const buttonDefaultClasses = isDark
-    ? "border-white/10 text-slate-300 hover:border-white/30 hover:bg-white/5 hover:text-white"
-    : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50";
+  const buttonDefaultClasses =
+    "border-border/60 bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground";
 
   const modeButtonClasses = (mode: InteractionMode) =>
     [

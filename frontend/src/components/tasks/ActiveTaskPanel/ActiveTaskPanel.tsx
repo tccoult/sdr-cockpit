@@ -46,7 +46,7 @@ export function ActiveTaskPanel({
   })();
 
   return (
-    <section className="rounded-xl border border-border/70 bg-card/95 p-4 text-foreground shadow-lg shadow-black/15">
+    <section className="rounded-sm border border-border/70 bg-card/95 p-4 text-foreground shadow-lg shadow-black/15">
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
