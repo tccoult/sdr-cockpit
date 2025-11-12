@@ -25,23 +25,23 @@ export function ActiveTaskPanel({
     if (task?.status === TaskStatus.LIVE || task?.status === TaskStatus.TRANSMITTING) {
       return {
         badgeClass:
-          "border-status-success/30 bg-status-success/12 text-status-success dark:border-status-success/40 dark:bg-status-success/15 dark:text-status-success",
-        dotClass: "bg-status-success dark:bg-status-success animate-pulse",
+          "border border-status-success/30 bg-status-success/15 text-status-success",
+        dotClass: "bg-status-success animate-pulse",
       };
     }
 
     if (task?.status === TaskStatus.PAUSED) {
       return {
         badgeClass:
-          "border-status-warning/30 bg-status-warning/12 text-status-warning dark:border-status-warning/40 dark:bg-status-warning/15 dark:text-status-warning",
+          "border border-status-warning/30 bg-status-warning/15 text-status-warning",
         dotClass: "bg-status-warning",
       };
     }
 
     return {
       badgeClass:
-        "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-200",
-      dotClass: "bg-slate-400 dark:bg-slate-300",
+        "border border-border/60 bg-muted/60 text-muted-foreground",
+      dotClass: "bg-muted-foreground/60",
     };
   })();
 
@@ -49,13 +49,11 @@ export function ActiveTaskPanel({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Active Task
-          </p>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-foreground">Active Task</p>
+          <h2 className="mt-1 text-lg font-semibold text-foreground">
             {task ? task.name : "No task selected"}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-muted-foreground">
             {task
               ? `${formatFrequency(
                   task.frequency
@@ -64,7 +62,7 @@ export function ActiveTaskPanel({
           </p>
         </div>
         <div
-          className={`flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold ${badgeClass}`}
+          className={`flex items-center gap-2 rounded-md px-3 py-1 text-xs font-semibold ${badgeClass}`}
         >
           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
           {statusLabel}
@@ -72,30 +70,30 @@ export function ActiveTaskPanel({
       </div>
 
       {task && (
-        <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-300">
+        <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
               Sample Rate
             </p>
-            <p>{task.sampleRate.toLocaleString()} sps</p>
+            <p className="text-foreground">{task.sampleRate.toLocaleString()} sps</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
               Owner
             </p>
-            <p>{task.ownerName}</p>
+            <p className="text-foreground">{task.ownerName}</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
               Uptime
             </p>
-            <p>{Math.max(task.uptime, 0).toFixed(0)}s</p>
+            <p className="text-foreground">{Math.max(task.uptime, 0).toFixed(0)}s</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
               Recording
             </p>
-            <p>
+            <p className="text-foreground">
               {task.recording?.isRecording
                 ? `Recording · ${task.recording.duration}s`
                 : "Idle"}
