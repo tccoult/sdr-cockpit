@@ -51,10 +51,10 @@ export function getVisualizationTheme(isDark: boolean): VisualizationTheme {
   if (isDark) {
     return {
       background: "#0E1018",
-      gridColor: "rgba(15, 23, 42, 0.08)",
+      gridColor: "rgba(255, 255, 255, 0.05)",
       textColor: "#E5E7EB",
-      axisColor: "rgba(15, 23, 42, 0.40)",
-      cursorLineColor: "rgba(255, 255, 255, 0.4)",
+      axisColor: "rgba(255, 255, 255, 0.30)",
+      cursorLineColor: "rgba(255, 255, 255, 0.25)",
       traceColor: accentColor,
       tooltipBackground: "rgba(14, 16, 24, 0.95)",
       tooltipBorder: "rgba(124, 131, 255, 0.35)",
