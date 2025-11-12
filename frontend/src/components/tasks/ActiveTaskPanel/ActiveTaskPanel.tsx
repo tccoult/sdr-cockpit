@@ -45,6 +45,8 @@ export function ActiveTaskPanel({
     };
   })();
 
+  const controlButtonBase = "h-9 w-9 rounded-sm p-0";
+
   return (
     <section className="rounded-sm border border-border/70 bg-card/95 p-4 text-foreground shadow-lg shadow-black/15">
       <div className="space-y-4">
@@ -109,30 +111,29 @@ export function ActiveTaskPanel({
               <Button
                 onClick={() => onPauseTask(task.id)}
                 size="sm"
-                variant="secondary"
-                className="px-2 py-1"
+                variant={
+                  task.status === TaskStatus.PAUSED ? "primary" : "secondary"
+                }
+                className={controlButtonBase}
+                title={task.status === TaskStatus.PAUSED ? "Resume task" : "Pause task"}
+                aria-label={task.status === TaskStatus.PAUSED ? "Resume task" : "Pause task"}
               >
                 {task.status === TaskStatus.PAUSED ? (
-                  <>
-                    <Play aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Resume
-                  </>
+                  <Play aria-hidden className="h-4 w-4" />
                 ) : (
-                  <>
-                    <Pause aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Pause
-                  </>
+                  <Pause aria-hidden className="h-4 w-4" />
                 )}
               </Button>
 
               <Button
                 onClick={() => onStopTask(task.id)}
                 size="sm"
-                variant="secondary"
-                className="px-2 py-1"
+                variant="subtle"
+                className={`${controlButtonBase} border border-status-stopped/40 text-status-stopped hover:bg-status-stopped/10`}
+                title="Stop task"
+                aria-label="Stop task"
               >
-                <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-                Stop
+                <Square aria-hidden className="h-4 w-4" />
               </Button>
 
               {task.type === TaskType.RX && (
@@ -143,19 +144,29 @@ export function ActiveTaskPanel({
                       : onRecordTask(task.id)
                   }
                   size="sm"
-                  variant="secondary"
-                  className="px-2 py-1"
+                  variant={
+                    task.recording?.isRecording ? "primary" : "secondary"
+                  }
+                  className={`${controlButtonBase} ${
+                    task.recording?.isRecording
+                      ? "ring-1 ring-status-recording/70"
+                      : ""
+                  }`}
+                  title={
+                    task.recording?.isRecording
+                      ? "Stop recording"
+                      : "Start recording"
+                  }
+                  aria-label={
+                    task.recording?.isRecording
+                      ? "Stop recording"
+                      : "Start recording"
+                  }
                 >
                   {task.recording?.isRecording ? (
-                    <>
-                      <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-                      Stop Recording
-                    </>
+                    <Square aria-hidden className="h-4 w-4" />
                   ) : (
-                    <>
-                      <CircleDot aria-hidden className="mr-1 h-3.5 w-3.5" />
-                      Record
-                    </>
+                    <CircleDot aria-hidden className="h-4 w-4" />
                   )}
                 </Button>
               )}

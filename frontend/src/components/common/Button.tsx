@@ -18,11 +18,11 @@ const BASE_CLASSES =
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'border-transparent bg-slate-900 text-white hover:bg-slate-800 dark:border-white/30 dark:bg-cockpit-accent/40 dark:hover:bg-cockpit-accent/50',
+    'border-transparent bg-cockpit-accent text-white shadow-sm hover:bg-cockpit-accent/80 dark:bg-cockpit-accent/60 dark:hover:bg-cockpit-accent/70',
   secondary:
     'border-border/70 bg-secondary text-foreground shadow-sm hover:bg-secondary/80',
   subtle:
-    'border-border/60 bg-muted text-muted-foreground hover:bg-muted/80',
+    'border-border/50 bg-card/70 text-foreground hover:bg-card',
   ghost:
     'border-transparent bg-transparent text-foreground hover:border-border/50 hover:bg-ghost/70',
   icon:
