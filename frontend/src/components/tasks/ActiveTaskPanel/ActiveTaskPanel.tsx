@@ -45,7 +45,8 @@ export function ActiveTaskPanel({
     };
   })();
 
-  const controlButtonBase = "h-9 w-9 rounded-sm p-0";
+  const controlButtonBase =
+    "flex h-9 w-9 items-center justify-center rounded-sm p-0";
 
   return (
     <section className="rounded-sm border border-border/70 bg-card/95 p-4 text-foreground shadow-lg shadow-black/15">
@@ -111,29 +112,27 @@ export function ActiveTaskPanel({
               <Button
                 onClick={() => onPauseTask(task.id)}
                 size="sm"
-                variant={
-                  task.status === TaskStatus.PAUSED ? "primary" : "secondary"
-                }
+                variant={task.status === TaskStatus.PAUSED ? "secondary" : "primary"}
                 className={controlButtonBase}
                 title={task.status === TaskStatus.PAUSED ? "Resume task" : "Pause task"}
                 aria-label={task.status === TaskStatus.PAUSED ? "Resume task" : "Pause task"}
               >
                 {task.status === TaskStatus.PAUSED ? (
-                  <Play aria-hidden className="h-4 w-4" />
+                  <Play aria-hidden className="h-5 w-5" />
                 ) : (
-                  <Pause aria-hidden className="h-4 w-4" />
+                  <Pause aria-hidden className="h-5 w-5" />
                 )}
               </Button>
 
               <Button
                 onClick={() => onStopTask(task.id)}
                 size="sm"
-                variant="subtle"
-                className={`${controlButtonBase} border border-status-stopped/40 text-status-stopped hover:bg-status-stopped/10`}
+                variant="ghost"
+                className={`${controlButtonBase} border border-border/70 bg-card text-status-recording hover:bg-status-recording/10`}
                 title="Stop task"
                 aria-label="Stop task"
               >
-                <Square aria-hidden className="h-4 w-4" />
+                <Square aria-hidden className="h-5 w-5" />
               </Button>
 
               {task.type === TaskType.RX && (
@@ -149,7 +148,7 @@ export function ActiveTaskPanel({
                   }
                   className={`${controlButtonBase} ${
                     task.recording?.isRecording
-                      ? "ring-1 ring-status-recording/70"
+                      ? "bg-status-recording/15 text-status-recording"
                       : ""
                   }`}
                   title={
@@ -164,9 +163,9 @@ export function ActiveTaskPanel({
                   }
                 >
                   {task.recording?.isRecording ? (
-                    <Square aria-hidden className="h-4 w-4" />
+                    <CircleDot aria-hidden className="h-5 w-5" />
                   ) : (
-                    <CircleDot aria-hidden className="h-4 w-4" />
+                    <CircleDot aria-hidden className="h-5 w-5" />
                   )}
                 </Button>
               )}
