@@ -24,11 +24,6 @@ export default {
         'secondary-foreground': 'hsl(var(--secondary-foreground) / <alpha-value>)',
         ghost: 'hsl(var(--ghost) / <alpha-value>)',
         'ghost-foreground': 'hsl(var(--ghost-foreground) / <alpha-value>)',
-        cockpit: {
-          surface: '#080b12',
-          accent: 'rgb(var(--color-cockpit-accent) / <alpha-value>)',
-          'accent-hover': 'rgb(var(--color-cockpit-accent-hover) / <alpha-value>)',
-        },
         status: {
           success: 'rgb(var(--color-status-success) / <alpha-value>)',
           warning: 'rgb(var(--color-status-warning) / <alpha-value>)',
@@ -49,7 +44,6 @@ export default {
         sans: ['Inter', ...defaultTheme.fontFamily.sans],
       },
       boxShadow: {
-        'cockpit-glow': '0 20px 60px rgba(0, 0, 0, 0.45)',
         'viz-surface': 'var(--viz-surface-shadow)',
       },
     },

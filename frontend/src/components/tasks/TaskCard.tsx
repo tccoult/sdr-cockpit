@@ -60,10 +60,10 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
         }
       }}
       className={[
-        "group relative rounded-md border px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/50",
+        "group relative rounded-md border px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
         "bg-muted/40 text-foreground/90 hover:bg-muted/70",
         isSelected
-          ? "border-cockpit-accent/50 bg-cockpit-accent/10 shadow-inner"
+          ? "border-accent/50 bg-accent/10 shadow-inner"
           : "border-transparent",
       ].join(" ")}
     >

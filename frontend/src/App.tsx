@@ -16,7 +16,7 @@ import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { VisualizationView } from "./components/visualization/VisualizationView";
 import { useDataStream, useTasks } from "./hooks";
-import { getHealthIndicator } from "./styles/themeColors";
+import { getHealthIndicator } from "./styles/theme";
 import { TaskStatus } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
 import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";

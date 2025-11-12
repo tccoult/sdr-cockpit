@@ -4,7 +4,7 @@ import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { Task } from '../../types/sdr'
 import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
-import { getHealthIndicator } from '../../styles/themeColors'
+import { getHealthIndicator } from '../../styles/theme'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 

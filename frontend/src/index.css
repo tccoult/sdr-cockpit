@@ -20,8 +20,9 @@ html {
   --popover-foreground: 222.2 47.4% 11.2%;
   --muted: 220 18% 92%;
   --muted-foreground: 220 12% 36%;
-  --accent: 226 70% 55%;
+  --accent: 237 100% 74%;
   --accent-foreground: 210 40% 98%;
+  --accent-rgb: 124 131 255;
   --border: 220 16% 85%;
   --input: 220 16% 85%;
   --ring: 226 70% 55%;
@@ -39,10 +40,6 @@ html {
   --color-status-recording: 229 57 53;
   --color-status-stopped: 94 98 112;
 
-  /* Cockpit accent - light mode (RGB format for Tailwind opacity support) */
-  --color-cockpit-accent: 124 131 255;
-  --color-cockpit-accent-hover: 104 112 255;
-
   /* Visualization palette */
   --viz-bg: 252 253 255;
   --viz-text: 31 41 55;
@@ -51,7 +48,7 @@ html {
   --viz-grid: rgba(15, 23, 42, 0.08);
   --viz-axis: rgba(15, 23, 42, 0.65);
   --viz-cursor: rgba(31, 41, 55, 0.35);
-  --viz-trace: var(--color-cockpit-accent);
+  --viz-trace: var(--accent-rgb);
   --viz-tooltip-bg: rgba(255, 255, 255, 0.96);
   --viz-tooltip-border: rgba(124, 131, 255, 0.2);
   --viz-tooltip-text: #1f2937;
@@ -86,8 +83,9 @@ html {
   --popover-foreground: 210 40% 98%;
   --muted: 220 24% 20%;
   --muted-foreground: 215 18% 72%;
-  --accent: 260 65% 65%;
+  --accent: 249 100% 77%;
   --accent-foreground: 222.2 47.4% 11.2%;
+  --accent-rgb: 156 138 255;
   --border: 220 26% 26%;
   --input: 220 26% 26%;
   --ring: 260 65% 65%;
@@ -105,10 +103,6 @@ html {
   --color-status-recording: 255 107 157;
   --color-status-stopped: 100 116 139;
 
-  /* Cockpit accent - dark mode (RGB format for Tailwind opacity support) */
-  --color-cockpit-accent: 156 138 255;
-  --color-cockpit-accent-hover: 178 160 255;
-
   /* Visualization palette */
   --viz-bg: 14 16 24;
   --viz-text: 229 231 235;
@@ -117,7 +111,7 @@ html {
   --viz-grid: rgba(255, 255, 255, 0.05);
   --viz-axis: rgba(255, 255, 255, 0.3);
   --viz-cursor: rgba(255, 255, 255, 0.25);
-  --viz-trace: 80 210 255;
+  --viz-trace: var(--accent-rgb);
   --viz-tooltip-bg: rgba(14, 16, 24, 0.95);
   --viz-tooltip-border: rgba(124, 131, 255, 0.35);
   --viz-tooltip-text: #f8fafc;

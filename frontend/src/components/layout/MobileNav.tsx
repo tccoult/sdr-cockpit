@@ -32,7 +32,7 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left transition ${
         isActive
-          ? 'border-cockpit-accent/60 bg-cockpit-accent/10 text-foreground shadow-inner'
+          ? 'border-accent/60 bg-accent/10 text-foreground shadow-inner'
           : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/60 hover:text-foreground'
       }`}
     >

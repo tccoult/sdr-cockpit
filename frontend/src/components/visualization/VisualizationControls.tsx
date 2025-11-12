@@ -26,7 +26,7 @@ export function VisualizationControls({
   onAutoRange,
 }: VisualizationControlsProps) {
   const inputClasses = [
-    "h-8 w-16 rounded-md border border-viz-border/40 bg-viz-bg/80 px-2 text-xs font-medium text-viz-text placeholder:text-muted-foreground transition focus:border-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/30 sm:h-9 sm:w-20 sm:text-sm",
+    "h-8 w-16 rounded-md border border-viz-border/40 bg-viz-bg/80 px-2 text-xs font-medium text-viz-text placeholder:text-muted-foreground transition focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 sm:h-9 sm:w-20 sm:text-sm",
   ].join(" ");
 
   const dockClasses = [

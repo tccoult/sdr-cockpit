@@ -10,7 +10,7 @@ import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import type { InteractionMode } from "./VisualizationControls";
-import { getVisualizationTheme } from "./theme";
+import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
 
 interface FFTDisplayProps {
   width: number;
@@ -41,18 +41,13 @@ export const FFTDisplay = memo(function FFTDisplay({
   interactionMode,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
-  const plotColors = useMemo(() => getVisualizationTheme(isDark), [isDark]);
+  const vizTheme = useMemo(() => getVisualizationTheme(isDark), [isDark]);
+  const plotTheme = useMemo(() => toPlotTheme(vizTheme), [vizTheme]);
 
   const plotOptions = useMemo<PlotCreationOptions>(
     () => ({
-      background: plotColors.background,
-      theme: {
-        gridColor: plotColors.gridColor,
-        textColor: plotColors.textColor,
-        axisColor: plotColors.axisColor,
-        cursorLineColor: plotColors.cursorLineColor,
-        cursorHighlightColor: plotColors.cursorLineColor,
-      },
+      background: plotTheme.background,
+      theme: plotTheme,
       interactions: {
         pan: { x: true, y: false },
         zoom: { x: true, y: false, factor: 0.2 },
@@ -72,7 +67,7 @@ export const FFTDisplay = memo(function FFTDisplay({
         },
       },
     }),
-    [plotColors]
+    [plotTheme]
   );
 
   const { plot, attachCanvas } = usePlot(plotOptions);
@@ -128,7 +123,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;
     const line = plot.addLine({
-      color: plotColors.traceColor,
+      color: vizTheme.traceColor,
       lineWidth: 2,
     });
     traceRef.current = line;
@@ -136,7 +131,7 @@ export const FFTDisplay = memo(function FFTDisplay({
       line.remove();
       traceRef.current = null;
     };
-  }, [plot, plotColors.traceColor]);
+  }, [plot, vizTheme.traceColor]);
 
   useEffect(() => {
     if (!onRenderFpsChange) return;
@@ -275,11 +270,11 @@ export const FFTDisplay = memo(function FFTDisplay({
             position: "absolute",
             left: Math.min(Math.max(cursorInfo.canvasX + 16, 8), width - 140),
             top: Math.min(Math.max(cursorInfo.canvasY - 32, 8), height - 48),
-            background: plotColors.tooltipBackground,
-            border: `1px solid ${plotColors.tooltipBorder}`,
+            background: vizTheme.tooltipBackground,
+            border: `1px solid ${vizTheme.tooltipBorder}`,
             borderRadius: 2,
             padding: "4px 8px",
-            color: plotColors.tooltipText,
+            color: vizTheme.tooltipText,
             fontSize: 11,
             pointerEvents: "none",
             whiteSpace: "nowrap",

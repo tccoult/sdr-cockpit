@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHeatmapLayer } from "../../layers/HeatmapLayer";
-import { defaultTheme } from "../../theme";
+import { getPlotTheme } from "../../../styles/theme";
 import type {
   LayerCreateContext,
   LayerRenderContext,
@@ -141,7 +141,7 @@ function createLayerContext(): {
   const invalidateSurface = vi.fn();
   const layerContext: LayerCreateContext = {
     viewport: createViewportStub(),
-    theme: defaultTheme,
+    theme: getPlotTheme("dark"),
     requestDraw,
     invalidateLayer,
     invalidateSurface,
