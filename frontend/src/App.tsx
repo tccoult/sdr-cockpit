@@ -276,8 +276,8 @@ function App() {
             )}
 
             {mobileView === 'tasks' && (
-              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900">
-                <div className="border-b border-slate-200 p-4 dark:border-white/10">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+                <div className="border-b border-border/60 bg-card/80 p-4">
                   <ActiveTaskPanel
                     task={selectedTask}
                     onPauseTask={pauseTask}
@@ -299,7 +299,7 @@ function App() {
             )}
 
             {mobileView === 'health' && (
-              <div className="h-full overflow-auto bg-white dark:bg-slate-900">
+              <div className="h-full overflow-auto bg-background">
                 <SystemHealthPanel bistResult={bistResult} />
               </div>
             )}
@@ -330,7 +330,7 @@ function App() {
             />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-white/10">
+          <div className="border-t border-border/60">
             <TaskRosterPanel
               tasks={tasks}
               selectedTaskId={selectedTaskId}

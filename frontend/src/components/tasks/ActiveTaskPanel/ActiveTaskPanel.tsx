@@ -46,121 +46,123 @@ export function ActiveTaskPanel({
   })();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Active Task</p>
-          <h2 className="mt-1 text-lg font-semibold text-foreground">
-            {task ? task.name : "No task selected"}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {task
-              ? `${formatFrequency(
-                  task.frequency
-                )} · ${task.type.toUpperCase()} task`
-              : "Select a task from the roster to drive the cockpit visuals."}
-          </p>
+    <section className="rounded-lg border border-border/70 bg-card/95 p-4 text-foreground shadow-lg shadow-black/15">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Active Task</p>
+            <h2 className="mt-1 text-lg font-semibold text-foreground">
+              {task ? task.name : "No task selected"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {task
+                ? `${formatFrequency(
+                    task.frequency
+                  )} · ${task.type.toUpperCase()} task`
+                : "Select a task from the roster to drive the cockpit visuals."}
+            </p>
+          </div>
+          <div
+            className={`flex items-center gap-2 rounded-md px-3 py-1 text-xs font-semibold ${badgeClass}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+            {statusLabel}
+          </div>
         </div>
-        <div
-          className={`flex items-center gap-2 rounded-md px-3 py-1 text-xs font-semibold ${badgeClass}`}
-        >
-          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-          {statusLabel}
-        </div>
-      </div>
 
-      {task && (
-        <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
-              Sample Rate
-            </p>
-            <p className="text-foreground">{task.sampleRate.toLocaleString()} sps</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
-              Owner
-            </p>
-            <p className="text-foreground">{task.ownerName}</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
-              Uptime
-            </p>
-            <p className="text-foreground">{Math.max(task.uptime, 0).toFixed(0)}s</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
-              Recording
-            </p>
-            <p className="text-foreground">
-              {task.recording?.isRecording
-                ? `Recording · ${task.recording.duration}s`
-                : "Idle"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2">
         {task && (
-          <>
-            <Button
-              onClick={() => onPauseTask(task.id)}
-              size="sm"
-              variant="secondary"
-              className="px-2 py-1"
-            >
-              {task.status === TaskStatus.PAUSED ? (
-                <>
-                  <Play aria-hidden className="mr-1 h-3.5 w-3.5" />
-                  Resume
-                </>
-              ) : (
-                <>
-                  <Pause aria-hidden className="mr-1 h-3.5 w-3.5" />
-                  Pause
-                </>
-              )}
-            </Button>
+          <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Sample Rate
+              </p>
+              <p className="text-foreground">{task.sampleRate.toLocaleString()} sps</p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Owner
+              </p>
+              <p className="text-foreground">{task.ownerName}</p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Uptime
+              </p>
+              <p className="text-foreground">{Math.max(task.uptime, 0).toFixed(0)}s</p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Recording
+              </p>
+              <p className="text-foreground">
+                {task.recording?.isRecording
+                  ? `Recording · ${task.recording.duration}s`
+                  : "Idle"}
+              </p>
+            </div>
+          </div>
+        )}
 
-            <Button
-              onClick={() => onStopTask(task.id)}
-              size="sm"
-              variant="secondary"
-              className="px-2 py-1"
-            >
-              <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-              Stop
-            </Button>
-
-            {task.type === TaskType.RX && (
+        <div className="flex flex-wrap gap-2">
+          {task && (
+            <>
               <Button
-                onClick={() =>
-                  task.recording?.isRecording
-                    ? onStopRecording(task.id)
-                    : onRecordTask(task.id)
-                }
+                onClick={() => onPauseTask(task.id)}
                 size="sm"
                 variant="secondary"
                 className="px-2 py-1"
               >
-                {task.recording?.isRecording ? (
+                {task.status === TaskStatus.PAUSED ? (
                   <>
-                    <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Stop Recording
+                    <Play aria-hidden className="mr-1 h-3.5 w-3.5" />
+                    Resume
                   </>
                 ) : (
                   <>
-                    <CircleDot aria-hidden className="mr-1 h-3.5 w-3.5" />
-                    Record
+                    <Pause aria-hidden className="mr-1 h-3.5 w-3.5" />
+                    Pause
                   </>
                 )}
               </Button>
-            )}
-          </>
-        )}
+
+              <Button
+                onClick={() => onStopTask(task.id)}
+                size="sm"
+                variant="secondary"
+                className="px-2 py-1"
+              >
+                <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
+                Stop
+              </Button>
+
+              {task.type === TaskType.RX && (
+                <Button
+                  onClick={() =>
+                    task.recording?.isRecording
+                      ? onStopRecording(task.id)
+                      : onRecordTask(task.id)
+                  }
+                  size="sm"
+                  variant="secondary"
+                  className="px-2 py-1"
+                >
+                  {task.recording?.isRecording ? (
+                    <>
+                      <Square aria-hidden className="mr-1 h-3.5 w-3.5" />
+                      Stop Recording
+                    </>
+                  ) : (
+                    <>
+                      <CircleDot aria-hidden className="mr-1 h-3.5 w-3.5" />
+                      Record
+                    </>
+                  )}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
