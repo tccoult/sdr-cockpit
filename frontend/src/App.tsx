@@ -1,25 +1,25 @@
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
+import { useTheme } from "./components/app/useTheme";
+import { Button } from "./components/common/Button";
 import { Drawer } from "./components/common/Drawer";
+import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
 import { MobileNav, MobileView } from "./components/layout/MobileNav";
+import { DisplaySettings } from "./components/settings/DisplaySettings";
+import { SettingsMenuItem } from "./components/settings/SettingsMenu";
+import { SystemSettings } from "./components/settings/SystemSettings";
+import { SystemUpdateWizard } from "./components/settings/SystemUpdateWizard";
+import { VersionInfo } from "./components/settings/VersionInfo";
 import { SystemHealthPanel } from "./components/system-health/SystemHealthPanel";
 import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
-import { SettingsMenuItem } from "./components/settings/SettingsMenu";
-import { SystemSettings } from "./components/settings/SystemSettings";
-import { DisplaySettings } from "./components/settings/DisplaySettings";
-import { VersionInfo } from "./components/settings/VersionInfo";
-import { SystemUpdateWizard } from "./components/settings/SystemUpdateWizard";
-import { useDataStream, useTasks } from "./hooks";
 import { VisualizationView } from "./components/visualization/VisualizationView";
-import { Button } from "./components/common/Button";
-import { PLASMA } from "./utils/colorMaps";
-import { TaskStatus } from "./types/sdr";
-import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
-import { X } from "lucide-react";
-import { useTheme } from "./components/app/useTheme";
+import { useDataStream, useTasks } from "./hooks";
 import { getHealthIndicator } from "./styles/themeColors";
+import { TaskStatus } from "./types/sdr";
+import { PLASMA } from "./utils/colorMaps";
+import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
 
 const TASK_DRAWER_WIDTH = 300;
 const SYSTEM_HEALTH_PANEL_WIDTH = 300;
@@ -34,16 +34,18 @@ function App() {
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
   const [isSystemHealthPanelOpen, setIsSystemHealthPanelOpen] = useState(false);
   const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
-  const [isSystemHealthPanelPinned, setIsSystemHealthPanelPinned] = useState(false);
+  const [isSystemHealthPanelPinned, setIsSystemHealthPanelPinned] =
+    useState(false);
   const [renderFps, setRenderFps] = useState(0);
 
   // Mobile navigation state
-  const [mobileView, setMobileView] = useState<MobileView>('visualization');
+  const [mobileView, setMobileView] = useState<MobileView>("visualization");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // Settings modal state
-  const [activeSettingsPanel, setActiveSettingsPanel] = useState<SettingsMenuItem | null>(null);
+  const [activeSettingsPanel, setActiveSettingsPanel] =
+    useState<SettingsMenuItem | null>(null);
   const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
 
   // Mock data
@@ -95,7 +97,7 @@ function App() {
 
   // Detect mobile screen size (< 1024px)
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
 
     const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsMobile(e.matches);
@@ -105,14 +107,14 @@ function App() {
     handleMediaChange(mediaQuery);
 
     // Listen for changes
-    mediaQuery.addEventListener('change', handleMediaChange);
-    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+    mediaQuery.addEventListener("change", handleMediaChange);
+    return () => mediaQuery.removeEventListener("change", handleMediaChange);
   }, []);
 
   // ESC key handling for modals
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         if (activeSettingsPanel) {
           setActiveSettingsPanel(null);
         } else if (isUpdateWizardOpen) {
@@ -127,8 +129,8 @@ function App() {
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [
     activeSettingsPanel,
     isUpdateWizardOpen,
@@ -149,7 +151,7 @@ function App() {
 
   // Handle settings menu selection
   const handleSettingsSelect = (item: SettingsMenuItem) => {
-    if (item === 'update') {
+    if (item === "update") {
       setIsUpdateWizardOpen(true);
     } else {
       setActiveSettingsPanel(item);
@@ -193,7 +195,9 @@ function App() {
           isHealthPanelOpen={isSystemHealthPanelOpen}
           isMobile={isMobile}
           onToggleTaskDrawer={handleToggleMenu}
-          onToggleHealthPanel={() => setIsSystemHealthPanelOpen((prev) => !prev)}
+          onToggleHealthPanel={() =>
+            setIsSystemHealthPanelOpen((prev) => !prev)
+          }
           onOpenSettings={handleSettingsSelect}
         />
 
@@ -244,7 +248,7 @@ function App() {
 
           {/* Mobile View: Selected panel only */}
           <div className="h-full lg:hidden">
-            {mobileView === 'visualization' && (
+            {mobileView === "visualization" && (
               <>
                 {selectedTask ? (
                   <div className="flex h-full w-full flex-col p-2">
@@ -275,7 +279,7 @@ function App() {
               </>
             )}
 
-            {mobileView === 'tasks' && (
+            {mobileView === "tasks" && (
               <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
                 <div className="border-b border-border/60 bg-card/80 p-3">
                   <ActiveTaskPanel
@@ -298,7 +302,7 @@ function App() {
               </div>
             )}
 
-            {mobileView === 'health' && (
+            {mobileView === "health" && (
               <div className="h-full overflow-auto bg-background">
                 <SystemHealthPanel bistResult={bistResult} />
               </div>
@@ -363,7 +367,7 @@ function App() {
         currentView={mobileView}
         onViewChange={setMobileView}
         onOpenSettings={handleSettingsSelect}
-        isDarkMode={theme === 'dark'}
+        isDarkMode={theme === "dark"}
         onToggleTheme={toggleTheme}
         healthIndicator={healthIndicator}
       />
@@ -390,11 +394,11 @@ function App() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {activeSettingsPanel === 'system'
-                  ? 'System Settings'
-                  : activeSettingsPanel === 'display'
-                  ? 'Display Settings'
-                  : 'Version Info'}
+                {activeSettingsPanel === "system"
+                  ? "System Settings"
+                  : activeSettingsPanel === "display"
+                  ? "Display Settings"
+                  : "Version Info"}
               </h2>
               <button
                 type="button"
@@ -407,9 +411,9 @@ function App() {
 
             {/* Content */}
             <div className="max-h-[70vh] overflow-y-auto">
-              {activeSettingsPanel === 'system' && <SystemSettings />}
-              {activeSettingsPanel === 'display' && <DisplaySettings />}
-              {activeSettingsPanel === 'version' && (
+              {activeSettingsPanel === "system" && <SystemSettings />}
+              {activeSettingsPanel === "display" && <DisplaySettings />}
+              {activeSettingsPanel === "version" && (
                 <VersionInfo
                   versionTree={systemInfo.versionTree}
                   overallVersion={systemInfo.version}

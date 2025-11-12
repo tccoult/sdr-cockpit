@@ -91,7 +91,7 @@ export function Drawer({
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border border-border/60 bg-background text-foreground shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90`}
+        className={`fixed top-0 ${positionStyles} z-50 h-screen ${slideAnimation} flex flex-col overflow-hidden rounded-none border border-border/60 bg-background text-foreground shadow-2xl`}
         style={{ width, top: offsetTop, height: appliedHeight }}
       >
         {/* Header */}
