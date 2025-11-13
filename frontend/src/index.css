@@ -6,6 +6,9 @@ html {
   height: 100%;
 }
 
+/* -------------------------------------------------------
+   LIGHT MODE — GLOBAL ROOT VARIABLES
+------------------------------------------------------- */
 :root {
   color-scheme: light;
 
@@ -24,13 +27,13 @@ html {
   --border: 220 16% 85%;
   --input: 220 16% 85%;
 
-  /* --- Accent (violet-blue) --- */
+  /* --- Accent (violet–blue) --- */
   --accent: 258 75% 65%;
   --accent-foreground: 210 40% 98%;
   --accent-rgb: 148 132 255;
   --ring: 258 75% 65%;
 
-  /* --- Status (RGB for Tailwind opacity) --- */
+  /* --- Status Colors (RGB for opacity variants) --- */
   --color-status-success: 0 183 122;
   --color-status-warning: 224 181 0;
   --color-status-error: 229 57 53;
@@ -40,38 +43,61 @@ html {
   --color-status-stopped: 94 98 112;
 
   /* --- Visualization Palette (light) --- */
-  --viz-bg: 250 251 255;                     /* near-white with cool tint */
+  --viz-bg: 250 251 255;
   --viz-text: 31 41 55;
   --viz-border: 15 23 42;
   --viz-border-alpha: 0.08;
-  --viz-grid: rgba(15, 23, 42, 0.08);
-  --viz-axis: rgba(15, 23, 42, 0.55);
+  --viz-grid: rgba(0, 0, 0, 0.09);
+  --viz-axis: rgba(0, 0, 0, 0.48);
   --viz-cursor: rgba(31, 41, 55, 0.35);
-  --viz-trace: 64 180 230;                   /* soft cyan trace */
+  --viz-trace: 42 130 210;
+
   --viz-tooltip-bg: rgba(255, 255, 255, 0.96);
   --viz-tooltip-border: rgba(148, 132, 255, 0.25);
   --viz-tooltip-text: #1f2937;
+
   --viz-scale-bg: rgba(255, 255, 255, 0.92);
   --viz-scale-text: #1f2937;
-  --viz-overlay-bg: rgba(252, 253, 255, 0.9);
-  --viz-overlay-border: rgba(0, 0, 0, 0.08);
+
   --viz-divider: rgba(0, 0, 0, 0.08);
   --viz-surface-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 
-  /* --- Scrollbars --- */
+  /* Visualization panel base (light mode) */
+  --viz-panel-bg-base: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(235, 237, 242, 0.96) 100%
+  );
+  --viz-panel-border: 1px solid rgba(0, 0, 0, 0.05);
+  --viz-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 0 8px rgba(255, 255, 255, 0.4);
+
+  --viz-overlay-blend: normal;
+  --viz-overlay-opacity: 0.6;
+  --viz-overlay-bg: rgba(255, 255, 255, 0.6); /* light in-plot overlay mask */
+  --viz-overlay-border: rgba(0, 0, 0, 0.1);
+
+  /* Scrollbars */
   --scroll-track: #f5f5f5;
   --scroll-thumb: #d4d4d4;
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
-    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
 }
 
+/* -------------------------------------------------------
+   DARK MODE VARIABLE OVERRIDES
+------------------------------------------------------- */
 .dark {
   color-scheme: dark;
 
-  /* --- Structural Frame --- */
-  --bg-body: radial-gradient(circle at 20% 20%, #131826 0%, #080b10 50%, #05070b 100%);
+  --bg-body: radial-gradient(
+    circle at 20% 20%,
+    #131826 0%,
+    #080b10 50%,
+    #05070b 100%
+  );
   --text-color: #f1f5f9;
 
   --background: 222 47% 3%;
@@ -85,13 +111,12 @@ html {
   --border: 220 26% 26%;
   --input: 220 26% 26%;
 
-  /* --- Accent (violet-blue) --- */
   --accent: 258 75% 70%;
   --accent-foreground: 222.2 47.4% 11.2%;
   --accent-rgb: 156 138 255;
   --ring: 258 75% 70%;
 
-  /* --- Status (RGB for Tailwind opacity) --- */
+  /* Status colors */
   --color-status-success: 76 228 179;
   --color-status-warning: 226 193 90;
   --color-status-error: 255 76 76;
@@ -100,8 +125,7 @@ html {
   --color-status-recording: 255 107 157;
   --color-status-stopped: 100 116 139;
 
-  /* --- Visualization Palette (dark) --- */
-  /* --viz-bg: 16 18 28; */
+  /* Visualization palette (dark) */
   --viz-bg: 12 14 24;
   --viz-text: 229 231 235;
   --viz-border: 255 255 255;
@@ -109,22 +133,61 @@ html {
   --viz-grid: rgba(255, 255, 255, 0.05);
   --viz-axis: rgba(255, 255, 255, 0.3);
   --viz-cursor: rgba(255, 255, 255, 0.25);
-  --viz-trace: 80 210 255;                  /* luminous cyan FFT trace */
+  --viz-trace: 80 210 255;
+
   --viz-tooltip-bg: rgba(12, 14, 24, 0.95);
   --viz-tooltip-border: rgba(156, 138, 255, 0.35);
   --viz-tooltip-text: #f8fafc;
+
   --viz-scale-bg: rgba(12, 14, 24, 0.85);
   --viz-scale-text: #f8fafc;
-  --viz-overlay-bg: rgba(12, 14, 24, 0.9);
-  --viz-overlay-border: rgba(255, 255, 255, 0.08);
+
   --viz-divider: rgba(255, 255, 255, 0.08);
   --viz-surface-shadow: 0 0 18px rgba(15, 23, 42, 0.75);
 
-  /* --- Scrollbars --- */
+  /* DARK MODE PANEL BASE */
+  --viz-panel-bg-base: radial-gradient(
+      circle at 50% 30%,
+      rgba(32, 40, 60, 0.9) 0%,
+      rgba(10, 12, 20, 0.95) 80%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(60, 70, 100, 0.12) 0%,
+      rgba(10, 12, 20, 0.96) 100%
+    );
+
+  --viz-panel-border: 1px solid rgba(255, 255, 255, 0.06);
+  --viz-panel-shadow: 0 0 8px rgba(100, 120, 255, 0.05),
+    0 0 20px rgba(100, 120, 255, 0.03);
+
+  /* DARK MODE GLASS HIGHLIGHT */
+  --viz-panel-highlight: radial-gradient(
+      ellipse at 50% -20%,
+      rgba(180, 200, 255, 0.07) 0%,
+      rgba(100, 120, 180, 0.04) 30%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.015) 0%,
+      rgba(0, 0, 0, 0.12) 100%
+    ),
+    radial-gradient(circle at 50% 120%, transparent 0%, rgba(0, 0, 0, 0.3) 75%);
+
+  --viz-overlay-blend: screen, overlay;
+  --viz-overlay-opacity: 0.7;
+  --viz-overlay-bg: rgba(0, 0, 0, 0.4); /* dark in-plot overlay mask */
+  --viz-overlay-border: rgba(255, 255, 255, 0.12);
+
+  /* Scrollbars */
   --scroll-track: #1f2937;
   --scroll-thumb: #334155;
 }
 
+/* -------------------------------------------------------
+   GLOBAL STRUCTURE
+------------------------------------------------------- */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -145,75 +208,37 @@ body {
   height: 100%;
 }
 
+/* -------------------------------------------------------
+   VISUALIZATION SURFACES
+------------------------------------------------------- */
 .viz-surface {
-  background-color: rgb(var(--viz-bg) / 1);
-  color: rgb(var(--viz-text) / 1);
+  background-color: rgb(var(--viz-bg));
+  color: rgb(var(--viz-text));
   border-color: rgb(var(--viz-border) / var(--viz-border-alpha));
 }
 
 .viz-overlay {
   background-color: var(--viz-overlay-bg);
   border-color: var(--viz-overlay-border);
-  color: rgb(var(--viz-text) / 1);
+  color: rgb(var(--viz-text));
 }
 
+/* -------------------------------------------------------
+   VIZ PANEL (FFT + WATERFALL WRAPPER CARD)
+------------------------------------------------------- */
 .viz-panel {
   position: relative;
   overflow: hidden;
   border-radius: 8px;
 
-  /* Base: dark tinted glass with depth */
-  background: radial-gradient(
-      circle at 50% 30%,
-      rgba(32, 40, 60, 0.9) 0%,
-      rgba(10, 12, 20, 0.95) 80%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(60, 70, 100, 0.12) 0%,
-      rgba(10, 12, 20, 0.96) 100%
-    );
-  background-blend-mode: overlay;
-
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 0 8px rgba(100, 120, 255, 0.05),
-    0 0 20px rgba(100, 120, 255, 0.03);
+  background: var(--viz-panel-bg-base);
+  border: var(--viz-panel-border);
+  box-shadow: var(--viz-panel-shadow);
 }
 
-.viz-panel .viz-glass-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  z-index: 1;
-  mix-blend-mode: screen;
-  opacity: 0.7; /* slightly reduced overall sheen */
-
-  background:
-    /* Narrower cool-tinted highlight near top */
-    radial-gradient(
-      ellipse at 50% -20%,
-      rgba(180, 200, 255, 0.07) 0%,       /* lower peak brightness */
-      rgba(100, 120, 180, 0.04) 30%,      /* quicker falloff */
-      transparent 60%
-    ),
-    /* Softer vertical light gradient */
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.015) 0%,      /* barely-there white at top */
-      rgba(0, 0, 0, 0.12) 100%            /* slightly deeper fade to anchor bottom */
-    ),
-    /* Reinforced vignette for darker edges */
-    radial-gradient(
-      circle at 50% 120%,
-      transparent 0%,
-      rgba(0, 0, 0, 0.3) 75%
-    );
-  background-blend-mode: screen, overlay;
-}
-
-/* Scrollbar styling */
+/* -------------------------------------------------------
+   SCROLLBARS
+------------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -232,19 +257,22 @@ body {
   background: rgba(124, 131, 255, 0.45);
 }
 
-/* Inputs */
-input[type='number'],
-input[type='text'],
+/* -------------------------------------------------------
+   INPUTS
+------------------------------------------------------- */
+input[type="number"],
+input[type="text"],
 select {
   font-family: inherit;
   font-size: 14px;
 }
 
-/* === GLOBAL ANIMATIONS === */
-
-/* Pulse animation for live indicators */
+/* -------------------------------------------------------
+   GLOBAL ANIMATIONS
+------------------------------------------------------- */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -252,7 +280,6 @@ select {
   }
 }
 
-/* Slide down animation for content reveal */
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -264,7 +291,6 @@ select {
   }
 }
 
-/* Spin animation for loading states */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -274,7 +300,6 @@ select {
   }
 }
 
-/* Expand animation for accordion-style content */
 @keyframes expandIn {
   from {
     opacity: 0;
@@ -286,7 +311,6 @@ select {
   }
 }
 
-/* Fade in animation for modals/overlays */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -296,7 +320,6 @@ select {
   }
 }
 
-/* Slide up animation for modals */
 @keyframes slideUp {
   from {
     opacity: 0;

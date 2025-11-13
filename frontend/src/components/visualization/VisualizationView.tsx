@@ -213,13 +213,11 @@ export const VisualizationView = memo(function VisualizationView({
     return () => observer.disconnect();
   }, [visualizationMode]);
 
-  const surfaceClasses = [
-    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border px-3 py-3 text-sm sm:px-4 sm:py-4",
-    "shadow-viz-surface",
-  ].join(" ");
+  const surfaceClasses =
+    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden";
 
   const sectionBaseClasses =
-    "relative flex flex-col overflow-hidden min-h-[180px]";
+    "relative flex flex-col overflow-hidden min-h-[180px] bg-transparent";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
@@ -278,9 +276,8 @@ export const VisualizationView = memo(function VisualizationView({
 
   return (
     <div className="viz-panel relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* Matte surface content (FFT, waterfall, spectrogram, controls) */}
       <div ref={containerRef} className={surfaceClasses}>
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {showFFT && (
             <div ref={fftContainerRef} className={fftSectionClasses}>
               <FFTDisplay
@@ -340,7 +337,6 @@ export const VisualizationView = memo(function VisualizationView({
               />
             </div>
           )}
-
           <VisualizationControls
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
@@ -353,9 +349,7 @@ export const VisualizationView = memo(function VisualizationView({
         </div>
       </div>
       {/* Overlay layers */}
-      {renderStatusOverlay()} {/* Always above the glass */}
-      {/* Reflective glass sheen */}
-      <div className="viz-glass-overlay" />
+      {renderStatusOverlay()}
     </div>
   );
 });
