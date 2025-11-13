@@ -31,6 +31,27 @@ interface FFTDisplayProps {
 
 const MAX_POINTS = 2048;
 
+interface LineBuffers {
+  freqs: Float32Array;
+  powers: Float32Array;
+  binIndices: Uint32Array;
+  sample: Float32Array;
+}
+
+const createLineBuffers = (): LineBuffers => ({
+  freqs: new Float32Array(MAX_POINTS),
+  powers: new Float32Array(MAX_POINTS),
+  binIndices: new Uint32Array(MAX_POINTS),
+  sample: new Float32Array(MAX_POINTS),
+});
+
+const getLineBuffers = (ref: { current: LineBuffers | null }): LineBuffers => {
+  if (!ref.current) {
+    ref.current = createLineBuffers();
+  }
+  return ref.current;
+};
+
 export const FFTDisplay = memo(function FFTDisplay({
   width,
   height,
@@ -77,14 +98,13 @@ export const FFTDisplay = memo(function FFTDisplay({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const traceRef = useRef<LineLayerHandle | null>(null);
   const maxHoldTraceRef = useRef<LineLayerHandle | null>(null);
-  const ghostTraceRefs = useRef<LineLayerHandle[]>([]);
   const smoothingRef = useRef<Float32Array | null>(null);
-  const currentSnapshotRef = useRef<Float32Array | null>(null);
-  const ghostHistoryRef = useRef<Float32Array[]>([]);
+  const lineBuffersRef = useRef<LineBuffers | null>(null);
   const maxHoldRef = useRef<Float32Array | null>(null);
   const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
+  const lastFrameTimestampRef = useRef<number | null>(null);
   const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
   const renderFps = usePlotRenderFps(plot);
 
@@ -136,8 +156,6 @@ export const FFTDisplay = memo(function FFTDisplay({
       traceRef.current = null;
       maxHoldTraceRef.current?.remove();
       maxHoldTraceRef.current = null;
-      ghostTraceRefs.current.forEach((handle) => handle.remove());
-      ghostTraceRefs.current = [];
     };
 
     cleanupHandles();
@@ -148,24 +166,6 @@ export const FFTDisplay = memo(function FFTDisplay({
       opacity: FFT_PERSISTENCE_CONFIG.maxHoldOpacity,
     });
     maxHoldTraceRef.current = maxHoldLine;
-
-    const ghostLines: LineLayerHandle[] = [];
-    const { ghostTraceCount, ghostOldestOpacity, ghostNewestOpacity } =
-      FFT_PERSISTENCE_CONFIG;
-
-    for (let i = 0; i < ghostTraceCount; i += 1) {
-      const t = ghostTraceCount <= 1 ? 1 : i / (ghostTraceCount - 1);
-      const opacity =
-        ghostOldestOpacity +
-        (ghostNewestOpacity - ghostOldestOpacity) * t;
-      const handle = plot.addLine({
-        color: vizTheme.persistence.ghostColor,
-        lineWidth: FFT_PERSISTENCE_CONFIG.ghostLineWidth,
-        opacity,
-      });
-      ghostLines.push(handle);
-    }
-    ghostTraceRefs.current = ghostLines;
 
     const currentLine = plot.addLine({
       color: vizTheme.traceColor,
@@ -209,8 +209,7 @@ export const FFTDisplay = memo(function FFTDisplay({
   useEffect(() => {
     smoothingRef.current = null;
     fftMetaRef.current = null;
-    currentSnapshotRef.current = null;
-    ghostHistoryRef.current = [];
+    lastFrameTimestampRef.current = null;
     maxHoldRef.current = null;
     const trace = traceRef.current;
     if (trace) {
@@ -218,9 +217,6 @@ export const FFTDisplay = memo(function FFTDisplay({
       plot?.requestDraw();
     }
     maxHoldTraceRef.current?.setXY(new Float32Array(0), new Float32Array(0));
-    ghostTraceRefs.current.forEach((ghost) =>
-      ghost.setXY(new Float32Array(0), new Float32Array(0))
-    );
   }, [plot, dataKey]);
 
   useEffect(() => {
@@ -237,6 +233,16 @@ export const FFTDisplay = memo(function FFTDisplay({
         return;
       }
 
+      const frameTimestamp = Number.isFinite(incomingFFT.timestamp)
+        ? incomingFFT.timestamp
+        : Date.now();
+      const lastFrameTimestamp = lastFrameTimestampRef.current;
+      const deltaSeconds =
+        typeof lastFrameTimestamp === "number"
+          ? Math.max((frameTimestamp - lastFrameTimestamp) / 1000, 0)
+          : 0;
+      lastFrameTimestampRef.current = frameTimestamp;
+
       let smoothed = smoothingRef.current;
       if (!smoothed || smoothed.length !== bins.length) {
         smoothed = new Float32Array(bins);
@@ -248,28 +254,24 @@ export const FFTDisplay = memo(function FFTDisplay({
         }
       }
       smoothingRef.current = smoothed;
-      const previousSnapshot = currentSnapshotRef.current;
-      if (previousSnapshot) {
-        const ghosts = ghostHistoryRef.current;
-        if (previousSnapshot.length !== smoothed.length) {
-          ghostHistoryRef.current = [];
-        } else {
-          ghosts.push(previousSnapshot);
-          const { ghostTraceCount } = FFT_PERSISTENCE_CONFIG;
-          while (ghosts.length > ghostTraceCount) {
-            ghosts.shift();
-          }
-        }
-      }
-      currentSnapshotRef.current = new Float32Array(smoothed);
-
+      const maxHoldDecayPerSecond = Math.min(
+        Math.max(FFT_PERSISTENCE_CONFIG.maxHoldDecay, Number.EPSILON),
+        1
+      );
+      const frameDecay =
+        deltaSeconds > 0
+          ? Math.pow(maxHoldDecayPerSecond, deltaSeconds)
+          : 1;
+      const maxHoldDecayDb =
+        frameDecay === 1 ? 0 : 10 * Math.log10(frameDecay);
       let maxHold = maxHoldRef.current;
       if (!maxHold || maxHold.length !== smoothed.length) {
         maxHold = new Float32Array(smoothed);
       } else {
-        const decay = FFT_PERSISTENCE_CONFIG.maxHoldDecay;
         for (let i = 0; i < smoothed.length; i += 1) {
-          maxHold[i] = Math.max(maxHold[i] * decay, smoothed[i]);
+          const decayedValue =
+            maxHoldDecayDb === 0 ? maxHold[i] : maxHold[i] + maxHoldDecayDb;
+          maxHold[i] = Math.max(decayedValue, smoothed[i]);
         }
       }
       maxHoldRef.current = maxHold;
@@ -300,9 +302,8 @@ export const FFTDisplay = memo(function FFTDisplay({
 
       const rangeBinCount = endBin - startBin;
       const maxPoints = Math.min(MAX_POINTS, Math.max(1, rangeBinCount));
-      const freqs = new Float32Array(maxPoints);
-      const powers = new Float32Array(maxPoints);
-      const binIndices = new Uint32Array(maxPoints);
+      const buffers = getLineBuffers(lineBuffersRef);
+      const { freqs, powers, binIndices, sample } = buffers;
       const step = maxPoints > 1 ? (rangeBinCount - 1) / (maxPoints - 1) : 0;
 
       for (let i = 0; i < maxPoints; i += 1) {
@@ -322,39 +323,32 @@ export const FFTDisplay = memo(function FFTDisplay({
 
       const sampleLine = (source: Float32Array | null) => {
         if (!source) return null;
-        const sampled = new Float32Array(maxPoints);
         for (let i = 0; i < maxPoints; i += 1) {
           const binIndex = binIndices[i];
           const value = source[binIndex];
-          sampled[i] = Number.isFinite(value) ? value : Number.NaN;
+          sample[i] = Number.isFinite(value) ? value : Number.NaN;
         }
-        return sampled;
+        return sample;
       };
 
-      trace.setXY(freqs, powers);
+      const freqView =
+        maxPoints === MAX_POINTS ? freqs : freqs.subarray(0, maxPoints);
+      const powerView =
+        maxPoints === MAX_POINTS ? powers : powers.subarray(0, maxPoints);
+
+      trace.setXY(freqView, powerView);
 
       const maxHoldLine = maxHoldTraceRef.current;
       const maxHoldSampled = sampleLine(maxHoldRef.current);
       if (maxHoldLine) {
         if (maxHoldSampled) {
-          maxHoldLine.setXY(freqs, maxHoldSampled);
+          const maxHoldView =
+            maxPoints === MAX_POINTS
+              ? maxHoldSampled
+              : maxHoldSampled.subarray(0, maxPoints);
+          maxHoldLine.setXY(freqView, maxHoldView);
         } else {
           maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
-        }
-      }
-
-      const ghosts = ghostHistoryRef.current;
-      const ghostLines = ghostTraceRefs.current;
-      const ghostStart = Math.max(0, ghostLines.length - ghosts.length);
-      for (let i = 0; i < ghostLines.length; i += 1) {
-        const line = ghostLines[i];
-        const ghostIndex = i - ghostStart;
-        const ghostSnapshot = ghostIndex >= 0 ? ghosts[ghostIndex] : undefined;
-        const sampled = sampleLine(ghostSnapshot ?? null);
-        if (sampled && ghostSnapshot) {
-          line.setXY(freqs, sampled);
-        } else {
-          line.setXY(new Float32Array(0), new Float32Array(0));
         }
       }
 

@@ -67,12 +67,11 @@ export const VisualizationView = memo(function VisualizationView({
   const currentFFTRef = useRef<FFTData | null>(null);
   const fftPersistenceRef = useRef<{
     current: Float32Array | null;
-    ghosts: Float32Array[];
     maxHold: Float32Array | null;
-  }>({ current: null, ghosts: [], maxHold: null });
+  }>({ current: null, maxHold: null });
   useEffect(() => {
     currentFFTRef.current = null;
-    fftPersistenceRef.current = { current: null, ghosts: [], maxHold: null };
+    fftPersistenceRef.current = { current: null, maxHold: null };
   }, [taskId]);
 
   useEffect(() => {
@@ -89,7 +88,6 @@ export const VisualizationView = memo(function VisualizationView({
       if (bins.length === 0) {
         fftPersistenceRef.current = {
           current: null,
-          ghosts: [],
           maxHold: null,
         };
         return;
@@ -97,19 +95,6 @@ export const VisualizationView = memo(function VisualizationView({
 
       const snapshot = new Float32Array(bins);
       const persistence = fftPersistenceRef.current;
-
-      if (persistence.current) {
-        if (persistence.current.length !== snapshot.length) {
-          persistence.ghosts = [];
-        } else {
-          persistence.ghosts.push(persistence.current);
-          while (
-            persistence.ghosts.length > FFT_PERSISTENCE_CONFIG.ghostTraceCount
-          ) {
-            persistence.ghosts.shift();
-          }
-        }
-      }
 
       let maxHold = persistence.maxHold;
       if (!maxHold || maxHold.length !== snapshot.length) {
@@ -123,7 +108,6 @@ export const VisualizationView = memo(function VisualizationView({
 
       fftPersistenceRef.current = {
         current: snapshot,
-        ghosts: [...persistence.ghosts],
         maxHold,
       };
     };
@@ -145,7 +129,6 @@ export const VisualizationView = memo(function VisualizationView({
       const persistence = fftPersistenceRef.current;
       const sources: (Float32Array | null | undefined)[] = [
         persistence.current,
-        ...persistence.ghosts,
         persistence.maxHold,
       ];
       if (sources.every((source) => !source)) {

@@ -1,9 +1,5 @@
 export const FFT_PERSISTENCE_CONFIG = {
-  ghostTraceCount: 3,
-  ghostNewestOpacity: 0.18,
-  ghostOldestOpacity: 0.06,
-  ghostLineWidth: 1.5,
-  maxHoldDecay: 0.985,
+  maxHoldDecay: 0.8, // per-second decay multiplier for max-hold envelopes
   maxHoldOpacity: 0.1,
   maxHoldLineWidth: 1.25,
 };
