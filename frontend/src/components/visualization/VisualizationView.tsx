@@ -14,6 +14,7 @@ import {
   VisualizationControls,
 } from "./VisualizationControls";
 import { WaterfallDisplay } from "./WaterfallDisplay";
+import { FFT_PERSISTENCE_CONFIG } from "./persistenceConfig";
 
 interface VisualizationViewProps {
   taskId: string;
@@ -64,8 +65,14 @@ export const VisualizationView = memo(function VisualizationView({
   });
 
   const currentFFTRef = useRef<FFTData | null>(null);
+  const fftPersistenceRef = useRef<{
+    current: Float32Array | null;
+    ghosts: Float32Array[];
+    maxHold: Float32Array | null;
+  }>({ current: null, ghosts: [], maxHold: null });
   useEffect(() => {
     currentFFTRef.current = null;
+    fftPersistenceRef.current = { current: null, ghosts: [], maxHold: null };
   }, [taskId]);
 
   useEffect(() => {
@@ -75,7 +82,50 @@ export const VisualizationView = memo(function VisualizationView({
       if (!frames || frames.length === 0) {
         return;
       }
-      currentFFTRef.current = frames[frames.length - 1];
+      const incoming = frames[frames.length - 1];
+      currentFFTRef.current = incoming;
+
+      const bins = incoming.bins;
+      if (bins.length === 0) {
+        fftPersistenceRef.current = {
+          current: null,
+          ghosts: [],
+          maxHold: null,
+        };
+        return;
+      }
+
+      const snapshot = new Float32Array(bins);
+      const persistence = fftPersistenceRef.current;
+
+      if (persistence.current) {
+        if (persistence.current.length !== snapshot.length) {
+          persistence.ghosts = [];
+        } else {
+          persistence.ghosts.push(persistence.current);
+          while (
+            persistence.ghosts.length > FFT_PERSISTENCE_CONFIG.ghostTraceCount
+          ) {
+            persistence.ghosts.shift();
+          }
+        }
+      }
+
+      let maxHold = persistence.maxHold;
+      if (!maxHold || maxHold.length !== snapshot.length) {
+        maxHold = new Float32Array(snapshot);
+      } else {
+        const decay = FFT_PERSISTENCE_CONFIG.maxHoldDecay;
+        for (let i = 0; i < snapshot.length; i += 1) {
+          maxHold[i] = Math.max(maxHold[i] * decay, snapshot[i]);
+        }
+      }
+
+      fftPersistenceRef.current = {
+        current: snapshot,
+        ghosts: [...persistence.ghosts],
+        maxHold,
+      };
     };
 
     window.addEventListener("fft-data", handleFFTData);
@@ -92,11 +142,30 @@ export const VisualizationView = memo(function VisualizationView({
     if (fftData && fftData.bins.length > 0) {
       let nextMin = Infinity;
       let nextMax = -Infinity;
-      for (let i = 0; i < fftData.bins.length; i += 1) {
-        const value = fftData.bins[i];
-        if (Number.isFinite(value)) {
-          nextMin = Math.min(nextMin, value);
-          nextMax = Math.max(nextMax, value);
+      const persistence = fftPersistenceRef.current;
+      const sources: (Float32Array | null | undefined)[] = [
+        persistence.current,
+        ...persistence.ghosts,
+        persistence.maxHold,
+      ];
+      if (sources.every((source) => !source)) {
+        for (let i = 0; i < fftData.bins.length; i += 1) {
+          const value = fftData.bins[i];
+          if (Number.isFinite(value)) {
+            nextMin = Math.min(nextMin, value);
+            nextMax = Math.max(nextMax, value);
+          }
+        }
+      } else {
+        for (const array of sources) {
+          if (!array) continue;
+          for (let i = 0; i < array.length; i += 1) {
+            const value = array[i];
+            if (Number.isFinite(value)) {
+              nextMin = Math.min(nextMin, value);
+              nextMax = Math.max(nextMax, value);
+            }
+          }
         }
       }
       if (

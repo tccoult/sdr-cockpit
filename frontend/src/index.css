@@ -51,6 +51,8 @@ html {
   --viz-axis: rgba(0, 0, 0, 0.48);
   --viz-cursor: rgba(31, 41, 55, 0.35);
   --viz-trace: 42 130 210;
+  --viz-ghost-rgb: 139 92 246;
+  --viz-maxhold-rgb: 124 58 237;
 
   --viz-tooltip-bg: rgba(255, 255, 255, 0.96);
   --viz-tooltip-border: rgba(148, 132, 255, 0.25);
@@ -134,6 +136,8 @@ html {
   --viz-axis: rgba(255, 255, 255, 0.3);
   --viz-cursor: rgba(255, 255, 255, 0.25);
   --viz-trace: 80 210 255;
+  --viz-ghost-rgb: 168 85 247;
+  --viz-maxhold-rgb: 124 58 237;
 
   --viz-tooltip-bg: rgba(12, 14, 24, 0.95);
   --viz-tooltip-border: rgba(156, 138, 255, 0.35);

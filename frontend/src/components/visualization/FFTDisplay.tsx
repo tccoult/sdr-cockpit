@@ -11,6 +11,10 @@ import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import type { InteractionMode } from "./VisualizationControls";
 import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
+import {
+  FFT_PERSISTENCE_CONFIG,
+  FFT_SMOOTHING_FACTOR,
+} from "./persistenceConfig";
 
 interface FFTDisplayProps {
   width: number;
@@ -25,7 +29,6 @@ interface FFTDisplayProps {
   interactionMode: InteractionMode;
 }
 
-const SMOOTHING_FACTOR = 0.95;
 const MAX_POINTS = 2048;
 
 export const FFTDisplay = memo(function FFTDisplay({
@@ -73,7 +76,12 @@ export const FFTDisplay = memo(function FFTDisplay({
   const { plot, attachCanvas } = usePlot(plotOptions);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const traceRef = useRef<LineLayerHandle | null>(null);
+  const maxHoldTraceRef = useRef<LineLayerHandle | null>(null);
+  const ghostTraceRefs = useRef<LineLayerHandle[]>([]);
   const smoothingRef = useRef<Float32Array | null>(null);
+  const currentSnapshotRef = useRef<Float32Array | null>(null);
+  const ghostHistoryRef = useRef<Float32Array[]>([]);
+  const maxHoldRef = useRef<Float32Array | null>(null);
   const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
@@ -122,16 +130,51 @@ export const FFTDisplay = memo(function FFTDisplay({
 
   useEffect(() => {
     if (!plot || plot.isDestroyed()) return;
-    const line = plot.addLine({
+
+    const cleanupHandles = () => {
+      traceRef.current?.remove();
+      traceRef.current = null;
+      maxHoldTraceRef.current?.remove();
+      maxHoldTraceRef.current = null;
+      ghostTraceRefs.current.forEach((handle) => handle.remove());
+      ghostTraceRefs.current = [];
+    };
+
+    cleanupHandles();
+
+    const maxHoldLine = plot.addLine({
+      color: vizTheme.persistence.maxHoldColor,
+      lineWidth: FFT_PERSISTENCE_CONFIG.maxHoldLineWidth,
+      opacity: FFT_PERSISTENCE_CONFIG.maxHoldOpacity,
+    });
+    maxHoldTraceRef.current = maxHoldLine;
+
+    const ghostLines: LineLayerHandle[] = [];
+    const { ghostTraceCount, ghostOldestOpacity, ghostNewestOpacity } =
+      FFT_PERSISTENCE_CONFIG;
+
+    for (let i = 0; i < ghostTraceCount; i += 1) {
+      const t = ghostTraceCount <= 1 ? 1 : i / (ghostTraceCount - 1);
+      const opacity =
+        ghostOldestOpacity +
+        (ghostNewestOpacity - ghostOldestOpacity) * t;
+      const handle = plot.addLine({
+        color: vizTheme.persistence.ghostColor,
+        lineWidth: FFT_PERSISTENCE_CONFIG.ghostLineWidth,
+        opacity,
+      });
+      ghostLines.push(handle);
+    }
+    ghostTraceRefs.current = ghostLines;
+
+    const currentLine = plot.addLine({
       color: vizTheme.traceColor,
       lineWidth: 2,
     });
-    traceRef.current = line;
-    return () => {
-      line.remove();
-      traceRef.current = null;
-    };
-  }, [plot, vizTheme.traceColor]);
+    traceRef.current = currentLine;
+
+    return cleanupHandles;
+  }, [plot, vizTheme]);
 
   useEffect(() => {
     if (!onRenderFpsChange) return;
@@ -166,11 +209,18 @@ export const FFTDisplay = memo(function FFTDisplay({
   useEffect(() => {
     smoothingRef.current = null;
     fftMetaRef.current = null;
+    currentSnapshotRef.current = null;
+    ghostHistoryRef.current = [];
+    maxHoldRef.current = null;
     const trace = traceRef.current;
     if (trace) {
       trace.setXY(new Float32Array(0), new Float32Array(0));
       plot?.requestDraw();
     }
+    maxHoldTraceRef.current?.setXY(new Float32Array(0), new Float32Array(0));
+    ghostTraceRefs.current.forEach((ghost) =>
+      ghost.setXY(new Float32Array(0), new Float32Array(0))
+    );
   }, [plot, dataKey]);
 
   useEffect(() => {
@@ -193,10 +243,36 @@ export const FFTDisplay = memo(function FFTDisplay({
       } else {
         for (let i = 0; i < bins.length; i += 1) {
           smoothed[i] =
-            smoothed[i] * SMOOTHING_FACTOR + bins[i] * (1 - SMOOTHING_FACTOR);
+            smoothed[i] * FFT_SMOOTHING_FACTOR +
+            bins[i] * (1 - FFT_SMOOTHING_FACTOR);
         }
       }
       smoothingRef.current = smoothed;
+      const previousSnapshot = currentSnapshotRef.current;
+      if (previousSnapshot) {
+        const ghosts = ghostHistoryRef.current;
+        if (previousSnapshot.length !== smoothed.length) {
+          ghostHistoryRef.current = [];
+        } else {
+          ghosts.push(previousSnapshot);
+          const { ghostTraceCount } = FFT_PERSISTENCE_CONFIG;
+          while (ghosts.length > ghostTraceCount) {
+            ghosts.shift();
+          }
+        }
+      }
+      currentSnapshotRef.current = new Float32Array(smoothed);
+
+      let maxHold = maxHoldRef.current;
+      if (!maxHold || maxHold.length !== smoothed.length) {
+        maxHold = new Float32Array(smoothed);
+      } else {
+        const decay = FFT_PERSISTENCE_CONFIG.maxHoldDecay;
+        for (let i = 0; i < smoothed.length; i += 1) {
+          maxHold[i] = Math.max(maxHold[i] * decay, smoothed[i]);
+        }
+      }
+      maxHoldRef.current = maxHold;
       fftMetaRef.current = {
         sampleRate: incomingFFT.sampleRate,
         centerFreq: incomingFFT.centerFreq,
@@ -226,6 +302,7 @@ export const FFTDisplay = memo(function FFTDisplay({
       const maxPoints = Math.min(MAX_POINTS, Math.max(1, rangeBinCount));
       const freqs = new Float32Array(maxPoints);
       const powers = new Float32Array(maxPoints);
+      const binIndices = new Uint32Array(maxPoints);
       const step = maxPoints > 1 ? (rangeBinCount - 1) / (maxPoints - 1) : 0;
 
       for (let i = 0; i < maxPoints; i += 1) {
@@ -233,6 +310,7 @@ export const FFTDisplay = memo(function FFTDisplay({
         const binIndex = Math.min(rangeBinCount - 1, offset) + startBin;
         const freq = fftStart + binIndex * binWidth;
         const power = smoothed[binIndex];
+        binIndices[i] = binIndex;
         if (!Number.isFinite(power)) {
           freqs[i] = Number.NaN;
           powers[i] = Number.NaN;
@@ -242,7 +320,44 @@ export const FFTDisplay = memo(function FFTDisplay({
         powers[i] = power;
       }
 
+      const sampleLine = (source: Float32Array | null) => {
+        if (!source) return null;
+        const sampled = new Float32Array(maxPoints);
+        for (let i = 0; i < maxPoints; i += 1) {
+          const binIndex = binIndices[i];
+          const value = source[binIndex];
+          sampled[i] = Number.isFinite(value) ? value : Number.NaN;
+        }
+        return sampled;
+      };
+
       trace.setXY(freqs, powers);
+
+      const maxHoldLine = maxHoldTraceRef.current;
+      const maxHoldSampled = sampleLine(maxHoldRef.current);
+      if (maxHoldLine) {
+        if (maxHoldSampled) {
+          maxHoldLine.setXY(freqs, maxHoldSampled);
+        } else {
+          maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
+        }
+      }
+
+      const ghosts = ghostHistoryRef.current;
+      const ghostLines = ghostTraceRefs.current;
+      const ghostStart = Math.max(0, ghostLines.length - ghosts.length);
+      for (let i = 0; i < ghostLines.length; i += 1) {
+        const line = ghostLines[i];
+        const ghostIndex = i - ghostStart;
+        const ghostSnapshot = ghostIndex >= 0 ? ghosts[ghostIndex] : undefined;
+        const sampled = sampleLine(ghostSnapshot ?? null);
+        if (sampled && ghostSnapshot) {
+          line.setXY(freqs, sampled);
+        } else {
+          line.setXY(new Float32Array(0), new Float32Array(0));
+        }
+      }
+
       plot.requestDraw();
     };
 
