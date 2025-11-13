@@ -11,7 +11,7 @@ import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import type { InteractionMode } from "./VisualizationControls";
-import { getVisualizationTheme } from "./theme";
+import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
 
 interface SpectrogramDisplayProps {
   width: number;
@@ -41,22 +41,13 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
   interactionMode,
 }: SpectrogramDisplayProps) {
   const isDark = theme === "dark";
-  const spectrogramColors = useMemo(
-    () => getVisualizationTheme(isDark),
-    [isDark]
-  );
+  const vizTheme = useMemo(() => getVisualizationTheme(isDark), [isDark]);
+  const plotTheme = useMemo(() => toPlotTheme(vizTheme), [vizTheme]);
 
   const plotOptions = useMemo<PlotCreationOptions>(
     () => ({
-      background: spectrogramColors.background,
-      theme: {
-        background: spectrogramColors.background,
-        axisColor: spectrogramColors.axisColor,
-        textColor: spectrogramColors.textColor,
-        gridColor: spectrogramColors.gridColor,
-        cursorLineColor: spectrogramColors.cursorLineColor,
-        cursorHighlightColor: spectrogramColors.cursorLineColor,
-      },
+      background: plotTheme.background,
+      theme: plotTheme,
       interactions: {
         pan: { x: true, y: true },
         zoom: { x: true, y: true, factor: 0.2 },
@@ -75,7 +66,7 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
         },
       },
     }),
-    [spectrogramColors]
+    [plotTheme]
   );
 
   const { plot, attachCanvas } = usePlot(plotOptions);
@@ -308,8 +299,8 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
             position: "absolute",
             left: tooltip.left,
             top: tooltip.top,
-            background: spectrogramColors.tooltipBackground,
-            color: spectrogramColors.tooltipText,
+            background: vizTheme.tooltipBackground,
+            color: vizTheme.tooltipText,
             border: "1px solid rgba(15,23,42,0.2)",
             borderRadius: 2,
             padding: "4px 8px",

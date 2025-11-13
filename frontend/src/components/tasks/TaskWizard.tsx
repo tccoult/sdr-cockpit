@@ -15,9 +15,9 @@ interface TaskWizardProps {
 const labelClass =
   'mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground'
 const selectClass =
-  'h-11 w-full rounded-md border border-border/60 bg-card px-3 text-sm text-foreground transition focus:border-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40'
+  'h-11 w-full rounded-md border border-border/60 bg-card px-3 text-sm text-foreground transition focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40'
 const checkboxClass =
-  'h-4 w-4 rounded-sm border border-border/60 bg-card text-cockpit-accent accent-cockpit-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40'
+  'h-4 w-4 rounded-sm border border-border/60 bg-card text-accent accent-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40'
 
 export function TaskWizard({
   isOpen,
@@ -136,7 +136,7 @@ export function TaskWizard({
               <button
                 type="button"
                 onClick={() => setMode('rx')}
-                className="rounded-sm border border-border/70 bg-muted/50 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40"
+                className="rounded-sm border border-border/70 bg-muted/50 p-5 text-left transition hover:border-accent/40 hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <div className="text-xl font-semibold text-foreground">📡 Receive Signal</div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -147,7 +147,7 @@ export function TaskWizard({
               <button
                 type="button"
                 onClick={() => setMode('tx')}
-                className="rounded-sm border border-border/70 bg-muted/50 p-5 text-left transition hover:border-cockpit-accent/40 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40"
+                className="rounded-sm border border-border/70 bg-muted/50 p-5 text-left transition hover:border-accent/40 hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <div className="text-xl font-semibold text-foreground">📤 Transmit File</div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -292,7 +292,7 @@ export function TaskWizard({
                 <div
                   tabIndex={0}
                   role="button"
-                  className="rounded-sm border-2 border-dashed border-border/60 bg-muted/40 p-6 text-center text-muted-foreground transition hover:border-cockpit-accent/50 hover:bg-cockpit-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cockpit-accent/40"
+                  className="rounded-sm border-2 border-dashed border-border/60 bg-muted/40 p-6 text-center text-muted-foreground transition hover:border-accent/50 hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   onClick={handleFilePicker}
                   onKeyDown={handleFilePickerKeyDown}
                 >

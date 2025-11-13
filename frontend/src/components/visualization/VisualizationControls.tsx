@@ -1,5 +1,4 @@
 import { Hand, ZoomIn } from "lucide-react";
-import { useTheme } from "../app/useTheme";
 
 export type InteractionMode = "pan" | "zoom";
 
@@ -26,27 +25,17 @@ export function VisualizationControls({
   onMaxDbChange,
   onAutoRange,
 }: VisualizationControlsProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-
   const inputClasses = [
-    "h-8 w-16 rounded-md border px-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 sm:h-9 sm:w-20 sm:text-sm",
-    isDark
-      ? "border-white/20 bg-[#E1018] text-slate-100 placeholder:text-slate-500 focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/20"
-      : "border-border/70 bg-card text-foreground placeholder:text-muted-foreground focus:border-[#7C83FF]/60 focus-visible:ring-[#7C83FF]/30",
+    "h-8 w-16 rounded-md border border-viz-border/40 bg-viz-bg/80 px-2 text-xs font-medium text-viz-text placeholder:text-muted-foreground transition focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 sm:h-9 sm:w-20 sm:text-sm",
   ].join(" ");
 
   const dockClasses = [
-    "flex w-full flex-col items-center justify-center gap-3 border-t border-transparent px-4 py-2 text-[11px] sm:text-xs",
-    isDark
-      ? "bg-viz-bg-dark text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-      : "bg-viz-bg-light text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+    "flex w-full flex-col items-center justify-center gap-3 border-t px-4 py-2 text-[11px] text-viz-text/80 sm:text-xs",
+    "bg-viz-bg",
   ].join(" ");
 
   const dockStyle = {
-    borderTopColor: isDark
-      ? "rgba(255, 255, 255, 0.05)"
-      : "rgba(0, 0, 0, 0.08)",
+    borderTopColor: "var(--viz-divider)",
   };
 
   const actionGroupClasses =
@@ -55,23 +44,21 @@ export function VisualizationControls({
   const rangeGroupClasses =
     "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
 
-  const rangeLabelClasses = [
-    "text-[11px] font-medium",
-    isDark ? "text-slate-200" : "text-slate-600",
-  ].join(" ");
+  const rangeLabelClasses = "text-[11px] font-medium text-viz-text/70";
 
   const dividerClasses = [
     "hidden h-6 w-px sm:block",
-    isDark ? "bg-white/10" : "bg-black/10",
+    "bg-viz-border/40",
   ].join(" ");
 
   const sharedButtonBase =
     "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
 
-  const buttonActiveClasses = "border-border bg-card text-foreground shadow-sm";
+  const buttonActiveClasses =
+    "border-viz-border bg-viz-bg text-viz-text shadow-sm";
 
   const buttonDefaultClasses =
-    "border-border/60 bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground";
+    "border-viz-border/50 bg-transparent text-viz-text/70 hover:bg-viz-bg/70 hover:text-viz-text";
 
   const modeButtonClasses = (mode: InteractionMode) =>
     [

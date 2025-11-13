@@ -6,11 +6,14 @@ import {
   VisualizationMode,
 } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
-import { FFTDisplay } from "./FFTDisplay";
-import { WaterfallDisplay } from "./WaterfallDisplay";
-import { SpectrogramDisplay } from "./SpectrogramDisplay";
-import { VisualizationControls, InteractionMode } from "./VisualizationControls";
 import { useTheme } from "../app/useTheme";
+import { FFTDisplay } from "./FFTDisplay";
+import { SpectrogramDisplay } from "./SpectrogramDisplay";
+import {
+  InteractionMode,
+  VisualizationControls,
+} from "./VisualizationControls";
+import { WaterfallDisplay } from "./WaterfallDisplay";
 
 interface VisualizationViewProps {
   taskId: string;
@@ -34,7 +37,6 @@ export const VisualizationView = memo(function VisualizationView({
   onRenderFpsChange,
 }: VisualizationViewProps) {
   const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fftContainerRef = useRef<HTMLDivElement>(null);
@@ -97,7 +99,11 @@ export const VisualizationView = memo(function VisualizationView({
           nextMax = Math.max(nextMax, value);
         }
       }
-      if (Number.isFinite(nextMin) && Number.isFinite(nextMax) && nextMax > nextMin) {
+      if (
+        Number.isFinite(nextMin) &&
+        Number.isFinite(nextMax) &&
+        nextMax > nextMin
+      ) {
         const range = nextMax - nextMin;
         const padding = range * 0.1;
         setMinDb(Math.floor(nextMin - padding));
@@ -196,8 +202,10 @@ export const VisualizationView = memo(function VisualizationView({
     const targets: Element[] = [];
     if (containerRef.current) targets.push(containerRef.current);
     if (fftContainerRef.current) targets.push(fftContainerRef.current);
-    if (waterfallContainerRef.current) targets.push(waterfallContainerRef.current);
-    if (spectrogramContainerRef.current) targets.push(spectrogramContainerRef.current);
+    if (waterfallContainerRef.current)
+      targets.push(waterfallContainerRef.current);
+    if (spectrogramContainerRef.current)
+      targets.push(spectrogramContainerRef.current);
 
     targets.forEach((element) => observer.observe(element));
     updateSizes();
@@ -205,27 +213,19 @@ export const VisualizationView = memo(function VisualizationView({
     return () => observer.disconnect();
   }, [visualizationMode]);
 
-  const surfaceClasses = [
-    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border px-3 py-3 text-sm sm:px-4 sm:py-4",
-    isDark
-      ? "bg-viz-bg-dark border-white/5 text-slate-100 shadow-viz-surface-dark"
-      : "bg-viz-bg-light border-slate-200 text-slate-900 shadow-viz-surface-light",
-  ].join(" ");
+  const surfaceClasses =
+    "viz-surface relative flex min-h-0 flex-1 flex-col overflow-hidden";
 
   const sectionBaseClasses =
-    "relative flex flex-col overflow-hidden min-h-[180px]";
+    "relative flex flex-col overflow-hidden min-h-[180px] bg-transparent";
 
   const renderStatusOverlay = () => {
     if (!dataError && !isConnecting) {
       return null;
     }
 
-    const overlayClasses = [
-      "absolute inset-0 z-20 flex items-center justify-center rounded-sm border backdrop-blur-sm",
-      isDark
-        ? "border-white/5 bg-viz-bg-dark/85 text-slate-100"
-        : "border-slate-200 bg-viz-bg-light/90 text-slate-900",
-    ].join(" ");
+    const overlayClasses =
+      "viz-overlay absolute inset-0 z-20 flex items-center justify-center rounded-sm border backdrop-blur-sm";
 
     return (
       <div className={overlayClasses}>
@@ -235,7 +235,7 @@ export const VisualizationView = memo(function VisualizationView({
               <div className="text-base font-semibold sm:text-lg">
                 Connecting to data stream...
               </div>
-              <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+              <div className="mt-2 text-xs text-viz-text/70 sm:text-sm">
                 Please wait
               </div>
             </>
@@ -244,7 +244,7 @@ export const VisualizationView = memo(function VisualizationView({
               <div className="text-base font-semibold text-status-error sm:text-lg">
                 Unable to retrieve data
               </div>
-              <div className="mt-2 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
+              <div className="mt-2 text-xs text-viz-text/70 sm:text-sm">
                 {dataError || "Connection to data stream failed"}
               </div>
             </>
@@ -275,9 +275,9 @@ export const VisualizationView = memo(function VisualizationView({
   ].join(" ");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="viz-panel relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <div ref={containerRef} className={surfaceClasses}>
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {showFFT && (
             <div ref={fftContainerRef} className={fftSectionClasses}>
               <FFTDisplay
@@ -296,7 +296,10 @@ export const VisualizationView = memo(function VisualizationView({
           )}
 
           {showWaterfall && (
-            <div ref={waterfallContainerRef} className={waterfallSectionClasses}>
+            <div
+              ref={waterfallContainerRef}
+              className={waterfallSectionClasses}
+            >
               <WaterfallDisplay
                 width={Math.max(waterfallSize.width, 0)}
                 height={waterfallSize.height > 0 ? waterfallSize.height : 240}
@@ -315,7 +318,10 @@ export const VisualizationView = memo(function VisualizationView({
           )}
 
           {showSpectrogram && (
-            <div ref={spectrogramContainerRef} className={spectrogramSectionClasses}>
+            <div
+              ref={spectrogramContainerRef}
+              className={spectrogramSectionClasses}
+            >
               <SpectrogramDisplay
                 width={Math.max(spectrogramSize.width, 0)}
                 height={Math.max(spectrogramSize.height, 360)}
@@ -341,9 +347,9 @@ export const VisualizationView = memo(function VisualizationView({
             onAutoRange={autoRange}
           />
         </div>
-
-        {renderStatusOverlay()}
       </div>
+      {/* Overlay layers */}
+      {renderStatusOverlay()}
     </div>
   );
 });

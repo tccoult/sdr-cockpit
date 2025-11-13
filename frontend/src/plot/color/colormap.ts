@@ -2,7 +2,7 @@ import { buildColorLUT, PLASMA } from "../../utils/colorMaps";
 
 const cache = new Map<string, Uint8ClampedArray>();
 
-const DEFAULT_NAME = "plasma";
+const DEFAULT_NAME = "plasma+";
 
 function getPreset(name: string): Uint8ClampedArray {
   const key = name.toLowerCase();
@@ -11,8 +11,13 @@ function getPreset(name: string): Uint8ClampedArray {
   }
 
   switch (key) {
-    case "plasma":
+    case "plasma+":
     case "default": {
+      const lut = buildColorLUT(PLASMA);
+      cache.set(key, lut);
+      return lut;
+    }
+    case "plasma": {
       const lut = buildColorLUT(PLASMA);
       cache.set(key, lut);
       return lut;

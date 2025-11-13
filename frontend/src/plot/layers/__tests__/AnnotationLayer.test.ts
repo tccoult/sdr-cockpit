@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createAnnotationLayer } from "../../layers/AnnotationLayer";
-import { defaultTheme } from "../../theme";
+import { getPlotTheme } from "../../../styles/theme";
 
 const viewportStub = {
   projectX: (value: number) => value,
@@ -21,7 +21,7 @@ function createContext() {
   const invalidateSurface = () => {};
   return {
     viewport: viewportStub,
-    theme: defaultTheme,
+    theme: getPlotTheme("dark"),
     requestDraw,
     invalidateLayer,
     invalidateSurface,

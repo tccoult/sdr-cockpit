@@ -11,7 +11,7 @@ import { buildColorLUT, type ColorMap } from "../../utils/colorMaps";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
 import type { InteractionMode } from "./VisualizationControls";
-import { getVisualizationTheme } from "./theme";
+import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
 
 interface WaterfallDisplayProps {
   width: number;
@@ -46,22 +46,13 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
   interactionMode,
 }: WaterfallDisplayProps) {
   const isDark = theme === "dark";
-  const waterfallColors = useMemo(
-    () => getVisualizationTheme(isDark),
-    [isDark]
-  );
+  const vizTheme = useMemo(() => getVisualizationTheme(isDark), [isDark]);
+  const plotTheme = useMemo(() => toPlotTheme(vizTheme), [vizTheme]);
 
   const plotOptions = useMemo<PlotCreationOptions>(
     () => ({
-      background: waterfallColors.background,
-      theme: {
-        background: waterfallColors.background,
-        axisColor: waterfallColors.axisColor,
-        textColor: waterfallColors.textColor,
-        gridColor: waterfallColors.gridColor,
-        cursorLineColor: waterfallColors.cursorLineColor,
-        cursorHighlightColor: waterfallColors.cursorLineColor,
-      },
+      background: plotTheme.background,
+      theme: plotTheme,
       interactions: {
         pan: { x: true, y: false },
         zoom: { x: true, y: true, factor: 0.2 },
@@ -81,7 +72,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
         },
       },
     }),
-    [waterfallColors]
+    [plotTheme]
   );
 
   const { plot, attachCanvas } = usePlot(plotOptions);
@@ -363,8 +354,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
             position: "absolute",
             left: waterfallTooltip.left,
             top: waterfallTooltip.top,
-            background: waterfallColors.scaleBackground,
-            color: waterfallColors.scaleText,
+            background: vizTheme.scaleBackground,
+            color: vizTheme.scaleText,
             border: "1px solid rgba(15,23,42,0.2)",
             borderRadius: 2,
             padding: "4px 8px",

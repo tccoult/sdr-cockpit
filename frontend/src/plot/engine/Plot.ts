@@ -1,6 +1,6 @@
 import { AxisModel } from "../axes/AxisModel";
 import { createAxisLayer } from "../axes/AxisLayer";
-import type { AxisOptions } from "../axes/axisTypes";
+import type { AxisOptions, AxisTheme } from "../axes/axisTypes";
 import {
   beginPan,
   cancelBoxInteraction,
@@ -20,7 +20,6 @@ import { createCursorLayer } from "../layers/CursorLayer";
 import type { CursorLayer } from "../layers/CursorLayer";
 import { createHeatmapLayer } from "../layers/HeatmapLayer";
 import { createLineLayer } from "../layers/LineLayer";
-import { defaultTheme, toAxisTheme } from "../theme";
 import {
   type AnnotationLayerHandle,
   type AnnotationLayerOptions,
@@ -58,6 +57,32 @@ import {
   type SurfaceHandle,
   type SurfaceManager,
 } from "./SurfaceManager";
+
+const FALLBACK_THEME: PlotTheme = {
+  background: "rgba(10, 10, 15, 0.85)",
+  gridColor: "rgba(255, 255, 255, 0.1)",
+  axisColor: "rgba(255, 255, 255, 0.4)",
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontSize: 12,
+  textColor: "#ffffff",
+  axisLineWidth: 1,
+  axisLabelPadding: 18,
+  axisTickLabelPadding: 6,
+  cursorLineColor: "rgba(255, 255, 255, 0.7)",
+  cursorHighlightColor: "#ffff7a",
+};
+
+function toAxisTheme(theme: PlotTheme): AxisTheme {
+  return {
+    axisColor: theme.axisColor,
+    gridColor: theme.gridColor,
+    textColor: theme.textColor,
+    font: `${theme.fontSize}px ${theme.fontFamily}`,
+    lineWidth: theme.axisLineWidth,
+    labelPaddingPx: theme.axisLabelPadding,
+    tickLabelPaddingPx: theme.axisTickLabelPadding,
+  };
+}
 
 export type PlotInternalOptions = PlotCreationOptions;
 
@@ -1319,19 +1344,19 @@ class PlotEngine implements PlotHandle {
       background:
         options.background ??
         overrides.background ??
-        defaultTheme.background,
-      gridColor: overrides.gridColor ?? defaultTheme.gridColor,
-      axisColor: overrides.axisColor ?? defaultTheme.axisColor,
-      textColor: overrides.textColor ?? defaultTheme.textColor,
-      fontFamily: overrides.fontFamily ?? defaultTheme.fontFamily,
-      fontSize: overrides.fontSize ?? defaultTheme.fontSize,
-      axisLineWidth: overrides.axisLineWidth ?? defaultTheme.axisLineWidth,
-      axisLabelPadding: overrides.axisLabelPadding ?? defaultTheme.axisLabelPadding,
+        FALLBACK_THEME.background,
+      gridColor: overrides.gridColor ?? FALLBACK_THEME.gridColor,
+      axisColor: overrides.axisColor ?? FALLBACK_THEME.axisColor,
+      textColor: overrides.textColor ?? FALLBACK_THEME.textColor,
+      fontFamily: overrides.fontFamily ?? FALLBACK_THEME.fontFamily,
+      fontSize: overrides.fontSize ?? FALLBACK_THEME.fontSize,
+      axisLineWidth: overrides.axisLineWidth ?? FALLBACK_THEME.axisLineWidth,
+      axisLabelPadding: overrides.axisLabelPadding ?? FALLBACK_THEME.axisLabelPadding,
       axisTickLabelPadding:
-        overrides.axisTickLabelPadding ?? defaultTheme.axisTickLabelPadding,
-      cursorLineColor: overrides.cursorLineColor ?? defaultTheme.cursorLineColor,
+        overrides.axisTickLabelPadding ?? FALLBACK_THEME.axisTickLabelPadding,
+      cursorLineColor: overrides.cursorLineColor ?? FALLBACK_THEME.cursorLineColor,
       cursorHighlightColor:
-        overrides.cursorHighlightColor ?? defaultTheme.cursorHighlightColor,
+        overrides.cursorHighlightColor ?? FALLBACK_THEME.cursorHighlightColor,
     };
   }
 
