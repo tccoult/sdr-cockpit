@@ -119,7 +119,7 @@ export function VisualizationControls({
             onClick={onClearMaxHold}
             disabled={maxHoldControlsDisabled || !maxHoldEnabled}
           >
-            Clear
+            Clear Max Hold
           </button>
         </div>
       </div>
