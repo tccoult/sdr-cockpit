@@ -6,15 +6,15 @@ import {
   type LineLayerHandle,
   type PlotCreationOptions,
 } from "../../plot";
+import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
 import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
-import type { InteractionMode } from "./VisualizationControls";
-import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
 import {
   FFT_PERSISTENCE_CONFIG,
   FFT_SMOOTHING_FACTOR,
 } from "./persistenceConfig";
+import type { InteractionMode } from "./VisualizationControls";
 
 interface FFTDisplayProps {
   width: number;
@@ -259,11 +259,8 @@ export const FFTDisplay = memo(function FFTDisplay({
         1
       );
       const frameDecay =
-        deltaSeconds > 0
-          ? Math.pow(maxHoldDecayPerSecond, deltaSeconds)
-          : 1;
-      const maxHoldDecayDb =
-        frameDecay === 1 ? 0 : 10 * Math.log10(frameDecay);
+        deltaSeconds > 0 ? Math.pow(maxHoldDecayPerSecond, deltaSeconds) : 1;
+      const maxHoldDecayDb = frameDecay === 1 ? 0 : 10 * Math.log10(frameDecay);
       let maxHold = maxHoldRef.current;
       if (!maxHold || maxHold.length !== smoothed.length) {
         maxHold = new Float32Array(smoothed);
