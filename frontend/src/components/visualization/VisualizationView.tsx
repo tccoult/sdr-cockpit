@@ -68,11 +68,18 @@ export const VisualizationView = memo(function VisualizationView({
   const fftPersistenceRef = useRef<{
     current: Float32Array | null;
     maxHold: Float32Array | null;
-  }>({ current: null, maxHold: null });
+    trueMaxHold: Float32Array | null;
+  }>({ current: null, maxHold: null, trueMaxHold: null });
   useEffect(() => {
     currentFFTRef.current = null;
-    fftPersistenceRef.current = { current: null, maxHold: null };
+    fftPersistenceRef.current = { current: null, maxHold: null, trueMaxHold: null };
   }, [taskId]);
+  const [isTrueMaxHoldEnabled, setIsTrueMaxHoldEnabled] = useState(false);
+  const [trueMaxHoldClearKey, setTrueMaxHoldClearKey] = useState(0);
+  const trueMaxHoldEnabledRef = useRef(isTrueMaxHoldEnabled);
+  useEffect(() => {
+    trueMaxHoldEnabledRef.current = isTrueMaxHoldEnabled;
+  }, [isTrueMaxHoldEnabled]);
 
   useEffect(() => {
     const handleFFTData = (event: Event) => {
@@ -89,6 +96,7 @@ export const VisualizationView = memo(function VisualizationView({
         fftPersistenceRef.current = {
           current: null,
           maxHold: null,
+          trueMaxHold: null,
         };
         return;
       }
@@ -97,6 +105,7 @@ export const VisualizationView = memo(function VisualizationView({
       const persistence = fftPersistenceRef.current;
 
       let maxHold: Float32Array | null = null;
+      let trueMaxHold: Float32Array | null = null;
       if (FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false) {
         maxHold = persistence.maxHold;
         if (!maxHold || maxHold.length !== snapshot.length) {
@@ -109,9 +118,27 @@ export const VisualizationView = memo(function VisualizationView({
         }
       }
 
+      if (trueMaxHoldEnabledRef.current) {
+        trueMaxHold = persistence.trueMaxHold;
+        if (!trueMaxHold || trueMaxHold.length !== snapshot.length) {
+          trueMaxHold = new Float32Array(snapshot);
+        } else {
+          for (let i = 0; i < snapshot.length; i += 1) {
+            const value = snapshot[i];
+            if (!Number.isFinite(value)) continue;
+            if (!Number.isFinite(trueMaxHold[i]) || trueMaxHold[i] < value) {
+              trueMaxHold[i] = value;
+            }
+          }
+        }
+      } else {
+        trueMaxHold = null;
+      }
+
       fftPersistenceRef.current = {
         current: snapshot,
         maxHold,
+        trueMaxHold,
       };
     };
 
@@ -135,6 +162,7 @@ export const VisualizationView = memo(function VisualizationView({
         FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false
           ? persistence.maxHold
           : null,
+        isTrueMaxHoldEnabled ? persistence.trueMaxHold : null,
       ];
       if (sources.every((source) => !source)) {
         for (let i = 0; i < fftData.bins.length; i += 1) {
@@ -172,7 +200,7 @@ export const VisualizationView = memo(function VisualizationView({
     }
 
     setWaterfallResetKey((value) => value + 1);
-  }, [centerFreq, sampleRate]);
+  }, [centerFreq, sampleRate, isTrueMaxHoldEnabled]);
 
   useEffect(() => {
     autoRange();
@@ -218,6 +246,19 @@ export const VisualizationView = memo(function VisualizationView({
       onRenderFpsChange?.(0);
     };
   }, [onRenderFpsChange]);
+
+  const resetTrueMaxHold = useCallback(() => {
+    fftPersistenceRef.current.trueMaxHold = null;
+    setTrueMaxHoldClearKey((value) => value + 1);
+  }, []);
+
+  const handleToggleTrueMaxHold = useCallback(() => {
+    setIsTrueMaxHoldEnabled((enabled) => {
+      const next = !enabled;
+      resetTrueMaxHold();
+      return next;
+    });
+  }, [resetTrueMaxHold]);
 
   useEffect(() => {
     const measureElement = (element: HTMLElement) => {
@@ -317,6 +358,7 @@ export const VisualizationView = memo(function VisualizationView({
     visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showWaterfall = visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showSpectrogram = visualizationMode === VisualizationMode.SPECTROGRAM;
+  const maxHoldControlsDisabled = !showFFT;
   const fftSectionClasses = [
     sectionBaseClasses,
     visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]",
@@ -348,6 +390,8 @@ export const VisualizationView = memo(function VisualizationView({
                 theme={theme}
                 onRenderFpsChange={setFftRenderFps}
                 interactionMode={interactionMode}
+                trueMaxHoldEnabled={isTrueMaxHoldEnabled}
+                trueMaxHoldClearKey={trueMaxHoldClearKey}
               />
             </div>
           )}
@@ -397,11 +441,11 @@ export const VisualizationView = memo(function VisualizationView({
           <VisualizationControls
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
-            minDb={minDb}
-            maxDb={maxDb}
-            onMinDbChange={setMinDb}
-            onMaxDbChange={setMaxDb}
             onAutoRange={autoRange}
+            trueMaxHoldEnabled={isTrueMaxHoldEnabled}
+            onToggleTrueMaxHold={handleToggleTrueMaxHold}
+            onClearTrueMaxHold={resetTrueMaxHold}
+            trueMaxHoldControlsDisabled={maxHoldControlsDisabled}
           />
         </div>
       </div>

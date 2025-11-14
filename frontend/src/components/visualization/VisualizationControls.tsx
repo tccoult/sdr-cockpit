@@ -5,30 +5,26 @@ export type InteractionMode = "pan" | "zoom";
 export interface VisualizationControlsProps {
   interactionMode: InteractionMode;
   onInteractionModeChange: (mode: InteractionMode) => void;
-  minDb: number;
-  maxDb: number;
-  onMinDbChange: (value: number) => void;
-  onMaxDbChange: (value: number) => void;
   onAutoRange: () => void;
+  trueMaxHoldEnabled: boolean;
+  onToggleTrueMaxHold: () => void;
+  onClearTrueMaxHold: () => void;
+  trueMaxHoldControlsDisabled?: boolean;
 }
 
 /**
  * Bottom control bar for spectrum visualization.
- * Includes pan/zoom toggle, dB range controls, and settings.
+ * Includes pan/zoom toggle, auto range, and max-hold controls.
  */
 export function VisualizationControls({
   interactionMode,
   onInteractionModeChange,
-  minDb,
-  maxDb,
-  onMinDbChange,
-  onMaxDbChange,
   onAutoRange,
+  trueMaxHoldEnabled,
+  onToggleTrueMaxHold,
+  onClearTrueMaxHold,
+  trueMaxHoldControlsDisabled = false,
 }: VisualizationControlsProps) {
-  const inputClasses = [
-    "h-8 w-16 rounded-md border border-viz-border/40 bg-viz-bg/80 px-2 text-xs font-medium text-viz-text placeholder:text-muted-foreground transition focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 sm:h-9 sm:w-20 sm:text-sm",
-  ].join(" ");
-
   const dockClasses = [
     "flex w-full flex-col items-center justify-center gap-3 border-t px-4 py-2 text-[11px] text-viz-text/80 sm:text-xs",
     "bg-viz-bg",
@@ -41,15 +37,8 @@ export function VisualizationControls({
   const actionGroupClasses =
     "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
 
-  const rangeGroupClasses =
+  const extraGroupClasses =
     "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
-
-  const rangeLabelClasses = "text-[11px] font-medium text-viz-text/70";
-
-  const dividerClasses = [
-    "hidden h-6 w-px sm:block",
-    "bg-viz-border/40",
-  ].join(" ");
 
   const sharedButtonBase =
     "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
@@ -67,6 +56,20 @@ export function VisualizationControls({
     ].join(" ");
 
   const autoRangeClasses = [sharedButtonBase, buttonDefaultClasses].join(" ");
+
+  const trueMaxHoldToggleClasses = [
+    sharedButtonBase,
+    trueMaxHoldEnabled ? buttonActiveClasses : buttonDefaultClasses,
+    trueMaxHoldControlsDisabled ? "pointer-events-none opacity-50" : "",
+  ].join(" ");
+
+  const trueMaxHoldClearClasses = [
+    sharedButtonBase,
+    buttonDefaultClasses,
+    trueMaxHoldControlsDisabled || !trueMaxHoldEnabled
+      ? "pointer-events-none opacity-50"
+      : "",
+  ].join(" ");
 
   return (
     <div className={dockClasses} style={dockStyle}>
@@ -101,34 +104,25 @@ export function VisualizationControls({
           </button>
         </div>
 
-        <div className={dividerClasses} aria-hidden="true" />
-
-        <div className={rangeGroupClasses}>
-          <div className="flex items-center gap-2">
-            <label htmlFor="min-db-ctrl" className={rangeLabelClasses}>
-              Min
-            </label>
-            <input
-              id="min-db-ctrl"
-              type="number"
-              value={minDb}
-              onChange={(event) => onMinDbChange(Number(event.target.value))}
-              className={inputClasses}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label htmlFor="max-db-ctrl" className={rangeLabelClasses}>
-              Max
-            </label>
-            <input
-              id="max-db-ctrl"
-              type="number"
-              value={maxDb}
-              onChange={(event) => onMaxDbChange(Number(event.target.value))}
-              className={inputClasses}
-            />
-          </div>
+        <div className={extraGroupClasses}>
+          <button
+            type="button"
+            className={trueMaxHoldToggleClasses}
+            onClick={onToggleTrueMaxHold}
+            disabled={trueMaxHoldControlsDisabled}
+          >
+            {trueMaxHoldEnabled
+              ? "Disable Actual Max Hold"
+              : "Enable Actual Max Hold"}
+          </button>
+          <button
+            type="button"
+            className={trueMaxHoldClearClasses}
+            onClick={onClearTrueMaxHold}
+            disabled={trueMaxHoldControlsDisabled || !trueMaxHoldEnabled}
+          >
+            Clear Max Hold
+          </button>
         </div>
       </div>
     </div>

@@ -27,14 +27,21 @@ interface FFTDisplayProps {
   theme: Theme;
   onRenderFpsChange?: (fps: number) => void;
   interactionMode: InteractionMode;
+  trueMaxHoldEnabled: boolean;
+  trueMaxHoldClearKey: number;
 }
 
-const MAX_POINTS = 2048;
+const MAX_POINTS = 1024;
 const MAX_HOLD_ENABLED = FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false;
 const MAX_HOLD_INTERVAL_MS =
   FFT_PERSISTENCE_CONFIG.maxHoldTargetFps &&
   FFT_PERSISTENCE_CONFIG.maxHoldTargetFps > 0
     ? 1000 / FFT_PERSISTENCE_CONFIG.maxHoldTargetFps
+    : 0;
+const TRUE_MAX_HOLD_INTERVAL_MS =
+  FFT_PERSISTENCE_CONFIG.trueMaxHoldTargetFps &&
+  FFT_PERSISTENCE_CONFIG.trueMaxHoldTargetFps > 0
+    ? 1000 / FFT_PERSISTENCE_CONFIG.trueMaxHoldTargetFps
     : 0;
 
 interface LineBuffers {
@@ -69,6 +76,8 @@ export const FFTDisplay = memo(function FFTDisplay({
   theme,
   onRenderFpsChange,
   interactionMode,
+  trueMaxHoldEnabled,
+  trueMaxHoldClearKey,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
   const vizTheme = useMemo(() => getVisualizationTheme(isDark), [isDark]);
@@ -104,16 +113,24 @@ export const FFTDisplay = memo(function FFTDisplay({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const traceRef = useRef<LineLayerHandle | null>(null);
   const maxHoldTraceRef = useRef<LineLayerHandle | null>(null);
+  const trueMaxHoldTraceRef = useRef<LineLayerHandle | null>(null);
   const smoothingRef = useRef<Float32Array | null>(null);
   const lineBuffersRef = useRef<LineBuffers | null>(null);
   const maxHoldRef = useRef<Float32Array | null>(null);
+  const trueMaxHoldRef = useRef<Float32Array | null>(null);
   const fftMetaRef = useRef<{ sampleRate: number; centerFreq: number } | null>(
     null
   );
   const lastFrameTimestampRef = useRef<number | null>(null);
   const lastMaxHoldDrawRef = useRef<number>(0);
+  const lastTrueMaxHoldDrawRef = useRef<number>(0);
+  const trueMaxHoldEnabledRef = useRef(trueMaxHoldEnabled);
   const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
   const renderFps = usePlotRenderFps(plot);
+
+  useEffect(() => {
+    trueMaxHoldEnabledRef.current = trueMaxHoldEnabled;
+  }, [trueMaxHoldEnabled]);
 
   const handleCanvasAttach = useCallback(
     (canvas: HTMLCanvasElement | null) => {
@@ -189,6 +206,34 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, vizTheme]);
 
   useEffect(() => {
+    if (!plot || plot.isDestroyed()) return;
+    trueMaxHoldTraceRef.current?.remove();
+    trueMaxHoldTraceRef.current = null;
+    if (!trueMaxHoldEnabled) {
+      trueMaxHoldRef.current = null;
+      return;
+    }
+
+    const trueMaxHoldLine = plot.addLine({
+      color: vizTheme.persistence.maxHoldColor,
+      lineWidth:
+        FFT_PERSISTENCE_CONFIG.trueMaxHoldLineWidth ??
+        FFT_PERSISTENCE_CONFIG.maxHoldLineWidth ??
+        2,
+      opacity: 1,
+      surface: "data:trueMaxHold",
+    });
+    trueMaxHoldTraceRef.current = trueMaxHoldLine;
+
+    return () => {
+      trueMaxHoldLine.remove();
+      if (trueMaxHoldTraceRef.current === trueMaxHoldLine) {
+        trueMaxHoldTraceRef.current = null;
+      }
+    };
+  }, [plot, vizTheme, trueMaxHoldEnabled]);
+
+  useEffect(() => {
     if (!onRenderFpsChange) return;
     onRenderFpsChange(renderFps);
   }, [renderFps, onRenderFpsChange]);
@@ -219,10 +264,32 @@ export const FFTDisplay = memo(function FFTDisplay({
   }, [plot, minDb, maxDb]);
 
   useEffect(() => {
+    if (trueMaxHoldEnabled) {
+      return;
+    }
+    trueMaxHoldRef.current = null;
+    trueMaxHoldTraceRef.current?.setXY(
+      new Float32Array(0),
+      new Float32Array(0)
+    );
+    lastTrueMaxHoldDrawRef.current = 0;
+  }, [trueMaxHoldEnabled]);
+
+  useEffect(() => {
+    trueMaxHoldRef.current = null;
+    trueMaxHoldTraceRef.current?.setXY(
+      new Float32Array(0),
+      new Float32Array(0)
+    );
+    lastTrueMaxHoldDrawRef.current = 0;
+  }, [trueMaxHoldClearKey]);
+
+  useEffect(() => {
     smoothingRef.current = null;
     fftMetaRef.current = null;
     lastFrameTimestampRef.current = null;
     lastMaxHoldDrawRef.current = 0;
+    lastTrueMaxHoldDrawRef.current = 0;
     maxHoldRef.current = null;
     const trace = traceRef.current;
     if (trace) {
@@ -230,6 +297,11 @@ export const FFTDisplay = memo(function FFTDisplay({
       plot?.requestDraw();
     }
     maxHoldTraceRef.current?.setXY(new Float32Array(0), new Float32Array(0));
+    trueMaxHoldRef.current = null;
+    trueMaxHoldTraceRef.current?.setXY(
+      new Float32Array(0),
+      new Float32Array(0)
+    );
   }, [plot, dataKey]);
 
   useEffect(() => {
@@ -294,6 +366,24 @@ export const FFTDisplay = memo(function FFTDisplay({
         maxHoldRef.current = maxHold;
       } else {
         maxHoldRef.current = null;
+      }
+      if (trueMaxHoldEnabledRef.current) {
+        let trueMaxHold = trueMaxHoldRef.current;
+        if (!trueMaxHold || trueMaxHold.length !== smoothed.length) {
+          trueMaxHold = new Float32Array(smoothed);
+        } else {
+          for (let i = 0; i < smoothed.length; i += 1) {
+            const nextValue = smoothed[i];
+            if (!Number.isFinite(nextValue)) continue;
+            const currentValue = trueMaxHold[i];
+            if (!Number.isFinite(currentValue) || nextValue > currentValue) {
+              trueMaxHold[i] = nextValue;
+            }
+          }
+        }
+        trueMaxHoldRef.current = trueMaxHold;
+      } else {
+        trueMaxHoldRef.current = null;
       }
       fftMetaRef.current = {
         sampleRate: incomingFFT.sampleRate,
@@ -364,8 +454,7 @@ export const FFTDisplay = memo(function FFTDisplay({
         if (maxHoldLine) {
           const sinceLast = nowTs - (lastMaxHoldDrawRef.current || 0);
           const shouldUpdate =
-            MAX_HOLD_INTERVAL_MS === 0 ||
-            sinceLast >= MAX_HOLD_INTERVAL_MS;
+            MAX_HOLD_INTERVAL_MS === 0 || sinceLast >= MAX_HOLD_INTERVAL_MS;
           const shouldClear = !maxHoldSampled;
           if (shouldUpdate || shouldClear) {
             if (maxHoldSampled) {
@@ -378,6 +467,29 @@ export const FFTDisplay = memo(function FFTDisplay({
               maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
             }
             lastMaxHoldDrawRef.current = nowTs;
+          }
+        }
+      }
+      if (trueMaxHoldEnabledRef.current) {
+        const trueMaxHoldLine = trueMaxHoldTraceRef.current;
+        const trueMaxHoldSampled = sampleLine(trueMaxHoldRef.current);
+        if (trueMaxHoldLine) {
+          const sinceLast = nowTs - (lastTrueMaxHoldDrawRef.current || 0);
+          const shouldUpdate =
+            TRUE_MAX_HOLD_INTERVAL_MS === 0 ||
+            sinceLast >= TRUE_MAX_HOLD_INTERVAL_MS;
+          const shouldClear = !trueMaxHoldSampled;
+          if (shouldUpdate || shouldClear) {
+            if (trueMaxHoldSampled) {
+              const trueMaxHoldView =
+                maxPoints === MAX_POINTS
+                  ? trueMaxHoldSampled
+                  : trueMaxHoldSampled.subarray(0, maxPoints);
+              trueMaxHoldLine.setXY(freqView, trueMaxHoldView);
+            } else {
+              trueMaxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
+            }
+            lastTrueMaxHoldDrawRef.current = nowTs;
           }
         }
       }
