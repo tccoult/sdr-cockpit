@@ -30,6 +30,8 @@ interface FFTDisplayProps {
 }
 
 const MAX_POINTS = 2048;
+const MAX_HOLD_TARGET_FPS = 10;
+const MAX_HOLD_INTERVAL_MS = 1000 / MAX_HOLD_TARGET_FPS;
 
 interface LineBuffers {
   freqs: Float32Array;
@@ -105,6 +107,7 @@ export const FFTDisplay = memo(function FFTDisplay({
     null
   );
   const lastFrameTimestampRef = useRef<number | null>(null);
+  const lastMaxHoldDrawRef = useRef<number>(0);
   const [cursorInfo, setCursorInfo] = useState<CursorState | null>(null);
   const renderFps = usePlotRenderFps(plot);
 
@@ -164,6 +167,7 @@ export const FFTDisplay = memo(function FFTDisplay({
       color: vizTheme.persistence.maxHoldColor,
       lineWidth: FFT_PERSISTENCE_CONFIG.maxHoldLineWidth,
       opacity: FFT_PERSISTENCE_CONFIG.maxHoldOpacity,
+      surface: "data:maxHold",
     });
     maxHoldTraceRef.current = maxHoldLine;
 
@@ -210,6 +214,7 @@ export const FFTDisplay = memo(function FFTDisplay({
     smoothingRef.current = null;
     fftMetaRef.current = null;
     lastFrameTimestampRef.current = null;
+    lastMaxHoldDrawRef.current = 0;
     maxHoldRef.current = null;
     const trace = traceRef.current;
     if (trace) {
@@ -236,6 +241,11 @@ export const FFTDisplay = memo(function FFTDisplay({
       const frameTimestamp = Number.isFinite(incomingFFT.timestamp)
         ? incomingFFT.timestamp
         : Date.now();
+      const nowTs =
+        typeof performance !== "undefined" &&
+        typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
       const lastFrameTimestamp = lastFrameTimestampRef.current;
       const deltaSeconds =
         typeof lastFrameTimestamp === "number"
@@ -338,14 +348,20 @@ export const FFTDisplay = memo(function FFTDisplay({
       const maxHoldLine = maxHoldTraceRef.current;
       const maxHoldSampled = sampleLine(maxHoldRef.current);
       if (maxHoldLine) {
-        if (maxHoldSampled) {
-          const maxHoldView =
-            maxPoints === MAX_POINTS
-              ? maxHoldSampled
-              : maxHoldSampled.subarray(0, maxPoints);
-          maxHoldLine.setXY(freqView, maxHoldView);
-        } else {
-          maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
+        const sinceLast = nowTs - (lastMaxHoldDrawRef.current || 0);
+        const shouldUpdate = sinceLast >= MAX_HOLD_INTERVAL_MS;
+        const shouldClear = !maxHoldSampled;
+        if (shouldUpdate || shouldClear) {
+          if (maxHoldSampled) {
+            const maxHoldView =
+              maxPoints === MAX_POINTS
+                ? maxHoldSampled
+                : maxHoldSampled.subarray(0, maxPoints);
+            maxHoldLine.setXY(freqView, maxHoldView);
+          } else {
+            maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
+          }
+          lastMaxHoldDrawRef.current = nowTs;
         }
       }
 

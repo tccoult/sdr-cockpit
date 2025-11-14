@@ -110,8 +110,6 @@ const PHASE_SURFACE_MAP: Record<LayerPhase, PlotSurface> = {
   cursor: "overlay",
   debug: "overlay",
 };
-const SURFACE_DRAW_ORDER: PlotSurface[] = ["static", "data", "overlay"];
-
 function resolveSurfaceForLayer(layer: Layer, phase: LayerPhase): PlotSurface {
   if (layer.surface) {
     return layer.surface;
@@ -245,7 +243,8 @@ export function createPlot(
 
 class PlotEngine implements PlotHandle {
   private readonly surfaceManager: SurfaceManager;
-  private readonly surfaces: Record<PlotSurface, SurfaceHandle>;
+  private readonly surfaces: Map<PlotSurface, SurfaceHandle>;
+  private readonly dataSurfaces: PlotSurface[] = ["data"];
   private readonly canvas: HTMLCanvasElement;
   private readonly viewport: Viewport;
   private readonly scheduler: Scheduler;
@@ -568,7 +567,7 @@ class PlotEngine implements PlotHandle {
 
   private markSurfaceDirty(surface: PlotSurface) {
     if (this.destroyed) return;
-    const handle = this.surfaces[surface];
+    const handle = this.ensureSurface(surface);
     handle.markDirty();
     this.requestDraw();
   }
@@ -580,9 +579,31 @@ class PlotEngine implements PlotHandle {
     if (!record.dirty) {
       record.dirty = true;
     }
-    const handle = this.surfaces[record.surface];
+    const handle = this.ensureSurface(record.surface);
     handle.markDirty();
     this.requestDraw();
+  }
+
+  private ensureSurface(surface: PlotSurface): SurfaceHandle {
+    let handle = this.surfaces.get(surface);
+    if (!handle) {
+      handle = this.surfaceManager.getSurface(surface);
+      this.surfaces.set(surface, handle);
+    }
+    if (surface === "data") {
+      if (!this.dataSurfaces.includes(surface)) {
+        this.dataSurfaces.unshift(surface);
+      }
+    } else if (surface.startsWith("data:")) {
+      if (!this.dataSurfaces.includes(surface)) {
+        this.dataSurfaces.push(surface);
+      }
+    }
+    return handle;
+  }
+
+  private getSurfaceRenderOrder(): PlotSurface[] {
+    return ["static", ...this.dataSurfaces, "overlay"];
   }
 
   private readonly handleWheel = (event: WheelEvent) => {
@@ -635,12 +656,11 @@ class PlotEngine implements PlotHandle {
     this.scheduler = options.scheduler ?? new RafScheduler();
     this.theme = this.resolveTheme(options);
     this.surfaceManager = createSurfaceManager({ rootCanvas: canvas });
-    this.surfaces = {
-      static: this.surfaceManager.getSurface("static"),
-      data: this.surfaceManager.getSurface("data"),
-      overlay: this.surfaceManager.getSurface("overlay"),
-    };
-    this.canvas = this.surfaces.overlay.canvas;
+    this.surfaces = new Map();
+    this.ensureSurface("static");
+    this.ensureSurface("data");
+    this.ensureSurface("overlay");
+    this.canvas = this.ensureSurface("overlay").canvas;
     this.surfaceManager.setBackgroundColor(this.theme.background);
     this.interactions = resolveInteractions(options.interactions);
     this.devicePixelRatio = this.resolveInitialDpr(options);
@@ -1049,8 +1069,8 @@ class PlotEngine implements PlotHandle {
       now: now(),
     };
 
-    for (const surfaceId of SURFACE_DRAW_ORDER) {
-      const surface = this.surfaces[surfaceId];
+    for (const surfaceId of this.getSurfaceRenderOrder()) {
+      const surface = this.ensureSurface(surfaceId);
       if (!surface.isDirty()) continue;
       const ctx = surface.ctx;
       surface.clear();
@@ -1131,7 +1151,7 @@ class PlotEngine implements PlotHandle {
       devicePixelRatio: dpr,
     };
     this.surfaceManager.resizeAll(dimensions);
-    this.viewport.updateDimensions(this.surfaces.data.canvas, dpr);
+    this.viewport.updateDimensions(this.ensureSurface("data").canvas, dpr);
     this.axisModelX.setSpanPx(this.viewport.rect.width);
     this.axisModelY.setSpanPx(this.viewport.rect.height);
     this.dimensions = dimensions;

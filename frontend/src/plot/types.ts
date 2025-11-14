@@ -21,7 +21,8 @@ export type LayerPhase =
   | "cursor"
   | "debug";
 
-export type PlotSurface = "static" | "data" | "overlay";
+export type DataSurface = `data${"" | `:${string}`}`;
+export type PlotSurface = "static" | "overlay" | DataSurface;
 
 /** Dimensions of the canvas in CSS pixels and current DPR. */
 export interface PlotDimensions {
@@ -227,6 +228,7 @@ export interface LineLayerOptions {
     color?: string;
     opacity?: number;
   };
+  surface?: PlotSurface;
 }
 
 /** Options used when creating a heatmap layer. */
