@@ -6,10 +6,10 @@ export interface VisualizationControlsProps {
   interactionMode: InteractionMode;
   onInteractionModeChange: (mode: InteractionMode) => void;
   onAutoRange: () => void;
-  trueMaxHoldEnabled: boolean;
-  onToggleTrueMaxHold: () => void;
-  onClearTrueMaxHold: () => void;
-  trueMaxHoldControlsDisabled?: boolean;
+  maxHoldEnabled: boolean;
+  onToggleMaxHold: () => void;
+  onClearMaxHold: () => void;
+  maxHoldControlsDisabled?: boolean;
 }
 
 /**
@@ -20,10 +20,10 @@ export function VisualizationControls({
   interactionMode,
   onInteractionModeChange,
   onAutoRange,
-  trueMaxHoldEnabled,
-  onToggleTrueMaxHold,
-  onClearTrueMaxHold,
-  trueMaxHoldControlsDisabled = false,
+  maxHoldEnabled,
+  onToggleMaxHold,
+  onClearMaxHold,
+  maxHoldControlsDisabled = false,
 }: VisualizationControlsProps) {
   const dockClasses = [
     "flex w-full flex-col items-center justify-center gap-3 border-t px-4 py-2 text-[11px] text-viz-text/80 sm:text-xs",
@@ -57,16 +57,16 @@ export function VisualizationControls({
 
   const autoRangeClasses = [sharedButtonBase, buttonDefaultClasses].join(" ");
 
-  const trueMaxHoldToggleClasses = [
+  const maxHoldToggleClasses = [
     sharedButtonBase,
-    trueMaxHoldEnabled ? buttonActiveClasses : buttonDefaultClasses,
-    trueMaxHoldControlsDisabled ? "pointer-events-none opacity-50" : "",
+    maxHoldEnabled ? buttonActiveClasses : buttonDefaultClasses,
+    maxHoldControlsDisabled ? "pointer-events-none opacity-50" : "",
   ].join(" ");
 
-  const trueMaxHoldClearClasses = [
+  const maxHoldClearClasses = [
     sharedButtonBase,
     buttonDefaultClasses,
-    trueMaxHoldControlsDisabled || !trueMaxHoldEnabled
+    maxHoldControlsDisabled || !maxHoldEnabled
       ? "pointer-events-none opacity-50"
       : "",
   ].join(" ");
@@ -107,21 +107,19 @@ export function VisualizationControls({
         <div className={extraGroupClasses}>
           <button
             type="button"
-            className={trueMaxHoldToggleClasses}
-            onClick={onToggleTrueMaxHold}
-            disabled={trueMaxHoldControlsDisabled}
+            className={maxHoldToggleClasses}
+            onClick={onToggleMaxHold}
+            disabled={maxHoldControlsDisabled}
           >
-            {trueMaxHoldEnabled
-              ? "Disable Actual Max Hold"
-              : "Enable Actual Max Hold"}
+            Max Hold
           </button>
           <button
             type="button"
-            className={trueMaxHoldClearClasses}
-            onClick={onClearTrueMaxHold}
-            disabled={trueMaxHoldControlsDisabled || !trueMaxHoldEnabled}
+            className={maxHoldClearClasses}
+            onClick={onClearMaxHold}
+            disabled={maxHoldControlsDisabled || !maxHoldEnabled}
           >
-            Clear Max Hold
+            Clear
           </button>
         </div>
       </div>

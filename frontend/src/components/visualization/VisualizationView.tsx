@@ -14,7 +14,7 @@ import {
   VisualizationControls,
 } from "./VisualizationControls";
 import { WaterfallDisplay } from "./WaterfallDisplay";
-import { FFT_PERSISTENCE_CONFIG } from "./persistenceConfig";
+import { FFT_SETTINGS_CONFIG } from "./fftSettings";
 
 interface VisualizationViewProps {
   taskId: string;
@@ -65,21 +65,21 @@ export const VisualizationView = memo(function VisualizationView({
   });
 
   const currentFFTRef = useRef<FFTData | null>(null);
-  const fftPersistenceRef = useRef<{
+  const fftTracesRef = useRef<{
     current: Float32Array | null;
+    persistence: Float32Array | null;
     maxHold: Float32Array | null;
-    trueMaxHold: Float32Array | null;
-  }>({ current: null, maxHold: null, trueMaxHold: null });
+  }>({ current: null, persistence: null, maxHold: null });
   useEffect(() => {
     currentFFTRef.current = null;
-    fftPersistenceRef.current = { current: null, maxHold: null, trueMaxHold: null };
+    fftTracesRef.current = { current: null, persistence: null, maxHold: null };
   }, [taskId]);
-  const [isTrueMaxHoldEnabled, setIsTrueMaxHoldEnabled] = useState(false);
-  const [trueMaxHoldClearKey, setTrueMaxHoldClearKey] = useState(0);
-  const trueMaxHoldEnabledRef = useRef(isTrueMaxHoldEnabled);
+  const [isMaxHoldEnabled, setIsMaxHoldEnabled] = useState(false);
+  const [maxHoldClearKey, setMaxHoldClearKey] = useState(0);
+  const maxHoldEnabledRef = useRef(isMaxHoldEnabled);
   useEffect(() => {
-    trueMaxHoldEnabledRef.current = isTrueMaxHoldEnabled;
-  }, [isTrueMaxHoldEnabled]);
+    maxHoldEnabledRef.current = isMaxHoldEnabled;
+  }, [isMaxHoldEnabled]);
 
   useEffect(() => {
     const handleFFTData = (event: Event) => {
@@ -93,52 +93,52 @@ export const VisualizationView = memo(function VisualizationView({
 
       const bins = incoming.bins;
       if (bins.length === 0) {
-        fftPersistenceRef.current = {
+        fftTracesRef.current = {
           current: null,
+          persistence: null,
           maxHold: null,
-          trueMaxHold: null,
         };
         return;
       }
 
       const snapshot = new Float32Array(bins);
-      const persistence = fftPersistenceRef.current;
+      const traces = fftTracesRef.current;
 
+      let persistence: Float32Array | null = null;
       let maxHold: Float32Array | null = null;
-      let trueMaxHold: Float32Array | null = null;
-      if (FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false) {
-        maxHold = persistence.maxHold;
-        if (!maxHold || maxHold.length !== snapshot.length) {
-          maxHold = new Float32Array(snapshot);
+      if (FFT_SETTINGS_CONFIG.persistenceEnabled !== false) {
+        persistence = traces.persistence;
+        if (!persistence || persistence.length !== snapshot.length) {
+          persistence = new Float32Array(snapshot);
         } else {
-          const decay = FFT_PERSISTENCE_CONFIG.maxHoldDecay;
+          const decay = FFT_SETTINGS_CONFIG.persistenceDecay;
           for (let i = 0; i < snapshot.length; i += 1) {
-            maxHold[i] = Math.max(maxHold[i] * decay, snapshot[i]);
+            persistence[i] = Math.max(persistence[i] * decay, snapshot[i]);
           }
         }
       }
 
-      if (trueMaxHoldEnabledRef.current) {
-        trueMaxHold = persistence.trueMaxHold;
-        if (!trueMaxHold || trueMaxHold.length !== snapshot.length) {
-          trueMaxHold = new Float32Array(snapshot);
+      if (maxHoldEnabledRef.current) {
+        maxHold = traces.maxHold;
+        if (!maxHold || maxHold.length !== snapshot.length) {
+          maxHold = new Float32Array(snapshot);
         } else {
           for (let i = 0; i < snapshot.length; i += 1) {
             const value = snapshot[i];
             if (!Number.isFinite(value)) continue;
-            if (!Number.isFinite(trueMaxHold[i]) || trueMaxHold[i] < value) {
-              trueMaxHold[i] = value;
+            if (!Number.isFinite(maxHold[i]) || maxHold[i] < value) {
+              maxHold[i] = value;
             }
           }
         }
       } else {
-        trueMaxHold = null;
+        maxHold = null;
       }
 
-      fftPersistenceRef.current = {
+      fftTracesRef.current = {
         current: snapshot,
+        persistence,
         maxHold,
-        trueMaxHold,
       };
     };
 
@@ -153,46 +153,45 @@ export const VisualizationView = memo(function VisualizationView({
     });
 
     const fftData = currentFFTRef.current;
-    if (fftData && fftData.bins.length > 0) {
+    const traces = fftTracesRef.current;
+    const candidateSources = [
+      traces.current,
+      FFT_SETTINGS_CONFIG.persistenceEnabled !== false
+        ? traces.persistence
+        : null,
+      isMaxHoldEnabled ? traces.maxHold : null,
+    ].filter((source): source is Float32Array => !!source);
+
+    const measurementSources =
+      candidateSources.length > 0
+        ? candidateSources
+        : fftData && fftData.bins.length > 0
+        ? [fftData.bins]
+        : [];
+
+    if (measurementSources.length > 0) {
       let nextMin = Infinity;
       let nextMax = -Infinity;
-      const persistence = fftPersistenceRef.current;
-      const sources: (Float32Array | null | undefined)[] = [
-        persistence.current,
-        FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false
-          ? persistence.maxHold
-          : null,
-        isTrueMaxHoldEnabled ? persistence.trueMaxHold : null,
-      ];
-      if (sources.every((source) => !source)) {
-        for (let i = 0; i < fftData.bins.length; i += 1) {
-          const value = fftData.bins[i];
+      for (const array of measurementSources) {
+        for (let i = 0; i < array.length; i += 1) {
+          const value = array[i];
           if (Number.isFinite(value)) {
             nextMin = Math.min(nextMin, value);
             nextMax = Math.max(nextMax, value);
           }
         }
-      } else {
-        for (const array of sources) {
-          if (!array) continue;
-          for (let i = 0; i < array.length; i += 1) {
-            const value = array[i];
-            if (Number.isFinite(value)) {
-              nextMin = Math.min(nextMin, value);
-              nextMax = Math.max(nextMax, value);
-            }
-          }
-        }
       }
-      if (
-        Number.isFinite(nextMin) &&
-        Number.isFinite(nextMax) &&
-        nextMax > nextMin
-      ) {
-        const range = nextMax - nextMin;
-        const padding = range * 0.1;
-        setMinDb(Math.floor(nextMin - padding));
-        setMaxDb(Math.ceil(nextMax + padding));
+      if (Number.isFinite(nextMin) && Number.isFinite(nextMax)) {
+        if (nextMax > nextMin) {
+          const range = nextMax - nextMin;
+          const padding = range * 0.1;
+          setMinDb(Math.floor(nextMin - padding));
+          setMaxDb(Math.ceil(nextMax + padding));
+        } else {
+          const padding = Math.max(5, Math.abs(nextMin) * 0.1);
+          setMinDb(Math.floor(nextMin - padding));
+          setMaxDb(Math.ceil(nextMax + padding));
+        }
       }
     } else {
       setMinDb(-100);
@@ -200,7 +199,7 @@ export const VisualizationView = memo(function VisualizationView({
     }
 
     setWaterfallResetKey((value) => value + 1);
-  }, [centerFreq, sampleRate, isTrueMaxHoldEnabled]);
+  }, [centerFreq, sampleRate, isMaxHoldEnabled]);
 
   useEffect(() => {
     autoRange();
@@ -247,18 +246,18 @@ export const VisualizationView = memo(function VisualizationView({
     };
   }, [onRenderFpsChange]);
 
-  const resetTrueMaxHold = useCallback(() => {
-    fftPersistenceRef.current.trueMaxHold = null;
-    setTrueMaxHoldClearKey((value) => value + 1);
+  const resetMaxHold = useCallback(() => {
+    fftTracesRef.current.maxHold = null;
+    setMaxHoldClearKey((value) => value + 1);
   }, []);
 
-  const handleToggleTrueMaxHold = useCallback(() => {
-    setIsTrueMaxHoldEnabled((enabled) => {
+  const handleToggleMaxHold = useCallback(() => {
+    setIsMaxHoldEnabled((enabled) => {
       const next = !enabled;
-      resetTrueMaxHold();
+      resetMaxHold();
       return next;
     });
-  }, [resetTrueMaxHold]);
+  }, [resetMaxHold]);
 
   useEffect(() => {
     const measureElement = (element: HTMLElement) => {
@@ -390,8 +389,8 @@ export const VisualizationView = memo(function VisualizationView({
                 theme={theme}
                 onRenderFpsChange={setFftRenderFps}
                 interactionMode={interactionMode}
-                trueMaxHoldEnabled={isTrueMaxHoldEnabled}
-                trueMaxHoldClearKey={trueMaxHoldClearKey}
+                maxHoldEnabled={isMaxHoldEnabled}
+                maxHoldClearKey={maxHoldClearKey}
               />
             </div>
           )}
@@ -442,10 +441,10 @@ export const VisualizationView = memo(function VisualizationView({
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
             onAutoRange={autoRange}
-            trueMaxHoldEnabled={isTrueMaxHoldEnabled}
-            onToggleTrueMaxHold={handleToggleTrueMaxHold}
-            onClearTrueMaxHold={resetTrueMaxHold}
-            trueMaxHoldControlsDisabled={maxHoldControlsDisabled}
+            maxHoldEnabled={isMaxHoldEnabled}
+            onToggleMaxHold={handleToggleMaxHold}
+            onClearMaxHold={resetMaxHold}
+            maxHoldControlsDisabled={maxHoldControlsDisabled}
           />
         </div>
       </div>
