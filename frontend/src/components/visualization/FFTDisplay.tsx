@@ -30,8 +30,12 @@ interface FFTDisplayProps {
 }
 
 const MAX_POINTS = 2048;
-const MAX_HOLD_TARGET_FPS = 10;
-const MAX_HOLD_INTERVAL_MS = 1000 / MAX_HOLD_TARGET_FPS;
+const MAX_HOLD_ENABLED = FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false;
+const MAX_HOLD_INTERVAL_MS =
+  FFT_PERSISTENCE_CONFIG.maxHoldTargetFps &&
+  FFT_PERSISTENCE_CONFIG.maxHoldTargetFps > 0
+    ? 1000 / FFT_PERSISTENCE_CONFIG.maxHoldTargetFps
+    : 0;
 
 interface LineBuffers {
   freqs: Float32Array;
@@ -163,13 +167,17 @@ export const FFTDisplay = memo(function FFTDisplay({
 
     cleanupHandles();
 
-    const maxHoldLine = plot.addLine({
-      color: vizTheme.persistence.maxHoldColor,
-      lineWidth: FFT_PERSISTENCE_CONFIG.maxHoldLineWidth,
-      opacity: FFT_PERSISTENCE_CONFIG.maxHoldOpacity,
-      surface: "data:maxHold",
-    });
-    maxHoldTraceRef.current = maxHoldLine;
+    if (MAX_HOLD_ENABLED) {
+      const maxHoldLine = plot.addLine({
+        color: vizTheme.persistence.maxHoldColor,
+        lineWidth: FFT_PERSISTENCE_CONFIG.maxHoldLineWidth,
+        opacity: FFT_PERSISTENCE_CONFIG.maxHoldOpacity,
+        surface: "data:maxHold",
+      });
+      maxHoldTraceRef.current = maxHoldLine;
+    } else {
+      maxHoldTraceRef.current = null;
+    }
 
     const currentLine = plot.addLine({
       color: vizTheme.traceColor,
@@ -264,24 +272,29 @@ export const FFTDisplay = memo(function FFTDisplay({
         }
       }
       smoothingRef.current = smoothed;
-      const maxHoldDecayPerSecond = Math.min(
-        Math.max(FFT_PERSISTENCE_CONFIG.maxHoldDecay, Number.EPSILON),
-        1
-      );
-      const frameDecay =
-        deltaSeconds > 0 ? Math.pow(maxHoldDecayPerSecond, deltaSeconds) : 1;
-      const maxHoldDecayDb = frameDecay === 1 ? 0 : 10 * Math.log10(frameDecay);
-      let maxHold = maxHoldRef.current;
-      if (!maxHold || maxHold.length !== smoothed.length) {
-        maxHold = new Float32Array(smoothed);
-      } else {
-        for (let i = 0; i < smoothed.length; i += 1) {
-          const decayedValue =
-            maxHoldDecayDb === 0 ? maxHold[i] : maxHold[i] + maxHoldDecayDb;
-          maxHold[i] = Math.max(decayedValue, smoothed[i]);
+      if (MAX_HOLD_ENABLED) {
+        const maxHoldDecayPerSecond = Math.min(
+          Math.max(FFT_PERSISTENCE_CONFIG.maxHoldDecay, Number.EPSILON),
+          1
+        );
+        const frameDecay =
+          deltaSeconds > 0 ? Math.pow(maxHoldDecayPerSecond, deltaSeconds) : 1;
+        const maxHoldDecayDb =
+          frameDecay === 1 ? 0 : 10 * Math.log10(frameDecay);
+        let maxHold = maxHoldRef.current;
+        if (!maxHold || maxHold.length !== smoothed.length) {
+          maxHold = new Float32Array(smoothed);
+        } else {
+          for (let i = 0; i < smoothed.length; i += 1) {
+            const decayedValue =
+              maxHoldDecayDb === 0 ? maxHold[i] : maxHold[i] + maxHoldDecayDb;
+            maxHold[i] = Math.max(decayedValue, smoothed[i]);
+          }
         }
+        maxHoldRef.current = maxHold;
+      } else {
+        maxHoldRef.current = null;
       }
-      maxHoldRef.current = maxHold;
       fftMetaRef.current = {
         sampleRate: incomingFFT.sampleRate,
         centerFreq: incomingFFT.centerFreq,
@@ -345,23 +358,27 @@ export const FFTDisplay = memo(function FFTDisplay({
 
       trace.setXY(freqView, powerView);
 
-      const maxHoldLine = maxHoldTraceRef.current;
-      const maxHoldSampled = sampleLine(maxHoldRef.current);
-      if (maxHoldLine) {
-        const sinceLast = nowTs - (lastMaxHoldDrawRef.current || 0);
-        const shouldUpdate = sinceLast >= MAX_HOLD_INTERVAL_MS;
-        const shouldClear = !maxHoldSampled;
-        if (shouldUpdate || shouldClear) {
-          if (maxHoldSampled) {
-            const maxHoldView =
-              maxPoints === MAX_POINTS
-                ? maxHoldSampled
-                : maxHoldSampled.subarray(0, maxPoints);
-            maxHoldLine.setXY(freqView, maxHoldView);
-          } else {
-            maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
+      if (MAX_HOLD_ENABLED) {
+        const maxHoldLine = maxHoldTraceRef.current;
+        const maxHoldSampled = sampleLine(maxHoldRef.current);
+        if (maxHoldLine) {
+          const sinceLast = nowTs - (lastMaxHoldDrawRef.current || 0);
+          const shouldUpdate =
+            MAX_HOLD_INTERVAL_MS === 0 ||
+            sinceLast >= MAX_HOLD_INTERVAL_MS;
+          const shouldClear = !maxHoldSampled;
+          if (shouldUpdate || shouldClear) {
+            if (maxHoldSampled) {
+              const maxHoldView =
+                maxPoints === MAX_POINTS
+                  ? maxHoldSampled
+                  : maxHoldSampled.subarray(0, maxPoints);
+              maxHoldLine.setXY(freqView, maxHoldView);
+            } else {
+              maxHoldLine.setXY(new Float32Array(0), new Float32Array(0));
+            }
+            lastMaxHoldDrawRef.current = nowTs;
           }
-          lastMaxHoldDrawRef.current = nowTs;
         }
       }
 

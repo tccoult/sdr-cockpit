@@ -1,4 +1,6 @@
 export const FFT_PERSISTENCE_CONFIG = {
+  maxHoldEnabled: true,
+  maxHoldTargetFps: 10,
   maxHoldDecay: 0.8, // per-second decay multiplier for max-hold envelopes
   maxHoldOpacity: 0.2,
   maxHoldLineWidth: 1.25,

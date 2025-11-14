@@ -96,13 +96,16 @@ export const VisualizationView = memo(function VisualizationView({
       const snapshot = new Float32Array(bins);
       const persistence = fftPersistenceRef.current;
 
-      let maxHold = persistence.maxHold;
-      if (!maxHold || maxHold.length !== snapshot.length) {
-        maxHold = new Float32Array(snapshot);
-      } else {
-        const decay = FFT_PERSISTENCE_CONFIG.maxHoldDecay;
-        for (let i = 0; i < snapshot.length; i += 1) {
-          maxHold[i] = Math.max(maxHold[i] * decay, snapshot[i]);
+      let maxHold: Float32Array | null = null;
+      if (FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false) {
+        maxHold = persistence.maxHold;
+        if (!maxHold || maxHold.length !== snapshot.length) {
+          maxHold = new Float32Array(snapshot);
+        } else {
+          const decay = FFT_PERSISTENCE_CONFIG.maxHoldDecay;
+          for (let i = 0; i < snapshot.length; i += 1) {
+            maxHold[i] = Math.max(maxHold[i] * decay, snapshot[i]);
+          }
         }
       }
 
@@ -129,7 +132,9 @@ export const VisualizationView = memo(function VisualizationView({
       const persistence = fftPersistenceRef.current;
       const sources: (Float32Array | null | undefined)[] = [
         persistence.current,
-        persistence.maxHold,
+        FFT_PERSISTENCE_CONFIG.maxHoldEnabled !== false
+          ? persistence.maxHold
+          : null,
       ];
       if (sources.every((source) => !source)) {
         for (let i = 0; i < fftData.bins.length; i += 1) {
