@@ -88,10 +88,7 @@ export function createSurfaceManager(
   container.appendChild(dataCanvas);
   container.appendChild(overlayCanvas);
 
-  const createHandle = (
-    surface: PlotSurface,
-    canvas: HTMLCanvasElement
-  ): SurfaceHandle => {
+  const createHandle = (canvas: HTMLCanvasElement): SurfaceHandle => {
     const ctx = ensureContext(canvas);
     let dirty = true;
     let dimensions: PlotDimensions = {
@@ -138,7 +135,7 @@ export function createSurfaceManager(
   };
 
   const registerSurface = (surface: PlotSurface, canvas: HTMLCanvasElement) => {
-    const handle = createHandle(surface, canvas);
+    const handle = createHandle(canvas);
     surfaceStates.set(surface, { handle, canvas });
     if (lastDimensions) {
       handle.resize(lastDimensions);
