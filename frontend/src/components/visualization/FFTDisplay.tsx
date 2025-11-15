@@ -13,6 +13,11 @@ import type { Theme } from "../app/theme-context";
 import { FFT_SETTINGS_CONFIG, FFT_SMOOTHING_FACTOR } from "./FFTSettings";
 import type { InteractionMode } from "./VisualizationControls";
 
+export interface FFTRangeMetrics {
+  minDb: number;
+  maxDb: number;
+}
+
 interface FFTDisplayProps {
   width: number;
   height: number;
@@ -26,6 +31,8 @@ interface FFTDisplayProps {
   interactionMode: InteractionMode;
   maxHoldEnabled: boolean;
   maxHoldClearKey: number;
+  rangeRequestKey: number;
+  onRangeMetrics?: (metrics: FFTRangeMetrics | null) => void;
 }
 
 const MAX_POINTS = 1024;
@@ -75,6 +82,8 @@ export const FFTDisplay = memo(function FFTDisplay({
   interactionMode,
   maxHoldEnabled,
   maxHoldClearKey,
+  rangeRequestKey,
+  onRangeMetrics,
 }: FFTDisplayProps) {
   const isDark = theme === "dark";
   const vizTheme = useMemo(() => getVisualizationTheme(isDark), [isDark]);
@@ -493,6 +502,42 @@ export const FFTDisplay = memo(function FFTDisplay({
     window.addEventListener(eventName, handleFFTData);
     return () => window.removeEventListener(eventName, handleFFTData);
   }, [plot, frequencyRange]);
+
+  useEffect(() => {
+    if (!onRangeMetrics || rangeRequestKey === 0) {
+      return;
+    }
+    const sources: Float32Array[] = [];
+    const addSource = (source: Float32Array | null) => {
+      if (source && source.length > 0) {
+        sources.push(source);
+      }
+    };
+    addSource(smoothingRef.current);
+    if (PERSISTENCE_ENABLED) {
+      addSource(persistenceRef.current);
+    }
+    addSource(maxHoldRef.current);
+    if (sources.length === 0) {
+      onRangeMetrics(null);
+      return;
+    }
+    let minValue = Infinity;
+    let maxValue = -Infinity;
+    for (const array of sources) {
+      for (let i = 0; i < array.length; i += 1) {
+        const value = array[i];
+        if (!Number.isFinite(value)) continue;
+        if (value < minValue) minValue = value;
+        if (value > maxValue) maxValue = value;
+      }
+    }
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+      onRangeMetrics(null);
+      return;
+    }
+    onRangeMetrics({ minDb: minValue, maxDb: maxValue });
+  }, [rangeRequestKey, onRangeMetrics]);
 
   return (
     <div

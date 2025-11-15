@@ -1,14 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import {
-  FFTData,
-  FFTDataBatch,
-  FrequencyRange,
-  VisualizationMode,
-} from "../../types/sdr";
+import { FrequencyRange, VisualizationMode } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { useTheme } from "../app/useTheme";
-import { FFTDisplay } from "./FFTDisplay";
-import { FFT_SETTINGS_CONFIG } from "./FFTSettings";
+import { FFTDisplay, type FFTRangeMetrics } from "./FFTDisplay";
 import { SpectrogramDisplay } from "./SpectrogramDisplay";
 import {
   InteractionMode,
@@ -58,148 +52,50 @@ export const VisualizationView = memo(function VisualizationView({
   const [spectrogramRenderFps, setSpectrogramRenderFps] = useState(0);
   const [interactionMode, setInteractionMode] =
     useState<InteractionMode>("pan");
+  const [rangeRequestKey, setRangeRequestKey] = useState(0);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
     endFreq: centerFreq + sampleRate / 2,
   });
 
-  const currentFFTRef = useRef<FFTData | null>(null);
-  const fftTracesRef = useRef<{
-    current: Float32Array | null;
-    persistence: Float32Array | null;
-    maxHold: Float32Array | null;
-  }>({ current: null, persistence: null, maxHold: null });
-  useEffect(() => {
-    currentFFTRef.current = null;
-    fftTracesRef.current = { current: null, persistence: null, maxHold: null };
-  }, [taskId]);
   const [isMaxHoldEnabled, setIsMaxHoldEnabled] = useState(false);
   const [maxHoldClearKey, setMaxHoldClearKey] = useState(0);
-  const maxHoldEnabledRef = useRef(isMaxHoldEnabled);
-  useEffect(() => {
-    maxHoldEnabledRef.current = isMaxHoldEnabled;
-  }, [isMaxHoldEnabled]);
-
-  useEffect(() => {
-    const handleFFTData = (event: Event) => {
-      const customEvent = event as CustomEvent<FFTDataBatch>;
-      const frames = customEvent.detail?.frames;
-      if (!frames || frames.length === 0) {
-        return;
-      }
-      const incoming = frames[frames.length - 1];
-      currentFFTRef.current = incoming;
-
-      const bins = incoming.bins;
-      if (bins.length === 0) {
-        fftTracesRef.current = {
-          current: null,
-          persistence: null,
-          maxHold: null,
-        };
-        return;
-      }
-
-      const snapshot = new Float32Array(bins);
-      const traces = fftTracesRef.current;
-
-      let persistence: Float32Array | null = null;
-      let maxHold: Float32Array | null = null;
-      if (FFT_SETTINGS_CONFIG.persistenceEnabled !== false) {
-        persistence = traces.persistence;
-        if (!persistence || persistence.length !== snapshot.length) {
-          persistence = new Float32Array(snapshot);
-        } else {
-          const decay = FFT_SETTINGS_CONFIG.persistenceDecay;
-          for (let i = 0; i < snapshot.length; i += 1) {
-            persistence[i] = Math.max(persistence[i] * decay, snapshot[i]);
-          }
-        }
-      }
-
-      if (maxHoldEnabledRef.current) {
-        maxHold = traces.maxHold;
-        if (!maxHold || maxHold.length !== snapshot.length) {
-          maxHold = new Float32Array(snapshot);
-        } else {
-          for (let i = 0; i < snapshot.length; i += 1) {
-            const value = snapshot[i];
-            if (!Number.isFinite(value)) continue;
-            if (!Number.isFinite(maxHold[i]) || maxHold[i] < value) {
-              maxHold[i] = value;
-            }
-          }
-        }
-      } else {
-        maxHold = null;
-      }
-
-      fftTracesRef.current = {
-        current: snapshot,
-        persistence,
-        maxHold,
-      };
-    };
-
-    window.addEventListener("fft-data", handleFFTData);
-    return () => window.removeEventListener("fft-data", handleFFTData);
-  }, []);
-
   const autoRange = useCallback(() => {
     setFrequencyRange({
       startFreq: centerFreq - sampleRate / 2,
       endFreq: centerFreq + sampleRate / 2,
     });
-
-    const fftData = currentFFTRef.current;
-    const traces = fftTracesRef.current;
-    const candidateSources = [
-      traces.current,
-      FFT_SETTINGS_CONFIG.persistenceEnabled !== false
-        ? traces.persistence
-        : null,
-      isMaxHoldEnabled ? traces.maxHold : null,
-    ].filter((source): source is Float32Array => !!source);
-
-    const measurementSources =
-      candidateSources.length > 0
-        ? candidateSources
-        : fftData && fftData.bins.length > 0
-        ? [fftData.bins]
-        : [];
-
-    if (measurementSources.length > 0) {
-      let nextMin = Infinity;
-      let nextMax = -Infinity;
-      for (const array of measurementSources) {
-        for (let i = 0; i < array.length; i += 1) {
-          const value = array[i];
-          if (Number.isFinite(value)) {
-            nextMin = Math.min(nextMin, value);
-            nextMax = Math.max(nextMax, value);
-          }
-        }
-      }
-      if (Number.isFinite(nextMin) && Number.isFinite(nextMax)) {
-        if (nextMax > nextMin) {
-          const range = nextMax - nextMin;
-          const padding = range * 0.1;
-          setMinDb(Math.floor(nextMin - padding));
-          setMaxDb(Math.ceil(nextMax + padding));
-        } else {
-          const padding = Math.max(5, Math.abs(nextMin) * 0.1);
-          setMinDb(Math.floor(nextMin - padding));
-          setMaxDb(Math.ceil(nextMax + padding));
-        }
-      }
-    } else {
-      setMinDb(-100);
-      setMaxDb(-20);
-    }
-
+    setRangeRequestKey((value) => value + 1);
     setWaterfallResetKey((value) => value + 1);
-  }, [centerFreq, sampleRate, isMaxHoldEnabled]);
+  }, [centerFreq, sampleRate]);
+
+  const handleFftRangeMetrics = useCallback(
+    (metrics: FFTRangeMetrics | null) => {
+      if (!metrics) {
+        setMinDb(-100);
+        setMaxDb(-20);
+        return;
+      }
+      const { minDb: nextMin, maxDb: nextMax } = metrics;
+      if (!Number.isFinite(nextMin) || !Number.isFinite(nextMax)) {
+        setMinDb(-100);
+        setMaxDb(-20);
+        return;
+      }
+      if (nextMax > nextMin) {
+        const range = nextMax - nextMin;
+        const padding = range * 0.1;
+        setMinDb(Math.floor(nextMin - padding));
+        setMaxDb(Math.ceil(nextMax + padding));
+      } else {
+        const padding = Math.max(5, Math.abs(nextMin) * 0.1);
+        setMinDb(Math.floor(nextMin - padding));
+        setMaxDb(Math.ceil(nextMax + padding));
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     autoRange();
@@ -247,7 +143,6 @@ export const VisualizationView = memo(function VisualizationView({
   }, [onRenderFpsChange]);
 
   const resetMaxHold = useCallback(() => {
-    fftTracesRef.current.maxHold = null;
     setMaxHoldClearKey((value) => value + 1);
   }, []);
 
@@ -391,6 +286,8 @@ export const VisualizationView = memo(function VisualizationView({
                 interactionMode={interactionMode}
                 maxHoldEnabled={isMaxHoldEnabled}
                 maxHoldClearKey={maxHoldClearKey}
+                rangeRequestKey={rangeRequestKey}
+                onRangeMetrics={handleFftRangeMetrics}
               />
             </div>
           )}
