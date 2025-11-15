@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "./components/app/useTheme";
 import { Button } from "./components/common/Button";
 import { Drawer } from "./components/common/Drawer";
@@ -15,7 +15,7 @@ import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPa
 import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
 import { TaskWizard } from "./components/tasks/TaskWizard";
 import { VisualizationView } from "./components/visualization/VisualizationView";
-import { useDataStream, useTasks } from "./hooks";
+import { useDataStream, useEscapeKey, useMediaQuery, useTasks } from "./hooks";
 import { getHealthIndicator } from "./styles/theme";
 import { TaskStatus } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
@@ -41,7 +41,8 @@ function App() {
   // Mobile navigation state
   const [mobileView, setMobileView] = useState<MobileView>("visualization");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+
+  const isMobile = useMediaQuery("(max-width: 1023px)");
 
   // Settings modal state
   const [activeSettingsPanel, setActiveSettingsPanel] =
@@ -49,8 +50,29 @@ function App() {
   const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
 
   // Mock data
-  const bistResult = getMockBistResult();
-  const systemInfo = getMockSystemInfo();
+  const bistResult = useMemo(() => getMockBistResult(), []);
+  const systemInfo = useMemo(() => getMockSystemInfo(), []);
+
+  const openTaskWizard = useCallback(() => setIsWizardOpen(true), []);
+  const closeTaskWizard = useCallback(() => setIsWizardOpen(false), []);
+  const openUpdateWizard = useCallback(
+    () => setIsUpdateWizardOpen(true),
+    []
+  );
+  const closeUpdateWizard = useCallback(
+    () => setIsUpdateWizardOpen(false),
+    []
+  );
+  const closeSettingsPanel = useCallback(
+    () => setActiveSettingsPanel(null),
+    []
+  );
+  const closeMobileNav = useCallback(() => setIsMobileNavOpen(false), []);
+  const closeSystemHealthPanel = useCallback(
+    () => setIsSystemHealthPanelOpen(false),
+    []
+  );
+  const closeTaskDrawer = useCallback(() => setIsTaskDrawerOpen(false), []);
 
   // Task management hook
   const {
@@ -95,44 +117,31 @@ function App() {
     }
   }, [isWizardOpen, selectedTaskId]);
 
-  // Detect mobile screen size (< 1024px)
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+    if (!isMobile) {
+      closeMobileNav();
+    }
+  }, [isMobile, closeMobileNav]);
 
-    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsMobile(e.matches);
-    };
-
-    // Set initial value
-    handleMediaChange(mediaQuery);
-
-    // Listen for changes
-    mediaQuery.addEventListener("change", handleMediaChange);
-    return () => mediaQuery.removeEventListener("change", handleMediaChange);
-  }, []);
-
-  // ESC key handling for modals
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (activeSettingsPanel) {
-          setActiveSettingsPanel(null);
-        } else if (isUpdateWizardOpen) {
-          setIsUpdateWizardOpen(false);
-        } else if (isMobileNavOpen) {
-          setIsMobileNavOpen(false);
-        } else if (!isSystemHealthPanelPinned && isSystemHealthPanelOpen) {
-          setIsSystemHealthPanelOpen(false);
-        } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
-          setIsTaskDrawerOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+  const handleEscape = useCallback(() => {
+    if (activeSettingsPanel) {
+      closeSettingsPanel();
+    } else if (isUpdateWizardOpen) {
+      closeUpdateWizard();
+    } else if (isMobileNavOpen) {
+      closeMobileNav();
+    } else if (!isSystemHealthPanelPinned && isSystemHealthPanelOpen) {
+      closeSystemHealthPanel();
+    } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
+      closeTaskDrawer();
+    }
   }, [
     activeSettingsPanel,
+    closeMobileNav,
+    closeSettingsPanel,
+    closeSystemHealthPanel,
+    closeTaskDrawer,
+    closeUpdateWizard,
     isUpdateWizardOpen,
     isMobileNavOpen,
     isSystemHealthPanelOpen,
@@ -141,31 +150,46 @@ function App() {
     isTaskDrawerPinned,
   ]);
 
+  const escapeHandlerEnabled =
+    Boolean(activeSettingsPanel) ||
+    isUpdateWizardOpen ||
+    isMobileNavOpen ||
+    (!isSystemHealthPanelPinned && isSystemHealthPanelOpen) ||
+    (!isTaskDrawerPinned && isTaskDrawerOpen);
+
+  useEscapeKey(handleEscape, escapeHandlerEnabled);
+
   // Close unpinned drawers when selecting a task
-  const handleSelectTask = (taskId: string) => {
-    selectTask(taskId);
-    if (!isTaskDrawerPinned) {
-      setIsTaskDrawerOpen(false);
-    }
-  };
+  const handleSelectTask = useCallback(
+    (taskId: string) => {
+      selectTask(taskId);
+      if (!isTaskDrawerPinned) {
+        closeTaskDrawer();
+      }
+    },
+    [closeTaskDrawer, isTaskDrawerPinned, selectTask]
+  );
 
   // Handle settings menu selection
-  const handleSettingsSelect = (item: SettingsMenuItem) => {
-    if (item === "update") {
-      setIsUpdateWizardOpen(true);
-    } else {
-      setActiveSettingsPanel(item);
-    }
-  };
+  const handleSettingsSelect = useCallback(
+    (item: SettingsMenuItem) => {
+      if (item === "update") {
+        openUpdateWizard();
+      } else {
+        setActiveSettingsPanel(item);
+      }
+    },
+    [openUpdateWizard, setActiveSettingsPanel]
+  );
 
   // Handle hamburger button click (mobile nav or task drawer based on screen size)
-  const handleToggleMenu = () => {
+  const handleToggleMenu = useCallback(() => {
     if (isMobile) {
       setIsMobileNavOpen((prev) => !prev);
     } else {
       setIsTaskDrawerOpen((prev) => !prev);
     }
-  };
+  }, [isMobile]);
 
   // Calculate main area margin based on pinned drawers (desktop only)
   const mainMarginLeft = isMobile
@@ -235,11 +259,7 @@ function App() {
                     Select a task from the roster to view spectrum activity.
                   </p>
                 </div>
-                <Button
-                  onClick={() => setIsWizardOpen(true)}
-                  variant="secondary"
-                  size="lg"
-                >
+                <Button onClick={openTaskWizard} variant="secondary" size="lg">
                   + Create New Task
                 </Button>
               </div>
@@ -296,7 +316,7 @@ function App() {
                     selectedTaskId={selectedTaskId}
                     isDiscovering={isDiscovering}
                     onSelectTask={selectTask}
-                    onCreateTask={() => setIsWizardOpen(true)}
+                    onCreateTask={openTaskWizard}
                   />
                 </div>
               </div>
@@ -316,7 +336,7 @@ function App() {
         {/* Task Drawer */}
         <Drawer
           isOpen={isTaskDrawerOpen}
-          onClose={() => setIsTaskDrawerOpen(false)}
+          onClose={closeTaskDrawer}
           position="left"
           title="Tasks"
           isPinned={isTaskDrawerPinned}
@@ -340,7 +360,7 @@ function App() {
               selectedTaskId={selectedTaskId}
               isDiscovering={isDiscovering}
               onSelectTask={handleSelectTask}
-              onCreateTask={() => setIsWizardOpen(true)}
+              onCreateTask={openTaskWizard}
             />
           </div>
         </Drawer>
@@ -348,7 +368,7 @@ function App() {
         {/* System Health Drawer */}
         <Drawer
           isOpen={isSystemHealthPanelOpen}
-          onClose={() => setIsSystemHealthPanelOpen(false)}
+          onClose={closeSystemHealthPanel}
           position="right"
           title="System Health"
           isPinned={isSystemHealthPanelPinned}
@@ -363,7 +383,7 @@ function App() {
       {/* Mobile Navigation - only on mobile */}
       <MobileNav
         isOpen={isMobileNavOpen}
-        onClose={() => setIsMobileNavOpen(false)}
+        onClose={closeMobileNav}
         currentView={mobileView}
         onViewChange={setMobileView}
         onOpenSettings={handleSettingsSelect}
@@ -375,7 +395,7 @@ function App() {
       {/* Task Wizard */}
       <TaskWizard
         isOpen={isWizardOpen}
-        onClose={() => setIsWizardOpen(false)}
+        onClose={closeTaskWizard}
         onCreateRxTask={createRxTask}
         onCreateTxTask={createTxTask}
       />
@@ -386,7 +406,7 @@ function App() {
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => setActiveSettingsPanel(null)}
+            onClick={closeSettingsPanel}
           />
 
           {/* Modal */}
@@ -402,7 +422,7 @@ function App() {
               </h2>
               <button
                 type="button"
-                onClick={() => setActiveSettingsPanel(null)}
+                onClick={closeSettingsPanel}
                 className="rounded-md p-1 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
               >
                 <X size={20} />
@@ -429,7 +449,7 @@ function App() {
       {/* System Update Wizard */}
       <SystemUpdateWizard
         isOpen={isUpdateWizardOpen}
-        onClose={() => setIsUpdateWizardOpen(false)}
+        onClose={closeUpdateWizard}
       />
     </>
   );

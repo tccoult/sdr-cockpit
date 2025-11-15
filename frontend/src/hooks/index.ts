@@ -9,3 +9,6 @@ export { useDataStream } from './useDataStream';
 export type { UseDataStreamOptions, UseDataStreamResult } from './useDataStream';
 
 export { usePlotRenderFps } from './usePlotRenderFps';
+
+export { useMediaQuery } from './useMediaQuery';
+export { useEscapeKey } from './useEscapeKey';
