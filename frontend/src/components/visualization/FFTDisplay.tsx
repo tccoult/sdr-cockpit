@@ -183,7 +183,7 @@ export const FFTDisplay = memo(function FFTDisplay({
 
     if (PERSISTENCE_ENABLED) {
       const persistenceLine = plot.addLine({
-        color: vizTheme.persistence.maxHoldColor,
+        color: vizTheme.persistenceColor,
         lineWidth: FFT_SETTINGS_CONFIG.persistenceLineWidth,
         opacity: FFT_SETTINGS_CONFIG.persistenceOpacity,
         surface: "data:persistence",
@@ -212,7 +212,7 @@ export const FFTDisplay = memo(function FFTDisplay({
     }
 
     const maxHoldLine = plot.addLine({
-      color: vizTheme.persistence.maxHoldColor,
+      color: vizTheme.maxHoldColor,
       lineWidth: FFT_SETTINGS_CONFIG.maxHoldLineWidth,
       opacity: FFT_SETTINGS_CONFIG.maxHoldOpacity,
       surface: "data:maxHold",

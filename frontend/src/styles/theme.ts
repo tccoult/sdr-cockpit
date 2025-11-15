@@ -33,10 +33,8 @@ export interface VisualizationTheme {
   tooltipText: string;
   scaleBackground?: string;
   scaleText?: string;
-  persistence: {
-    ghostColor: string;
-    maxHoldColor: string;
-  };
+  persistenceColor: string;
+  maxHoldColor: string;
 }
 
 const LIGHT_VISUALIZATION_THEME: VisualizationTheme = {
@@ -51,10 +49,8 @@ const LIGHT_VISUALIZATION_THEME: VisualizationTheme = {
   tooltipText: "#1F2937",
   scaleBackground: "rgba(255, 255, 255, 0.92)",
   scaleText: "#1F2937",
-  persistence: {
-    ghostColor: "#8B5CF6",
-    maxHoldColor: "#7C3AED",
-  },
+  persistenceColor: "#7C3AED",
+  maxHoldColor: "#7C3AED",
 };
 
 const DARK_VISUALIZATION_THEME: VisualizationTheme = {
@@ -69,10 +65,8 @@ const DARK_VISUALIZATION_THEME: VisualizationTheme = {
   tooltipText: "#F8FAFC",
   scaleBackground: "rgba(14, 16, 24, 0.85)",
   scaleText: "#F8FAFC",
-  persistence: {
-    ghostColor: "#A855F7",
-    maxHoldColor: "#7C3AED",
-  },
+  persistenceColor: "#7C3AED",
+  maxHoldColor: "#7C3AED",
 };
 
 function resolveMode(input: boolean | "dark" | "light"): boolean {
@@ -94,12 +88,12 @@ export function getVisualizationTheme(
     rgbStringToHex(getCSSVariable("--viz-text")) || fallback.textColor;
   const traceColor =
     rgbStringToHex(getCSSVariable("--viz-trace")) || fallback.traceColor;
-  const ghostColor =
-    rgbStringToHex(getCSSVariable("--viz-ghost-rgb")) ||
-    fallback.persistence.ghostColor;
+  const persistenceColor =
+    rgbStringToHex(getCSSVariable("--viz-persistence-rgb")) ||
+    fallback.persistenceColor;
   const maxHoldColor =
     rgbStringToHex(getCSSVariable("--viz-maxhold-rgb")) ||
-    fallback.persistence.maxHoldColor;
+    fallback.maxHoldColor;
 
   return {
     background,
@@ -116,10 +110,8 @@ export function getVisualizationTheme(
     scaleBackground:
       getCSSVariable("--viz-scale-bg") || fallback.scaleBackground,
     scaleText: getCSSVariable("--viz-scale-text") || fallback.scaleText,
-    persistence: {
-      ghostColor,
-      maxHoldColor,
-    },
+    persistenceColor,
+    maxHoldColor,
   };
 }
 
