@@ -1,5 +1,5 @@
 import { TreeView } from '../common/TreeView'
-import { SystemVersion } from '../../types/diagnostics'
+import { SystemVersion } from '../../types/health'
 
 export interface VersionInfoProps {
   versionTree: SystemVersion

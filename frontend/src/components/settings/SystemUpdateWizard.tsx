@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import { Button } from '../common/Button'
-import { UpdateStatus, UpdateState } from '../../types/diagnostics'
+import { UpdateStatus, UpdateState } from '../../types/health'
 
 export interface SystemUpdateWizardProps {
   isOpen: boolean

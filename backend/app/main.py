@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.api.routes import tasks
+from app.api.routes import tasks, health, update
 from app.api import websocket
 from app.models.task import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
 from app.config.constants import TARGET_FPS
@@ -30,6 +30,8 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(tasks.router)
+app.include_router(health.router)
+app.include_router(update.router)
 app.include_router(websocket.router)
 
 
@@ -100,8 +102,8 @@ async def root():
     return {"message": "SDR Cockpit API", "version": "0.1.0", "status": "running"}
 
 
-@app.get("/api/health")
-async def health():
+@app.get("/api/healthcheck")
+async def healthcheck():
     """Health check endpoint"""
     return {"status": "healthy", "service": "backend"}
 

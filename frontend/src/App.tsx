@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { getBitResults } from "./api/health";
+import { getApiMode } from "./api/config";
 import { useTheme } from "./components/app/useTheme";
 import { Button } from "./components/common/Button";
 import { Drawer } from "./components/common/Drawer";
@@ -19,7 +21,7 @@ import { useDataStream, useTasks } from "./hooks";
 import { getHealthIndicator } from "./styles/theme";
 import { TaskStatus } from "./types/sdr";
 import { PLASMA } from "./utils/colorMaps";
-import { getMockBistResult, getMockSystemInfo } from "./utils/mockDiagnostics";
+import { getMockBitResult, getMockSystemInfo } from "./utils/mockHealth";
 
 const TASK_DRAWER_WIDTH = 300;
 const SYSTEM_HEALTH_PANEL_WIDTH = 300;
@@ -48,8 +50,8 @@ function App() {
     useState<SettingsMenuItem | null>(null);
   const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
 
-  // Mock data
-  const bistResult = getMockBistResult();
+  // Health data state
+  const [bitResult, setBitResult] = useState(() => getMockBitResult());
   const systemInfo = getMockSystemInfo();
 
   // Task management hook
@@ -94,6 +96,36 @@ function App() {
       setRenderFps(0);
     }
   }, [isWizardOpen, selectedTaskId]);
+
+  // Poll health/BIT data every 3 seconds in online mode
+  useEffect(() => {
+    const apiMode = getApiMode();
+
+    if (apiMode === 'offline') {
+      // In offline mode, just update periodically with new mock data
+      const interval = setInterval(() => {
+        setBitResult(getMockBitResult());
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+
+    // Online mode - poll the API
+    const fetchHealth = async () => {
+      try {
+        const result = await getBitResults();
+        setBitResult(result);
+      } catch (error) {
+        console.error('Failed to fetch BIT results:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchHealth();
+
+    // Poll every 3 seconds
+    const interval = setInterval(fetchHealth, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Detect mobile screen size (< 1024px)
   useEffect(() => {
@@ -304,7 +336,7 @@ function App() {
 
             {mobileView === "health" && (
               <div className="h-full overflow-auto bg-background">
-                <SystemHealthPanel bistResult={bistResult} />
+                <SystemHealthPanel bitResult={bitResult} />
               </div>
             )}
           </div>
@@ -356,7 +388,7 @@ function App() {
           width={`${SYSTEM_HEALTH_PANEL_WIDTH}px`}
           offsetTop={HEADER_HEIGHT}
         >
-          <SystemHealthPanel bistResult={bistResult} />
+          <SystemHealthPanel bitResult={bitResult} />
         </Drawer>
       </div>
 

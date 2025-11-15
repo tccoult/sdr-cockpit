@@ -1,33 +1,33 @@
 import {
-  BistResult,
-  BistStatus,
-  BistTest,
-  BistTreeNode,
+  BitResult,
+  BitStatus,
+  BitTest,
+  BitTreeNode,
   SystemInfo,
   SystemVersion,
-} from '../types/diagnostics'
+} from '../types/health'
 
-const STATUS_ORDER: Record<BistStatus, number> = {
-  [BistStatus.UNKNOWN]: 0,
-  [BistStatus.OK]: 1,
-  [BistStatus.WARN]: 2,
-  [BistStatus.FAIL]: 3,
+const STATUS_ORDER: Record<BitStatus, number> = {
+  [BitStatus.UNKNOWN]: 0,
+  [BitStatus.OK]: 1,
+  [BitStatus.WARN]: 2,
+  [BitStatus.FAIL]: 3,
 }
 
-const getMostSevere = (a: BistStatus, b: BistStatus) =>
+const getMostSevere = (a: BitStatus, b: BitStatus) =>
   STATUS_ORDER[a] >= STATUS_ORDER[b] ? a : b
 
 /**
- * Mock BIST data matching the example structure from requirements
+ * Mock BIT data matching the example structure from requirements
  */
-export function getMockBistResult(): BistResult {
+export function getMockBitResult(): BitResult {
   const now = Date.now()
 
-  const tests: BistTest[] = [
+  const tests: BitTest[] = [
     {
       id: 'rf-if-linearity',
       name: 'IF Output Linearity',
-      status: BistStatus.FAIL,
+      status: BitStatus.FAIL,
       description: 'Mixer IF output amplitude dropped below the minimum threshold.',
       lastRun: now - 1000 * 60 * 3,
       durationMs: 1320,
@@ -43,7 +43,7 @@ export function getMockBistResult(): BistResult {
     {
       id: 'clock-discipline',
       name: 'Clock PLL Discipline',
-      status: BistStatus.WARN,
+      status: BitStatus.WARN,
       description: 'PLL lock acquisition exceeded nominal settling time.',
       lastRun: now - 1000 * 60 * 7,
       durationMs: 980,
@@ -59,7 +59,7 @@ export function getMockBistResult(): BistResult {
     {
       id: 'gps-holdover',
       name: 'GPS Holdover Stability',
-      status: BistStatus.WARN,
+      status: BitStatus.WARN,
       description: 'Oscillator drift is elevated while operating in holdover mode.',
       lastRun: now - 1000 * 60 * 15,
       durationMs: 1430,
@@ -75,7 +75,7 @@ export function getMockBistResult(): BistResult {
     {
       id: 'dsp-integrity',
       name: 'DSP Pipeline Integrity',
-      status: BistStatus.OK,
+      status: BitStatus.OK,
       description: 'FFT and decimation stages produced expected reference signatures.',
       lastRun: now - 1000 * 60 * 2,
       durationMs: 760,
@@ -85,7 +85,7 @@ export function getMockBistResult(): BistResult {
     {
       id: 'memory-margin',
       name: 'Memory Margin Test',
-      status: BistStatus.OK,
+      status: BitStatus.OK,
       description: 'DDR burst transfers completed without error at operational temperature.',
       lastRun: now - 1000 * 60 * 12,
       durationMs: 1120,
@@ -95,7 +95,7 @@ export function getMockBistResult(): BistResult {
     {
       id: 'telemetry-link',
       name: 'Telemetry Channel Verification',
-      status: BistStatus.OK,
+      status: BitStatus.OK,
       description: 'Downlink telemetry frames were acknowledged across all priority queues.',
       lastRun: now - 1000 * 60 * 5,
       durationMs: 540,
@@ -105,7 +105,7 @@ export function getMockBistResult(): BistResult {
     {
       id: 'firmware-handshake',
       name: 'Firmware Interface Handshake',
-      status: BistStatus.OK,
+      status: BitStatus.OK,
       description: 'Control plane firmware responded with synchronized sequence IDs.',
       lastRun: now - 1000 * 60 * 9,
       durationMs: 680,
@@ -125,9 +125,9 @@ export function getMockBistResult(): BistResult {
   const summary = tests.reduce(
     (acc, test) => {
       acc.total += 1
-      if (test.status === BistStatus.FAIL) acc.fail += 1
-      else if (test.status === BistStatus.WARN) acc.warn += 1
-      else if (test.status === BistStatus.OK) acc.ok += 1
+      if (test.status === BitStatus.FAIL) acc.fail += 1
+      else if (test.status === BitStatus.WARN) acc.warn += 1
+      else if (test.status === BitStatus.OK) acc.ok += 1
       return acc
     },
     { total: 0, ok: 0, warn: 0, fail: 0 }
@@ -142,7 +142,7 @@ export function getMockBistResult(): BistResult {
   }
 }
 
-function buildAssignments(tests: BistTest[], key: 'functionNodes' | 'hardwareNodes') {
+function buildAssignments(tests: BitTest[], key: 'functionNodes' | 'hardwareNodes') {
   const assignments = new Map<string, string[]>()
 
   tests.forEach((test) => {
@@ -159,17 +159,17 @@ function buildAssignments(tests: BistTest[], key: 'functionNodes' | 'hardwareNod
 }
 
 function rollupTree(
-  node: BistTreeNode,
+  node: BitTreeNode,
   assignments: Map<string, string[]>,
-  testsById: Map<string, BistTest>
-): BistTreeNode {
+  testsById: Map<string, BitTest>
+): BitTreeNode {
   const children = node.children?.map((child) => rollupTree(child, assignments, testsById))
   const assignedTests = assignments.get(node.id) ?? []
 
-  let status = assignedTests.length > 0 ? BistStatus.OK : BistStatus.UNKNOWN
+  let status = assignedTests.length > 0 ? BitStatus.OK : BitStatus.UNKNOWN
 
   assignedTests.forEach((testId) => {
-    const testStatus = testsById.get(testId)?.status ?? BistStatus.UNKNOWN
+    const testStatus = testsById.get(testId)?.status ?? BitStatus.UNKNOWN
     status = getMostSevere(status, testStatus)
   })
 
@@ -185,48 +185,48 @@ function rollupTree(
   }
 }
 
-function createFunctionTree(): BistTreeNode {
+function createFunctionTree(): BitTreeNode {
   return {
     id: 'system-functions',
     name: 'System Functions',
-    status: BistStatus.UNKNOWN,
+    status: BitStatus.UNKNOWN,
     children: [
       {
         id: 'signal-flow',
         name: 'Signal Flow',
-        status: BistStatus.UNKNOWN,
+        status: BitStatus.UNKNOWN,
         children: [
           {
             id: 'rf-path',
             name: 'RF Path',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
             children: [
               {
                 id: 'conversion-stage',
                 name: 'Conversion Stage',
-                status: BistStatus.UNKNOWN,
+                status: BitStatus.UNKNOWN,
               },
               {
                 id: 'gain-stabilization',
                 name: 'Gain Stabilization',
-                status: BistStatus.UNKNOWN,
+                status: BitStatus.UNKNOWN,
               },
             ],
           },
           {
             id: 'baseband-processing',
             name: 'Baseband Processing',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
             children: [
               {
                 id: 'dsp-pipeline',
                 name: 'DSP Pipeline',
-                status: BistStatus.UNKNOWN,
+                status: BitStatus.UNKNOWN,
               },
               {
                 id: 'memory-buffering',
                 name: 'Memory Buffering',
-                status: BistStatus.UNKNOWN,
+                status: BitStatus.UNKNOWN,
               },
             ],
           },
@@ -235,34 +235,34 @@ function createFunctionTree(): BistTreeNode {
       {
         id: 'timing-chain',
         name: 'Timing Chain',
-        status: BistStatus.UNKNOWN,
+        status: BitStatus.UNKNOWN,
         children: [
           {
             id: 'sync-control',
             name: 'Sync Control',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'frequency-distribution',
             name: 'Frequency Distribution',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
         ],
       },
       {
         id: 'system-services',
         name: 'System Services',
-        status: BistStatus.UNKNOWN,
+        status: BitStatus.UNKNOWN,
         children: [
           {
             id: 'firmware-interfaces',
             name: 'Firmware Interfaces',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'telemetry',
             name: 'Telemetry Streams',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
         ],
       },
@@ -270,36 +270,36 @@ function createFunctionTree(): BistTreeNode {
   }
 }
 
-function createHardwareTree(): BistTreeNode {
+function createHardwareTree(): BitTreeNode {
   return {
     id: 'chassis',
     name: 'Chassis',
-    status: BistStatus.UNKNOWN,
+    status: BitStatus.UNKNOWN,
     children: [
       {
         id: 'rf-frontend',
         name: 'RF Frontend',
-        status: BistStatus.UNKNOWN,
+        status: BitStatus.UNKNOWN,
         children: [
           {
             id: 'lna-module',
             name: 'LNA Module',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'attenuator-bank',
             name: 'Attenuator Bank',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'mixer-stage',
             name: 'Mixer Stage',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
             children: [
               {
                 id: 'if-output',
                 name: 'IF Output Network',
-                status: BistStatus.UNKNOWN,
+                status: BitStatus.UNKNOWN,
               },
             ],
           },
@@ -308,44 +308,44 @@ function createHardwareTree(): BistTreeNode {
       {
         id: 'clocking',
         name: 'Clocking',
-        status: BistStatus.UNKNOWN,
+        status: BitStatus.UNKNOWN,
         children: [
           {
             id: 'pll-unit',
             name: 'PLL Unit',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'oscillator-board',
             name: 'Oscillator Board',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'distribution-amplifier',
             name: 'Distribution Amplifier',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
         ],
       },
       {
         id: 'processing-blade',
         name: 'Processing Blade',
-        status: BistStatus.UNKNOWN,
+        status: BitStatus.UNKNOWN,
         children: [
           {
             id: 'fpga',
             name: 'FPGA Fabric',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'dsp-complex',
             name: 'DSP Complex',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
           {
             id: 'ddr-bank',
             name: 'DDR Bank',
-            status: BistStatus.UNKNOWN,
+            status: BitStatus.UNKNOWN,
           },
         ],
       },

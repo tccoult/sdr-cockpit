@@ -1,11 +1,11 @@
 /**
- * Type definitions for system diagnostics, BIST, and settings
+ * Type definitions for system health, BIT, and settings
  */
 
 /**
- * Built-In Self Test (BIST) status values
+ * Built-In Test (BIT) status values
  */
-export enum BistStatus {
+export enum BitStatus {
   OK = 'ok',
   WARN = 'warn',
   FAIL = 'fail',
@@ -13,9 +13,9 @@ export enum BistStatus {
 }
 
 /**
- * Metrics for a BIST test result
+ * Metrics for a BIT test result
  */
-export interface BistMetrics {
+export interface BitMetrics {
   expected?: string
   actual?: string
   threshold?: string
@@ -23,16 +23,16 @@ export interface BistMetrics {
 }
 
 /**
- * Atomic BIST test definition with rollup mappings.
+ * Atomic BIT test definition with rollup mappings.
  */
-export interface BistTest {
+export interface BitTest {
   id: string
   name: string
-  status: BistStatus
+  status: BitStatus
   description?: string
   lastRun?: number
   durationMs?: number
-  metrics?: BistMetrics
+  metrics?: BitMetrics
   functionNodes: string[]
   hardwareNodes: string[]
 }
@@ -40,16 +40,16 @@ export interface BistTest {
 /**
  * Rollup node used by functional and hardware hierarchies.
  */
-export interface BistTreeNode {
+export interface BitTreeNode {
   id: string
   name: string
-  status: BistStatus
+  status: BitStatus
   description?: string
-  children?: BistTreeNode[]
+  children?: BitTreeNode[]
   tests?: string[] // IDs of tests mapped to this node
 }
 
-export interface BistSummary {
+export interface BitSummary {
   total: number
   ok: number
   warn: number
@@ -57,14 +57,14 @@ export interface BistSummary {
 }
 
 /**
- * BIST test suite result
+ * BIT test suite result
  */
-export interface BistResult {
+export interface BitResult {
   timestamp: number // Unix timestamp in ms
-  summary: BistSummary
-  tests: BistTest[]
-  functionTree: BistTreeNode
-  hardwareTree: BistTreeNode
+  summary: BitSummary
+  tests: BitTest[]
+  functionTree: BitTreeNode
+  hardwareTree: BitTreeNode
 }
 
 /**
