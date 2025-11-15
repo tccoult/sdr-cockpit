@@ -10,7 +10,7 @@ import { getVisualizationTheme, toPlotTheme } from "../../styles/theme";
 import { FFTDataBatch, FrequencyRange } from "../../types/sdr";
 import { formatFrequency } from "../../utils/formatters";
 import type { Theme } from "../app/theme-context";
-import { FFT_SETTINGS_CONFIG, FFT_SMOOTHING_FACTOR } from "./fftSettings";
+import { FFT_SETTINGS_CONFIG, FFT_SMOOTHING_FACTOR } from "./FFTSettings";
 import type { InteractionMode } from "./VisualizationControls";
 
 interface FFTDisplayProps {

@@ -8,13 +8,13 @@ import {
 import { ColorMap } from "../../utils/colorMaps";
 import { useTheme } from "../app/useTheme";
 import { FFTDisplay } from "./FFTDisplay";
+import { FFT_SETTINGS_CONFIG } from "./FFTSettings";
 import { SpectrogramDisplay } from "./SpectrogramDisplay";
 import {
   InteractionMode,
   VisualizationControls,
 } from "./VisualizationControls";
 import { WaterfallDisplay } from "./WaterfallDisplay";
-import { FFT_SETTINGS_CONFIG } from "./fftSettings";
 
 interface VisualizationViewProps {
   taskId: string;
