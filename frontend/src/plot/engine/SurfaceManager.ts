@@ -25,9 +25,8 @@ export interface SurfaceManager {
 
 type SurfaceState = {
   readonly handle: SurfaceHandle;
+  readonly canvas: HTMLCanvasElement;
 };
-
-const SURFACE_Z_ORDER: PlotSurface[] = ["static", "data", "overlay"];
 
 export function createSurfaceManager(
   options: SurfaceManagerOptions
@@ -50,13 +49,12 @@ export function createSurfaceManager(
     container.setAttribute("class", previousClass);
   }
 
-  const canvases: Record<PlotSurface, HTMLCanvasElement> = {
-    static: document.createElement("canvas"),
-    data: rootCanvas,
-    overlay: document.createElement("canvas"),
-  };
+  const staticCanvas = document.createElement("canvas");
+  const overlayCanvas = document.createElement("canvas");
+  const dataCanvas = rootCanvas;
 
   const surfaceStates = new Map<PlotSurface, SurfaceState>();
+  let lastDimensions: PlotDimensions | null = null;
 
   const ensureContext = (canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext("2d");
@@ -78,20 +76,19 @@ export function createSurfaceManager(
     canvas.style.pointerEvents = pointerEvents;
   };
 
-  applyCanvasStyles(canvases.static, "none");
-  applyCanvasStyles(canvases.data, "none");
-  applyCanvasStyles(canvases.overlay, "auto");
+  applyCanvasStyles(staticCanvas, "none");
+  applyCanvasStyles(dataCanvas, "none");
+  applyCanvasStyles(overlayCanvas, "auto");
 
   if (!rootParent) {
     throw new Error("Plot canvas must have a parent node");
   }
   rootParent.insertBefore(container, nextSibling);
-  container.appendChild(canvases.static);
-  container.appendChild(canvases.data);
-  container.appendChild(canvases.overlay);
+  container.appendChild(staticCanvas);
+  container.appendChild(dataCanvas);
+  container.appendChild(overlayCanvas);
 
-  const createHandle = (surface: PlotSurface): SurfaceHandle => {
-    const canvas = canvases[surface];
+  const createHandle = (canvas: HTMLCanvasElement): SurfaceHandle => {
     const ctx = ensureContext(canvas);
     let dirty = true;
     let dimensions: PlotDimensions = {
@@ -137,59 +134,76 @@ export function createSurfaceManager(
     };
   };
 
-  for (const surface of SURFACE_Z_ORDER) {
-    surfaceStates.set(surface, {
-      handle: createHandle(surface),
-    });
-  }
+  const registerSurface = (surface: PlotSurface, canvas: HTMLCanvasElement) => {
+    const handle = createHandle(canvas);
+    surfaceStates.set(surface, { handle, canvas });
+    if (lastDimensions) {
+      handle.resize(lastDimensions);
+    }
+    return handle;
+  };
+
+  registerSurface("static", staticCanvas);
+  registerSurface("data", dataCanvas);
+  registerSurface("overlay", overlayCanvas);
+
+  const isDataSurface = (surface: PlotSurface) =>
+    surface === "data" || surface.startsWith("data:");
+
+  const ensureSurface = (surface: PlotSurface): SurfaceHandle => {
+    const existing = surfaceStates.get(surface);
+    if (existing) {
+      return existing.handle;
+    }
+    if (!isDataSurface(surface)) {
+      throw new Error(`Unknown plot surface "${surface}"`);
+    }
+    const canvas = document.createElement("canvas");
+    applyCanvasStyles(canvas, "none");
+    container.insertBefore(canvas, overlayCanvas);
+    const handle = registerSurface(surface, canvas);
+    return handle;
+  };
 
   const updateBackground = (color: string) => {
     container.style.background = color;
   };
 
   const resizeAll = (dimensions: PlotDimensions) => {
-    for (const surface of SURFACE_Z_ORDER) {
-      const state = surfaceStates.get(surface);
-      if (!state) continue;
+    lastDimensions = dimensions;
+    for (const state of surfaceStates.values()) {
       state.handle.resize(dimensions);
     }
   };
 
   const destroy = () => {
-    for (const surface of SURFACE_Z_ORDER) {
-      const state = surfaceStates.get(surface);
-      if (!state) continue;
-      if (state.handle.canvas !== canvases.data) {
-        state.handle.canvas.remove();
+    for (const state of surfaceStates.values()) {
+      if (state.canvas !== dataCanvas) {
+        state.canvas.remove();
       }
     }
     if (previousStyle === null) {
-      canvases.data.removeAttribute("style");
+      dataCanvas.removeAttribute("style");
     } else {
-      canvases.data.setAttribute("style", previousStyle);
+      dataCanvas.setAttribute("style", previousStyle);
     }
     if (previousClass !== null) {
-      canvases.data.setAttribute("class", previousClass);
+      dataCanvas.setAttribute("class", previousClass);
     } else {
-      canvases.data.removeAttribute("class");
+      dataCanvas.removeAttribute("class");
     }
-    container.replaceWith(canvases.data);
+    container.replaceWith(dataCanvas);
     surfaceStates.clear();
   };
 
   return {
     getSurface(surface: PlotSurface) {
-      const state = surfaceStates.get(surface);
-      if (!state) {
-        throw new Error(`Unknown plot surface "${surface}"`);
-      }
-      return state.handle;
+      return ensureSurface(surface);
     },
     resizeAll,
     markSurface(surface: PlotSurface) {
-      const state = surfaceStates.get(surface);
-      if (!state) return;
-      state.handle.markDirty();
+      const handle = ensureSurface(surface);
+      handle.markDirty();
     },
     setBackgroundColor(color: string) {
       updateBackground(color);

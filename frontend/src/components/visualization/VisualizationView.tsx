@@ -1,13 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import {
-  FFTData,
-  FFTDataBatch,
-  FrequencyRange,
-  VisualizationMode,
-} from "../../types/sdr";
+import { FrequencyRange, VisualizationMode } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { useTheme } from "../app/useTheme";
-import { FFTDisplay } from "./FFTDisplay";
+import { FFTDisplay, type FFTRangeMetrics } from "./FFTDisplay";
 import { SpectrogramDisplay } from "./SpectrogramDisplay";
 import {
   InteractionMode,
@@ -57,65 +52,50 @@ export const VisualizationView = memo(function VisualizationView({
   const [spectrogramRenderFps, setSpectrogramRenderFps] = useState(0);
   const [interactionMode, setInteractionMode] =
     useState<InteractionMode>("pan");
+  const [rangeRequestKey, setRangeRequestKey] = useState(0);
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
     endFreq: centerFreq + sampleRate / 2,
   });
 
-  const currentFFTRef = useRef<FFTData | null>(null);
-  useEffect(() => {
-    currentFFTRef.current = null;
-  }, [taskId]);
-
-  useEffect(() => {
-    const handleFFTData = (event: Event) => {
-      const customEvent = event as CustomEvent<FFTDataBatch>;
-      const frames = customEvent.detail?.frames;
-      if (!frames || frames.length === 0) {
-        return;
-      }
-      currentFFTRef.current = frames[frames.length - 1];
-    };
-
-    window.addEventListener("fft-data", handleFFTData);
-    return () => window.removeEventListener("fft-data", handleFFTData);
-  }, []);
-
+  const [isMaxHoldEnabled, setIsMaxHoldEnabled] = useState(false);
+  const [maxHoldClearKey, setMaxHoldClearKey] = useState(0);
   const autoRange = useCallback(() => {
     setFrequencyRange({
       startFreq: centerFreq - sampleRate / 2,
       endFreq: centerFreq + sampleRate / 2,
     });
+    setRangeRequestKey((value) => value + 1);
+    setWaterfallResetKey((value) => value + 1);
+  }, [centerFreq, sampleRate]);
 
-    const fftData = currentFFTRef.current;
-    if (fftData && fftData.bins.length > 0) {
-      let nextMin = Infinity;
-      let nextMax = -Infinity;
-      for (let i = 0; i < fftData.bins.length; i += 1) {
-        const value = fftData.bins[i];
-        if (Number.isFinite(value)) {
-          nextMin = Math.min(nextMin, value);
-          nextMax = Math.max(nextMax, value);
-        }
+  const handleFftRangeMetrics = useCallback(
+    (metrics: FFTRangeMetrics | null) => {
+      if (!metrics) {
+        setMinDb(-100);
+        setMaxDb(-20);
+        return;
       }
-      if (
-        Number.isFinite(nextMin) &&
-        Number.isFinite(nextMax) &&
-        nextMax > nextMin
-      ) {
+      const { minDb: nextMin, maxDb: nextMax } = metrics;
+      if (!Number.isFinite(nextMin) || !Number.isFinite(nextMax)) {
+        setMinDb(-100);
+        setMaxDb(-20);
+        return;
+      }
+      if (nextMax > nextMin) {
         const range = nextMax - nextMin;
         const padding = range * 0.1;
         setMinDb(Math.floor(nextMin - padding));
         setMaxDb(Math.ceil(nextMax + padding));
+      } else {
+        const padding = Math.max(5, Math.abs(nextMin) * 0.1);
+        setMinDb(Math.floor(nextMin - padding));
+        setMaxDb(Math.ceil(nextMax + padding));
       }
-    } else {
-      setMinDb(-100);
-      setMaxDb(-20);
-    }
-
-    setWaterfallResetKey((value) => value + 1);
-  }, [centerFreq, sampleRate]);
+    },
+    []
+  );
 
   useEffect(() => {
     autoRange();
@@ -161,6 +141,18 @@ export const VisualizationView = memo(function VisualizationView({
       onRenderFpsChange?.(0);
     };
   }, [onRenderFpsChange]);
+
+  const resetMaxHold = useCallback(() => {
+    setMaxHoldClearKey((value) => value + 1);
+  }, []);
+
+  const handleToggleMaxHold = useCallback(() => {
+    setIsMaxHoldEnabled((enabled) => {
+      const next = !enabled;
+      resetMaxHold();
+      return next;
+    });
+  }, [resetMaxHold]);
 
   useEffect(() => {
     const measureElement = (element: HTMLElement) => {
@@ -260,6 +252,7 @@ export const VisualizationView = memo(function VisualizationView({
     visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showWaterfall = visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showSpectrogram = visualizationMode === VisualizationMode.SPECTROGRAM;
+  const maxHoldControlsDisabled = !showFFT;
   const fftSectionClasses = [
     sectionBaseClasses,
     visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]",
@@ -291,6 +284,10 @@ export const VisualizationView = memo(function VisualizationView({
                 theme={theme}
                 onRenderFpsChange={setFftRenderFps}
                 interactionMode={interactionMode}
+                maxHoldEnabled={isMaxHoldEnabled}
+                maxHoldClearKey={maxHoldClearKey}
+                rangeRequestKey={rangeRequestKey}
+                onRangeMetrics={handleFftRangeMetrics}
               />
             </div>
           )}
@@ -340,11 +337,11 @@ export const VisualizationView = memo(function VisualizationView({
           <VisualizationControls
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
-            minDb={minDb}
-            maxDb={maxDb}
-            onMinDbChange={setMinDb}
-            onMaxDbChange={setMaxDb}
             onAutoRange={autoRange}
+            maxHoldEnabled={isMaxHoldEnabled}
+            onToggleMaxHold={handleToggleMaxHold}
+            onClearMaxHold={resetMaxHold}
+            maxHoldControlsDisabled={maxHoldControlsDisabled}
           />
         </div>
       </div>

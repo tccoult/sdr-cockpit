@@ -50,7 +50,10 @@ html {
   --viz-grid: rgba(0, 0, 0, 0.09);
   --viz-axis: rgba(0, 0, 0, 0.48);
   --viz-cursor: rgba(31, 41, 55, 0.35);
+
   --viz-trace: 42 130 210;
+  --viz-maxhold-rgb: 255 200 80;
+  --viz-persistence-rgb: 124 58 237;
 
   --viz-tooltip-bg: rgba(255, 255, 255, 0.96);
   --viz-tooltip-border: rgba(148, 132, 255, 0.25);
@@ -72,8 +75,6 @@ html {
   --viz-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.06),
     inset 0 0 8px rgba(255, 255, 255, 0.4);
 
-  --viz-overlay-blend: normal;
-  --viz-overlay-opacity: 0.6;
   --viz-overlay-bg: rgba(255, 255, 255, 0.6); /* light in-plot overlay mask */
   --viz-overlay-border: rgba(0, 0, 0, 0.1);
 
@@ -133,7 +134,10 @@ html {
   --viz-grid: rgba(255, 255, 255, 0.05);
   --viz-axis: rgba(255, 255, 255, 0.3);
   --viz-cursor: rgba(255, 255, 255, 0.25);
+
   --viz-trace: 80 210 255;
+  --viz-maxhold-rgb: 255 200 80;
+  --viz-persistence-rgb: 124 58 237;
 
   --viz-tooltip-bg: rgba(12, 14, 24, 0.95);
   --viz-tooltip-border: rgba(156, 138, 255, 0.35);
@@ -161,22 +165,6 @@ html {
   --viz-panel-shadow: 0 0 8px rgba(100, 120, 255, 0.05),
     0 0 20px rgba(100, 120, 255, 0.03);
 
-  /* DARK MODE GLASS HIGHLIGHT */
-  --viz-panel-highlight: radial-gradient(
-      ellipse at 50% -20%,
-      rgba(180, 200, 255, 0.07) 0%,
-      rgba(100, 120, 180, 0.04) 30%,
-      transparent 60%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.015) 0%,
-      rgba(0, 0, 0, 0.12) 100%
-    ),
-    radial-gradient(circle at 50% 120%, transparent 0%, rgba(0, 0, 0, 0.3) 75%);
-
-  --viz-overlay-blend: screen, overlay;
-  --viz-overlay-opacity: 0.7;
   --viz-overlay-bg: rgba(0, 0, 0, 0.4); /* dark in-plot overlay mask */
   --viz-overlay-border: rgba(255, 255, 255, 0.12);
 

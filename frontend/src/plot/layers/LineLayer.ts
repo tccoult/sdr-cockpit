@@ -289,6 +289,7 @@ export function createLineLayer(
   return {
     id,
     phase: "content",
+    surface: options.surface,
     get visible() {
       return visible;
     },

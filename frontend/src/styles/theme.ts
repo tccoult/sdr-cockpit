@@ -33,6 +33,8 @@ export interface VisualizationTheme {
   tooltipText: string;
   scaleBackground?: string;
   scaleText?: string;
+  persistenceColor: string;
+  maxHoldColor: string;
 }
 
 const LIGHT_VISUALIZATION_THEME: VisualizationTheme = {
@@ -47,6 +49,8 @@ const LIGHT_VISUALIZATION_THEME: VisualizationTheme = {
   tooltipText: "#1F2937",
   scaleBackground: "rgba(255, 255, 255, 0.92)",
   scaleText: "#1F2937",
+  persistenceColor: "#7C3AED",
+  maxHoldColor: "#7C3AED",
 };
 
 const DARK_VISUALIZATION_THEME: VisualizationTheme = {
@@ -61,6 +65,8 @@ const DARK_VISUALIZATION_THEME: VisualizationTheme = {
   tooltipText: "#F8FAFC",
   scaleBackground: "rgba(14, 16, 24, 0.85)",
   scaleText: "#F8FAFC",
+  persistenceColor: "#7C3AED",
+  maxHoldColor: "#7C3AED",
 };
 
 function resolveMode(input: boolean | "dark" | "light"): boolean {
@@ -82,6 +88,12 @@ export function getVisualizationTheme(
     rgbStringToHex(getCSSVariable("--viz-text")) || fallback.textColor;
   const traceColor =
     rgbStringToHex(getCSSVariable("--viz-trace")) || fallback.traceColor;
+  const persistenceColor =
+    rgbStringToHex(getCSSVariable("--viz-persistence-rgb")) ||
+    fallback.persistenceColor;
+  const maxHoldColor =
+    rgbStringToHex(getCSSVariable("--viz-maxhold-rgb")) ||
+    fallback.maxHoldColor;
 
   return {
     background,
@@ -98,6 +110,8 @@ export function getVisualizationTheme(
     scaleBackground:
       getCSSVariable("--viz-scale-bg") || fallback.scaleBackground,
     scaleText: getCSSVariable("--viz-scale-text") || fallback.scaleText,
+    persistenceColor,
+    maxHoldColor,
   };
 }
 
