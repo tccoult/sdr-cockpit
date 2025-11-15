@@ -12,3 +12,5 @@ export { usePlotRenderFps } from './usePlotRenderFps';
 
 export { useMediaQuery } from './useMediaQuery';
 export { useEscapeKey } from './useEscapeKey';
+export { useDiagnostics } from './useDiagnostics';
+export type { DiagnosticsState } from './useDiagnostics';
