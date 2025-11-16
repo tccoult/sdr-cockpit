@@ -17,6 +17,9 @@ RUN ln -sf /usr/bin/python3.11 /usr/local/bin/python && \
 RUN dnf install -y epel-release && \
     dnf install -y git git-lfs wget vim htop procps-ng util-linux tar less which zsh fzf
 
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
     sed -i 's/^plugins=(git)/plugins=(git fzf sudo colored-man-pages)/' ~/.zshrc
