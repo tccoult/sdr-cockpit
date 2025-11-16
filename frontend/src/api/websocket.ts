@@ -1,11 +1,14 @@
 /**
- * WebSocket client with auto-reconnection
+ * WebSocket client with auto-reconnection and protobuf binary data support
  */
 
-import { TARGET_FPS } from "../config/constants";
-import { FFTData, FFTDataBatch } from "../types/sdr";
 import { VisualizationMode } from "../api/client";
+import { TARGET_FPS } from "../config/constants";
 import { MockFFTGenerator } from "../mocks/mockDataGenerator";
+import { sdr_cockpit } from "../proto/spectral_data.js";
+import { FFTData, FFTDataBatch } from "../types/sdr";
+import { decompressDataTimed } from "../utils/compression";
+import { bytesToDbBins, decodeDeltaBatch } from "../utils/spectralConversion";
 import { getApiMode, getWsBaseUrl } from "./config";
 
 export type DataStreamStatus =
@@ -21,7 +24,7 @@ export interface DataStreamCallbacks {
 }
 
 /**
- * Online (WebSocket) data stream with heartbeat support
+ * Online (WebSocket) data stream with heartbeat support and protobuf binary data
  */
 class OnlineDataStream {
   private ws: WebSocket | null = null;
@@ -44,54 +47,59 @@ class OnlineDataStream {
 
     try {
       this.ws = new WebSocket(wsUrl);
+      this.ws.binaryType = "arraybuffer"; // Required for binary protobuf messages
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
         // Wait for connected message before marking as connected
       };
 
-      this.ws.onmessage = (event) => {
+      this.ws.onmessage = async (event) => {
         try {
-          const message = JSON.parse(event.data);
+          // Handle JSON control messages (connected, ping, error, etc.)
+          if (typeof event.data === "string") {
+            const message = JSON.parse(event.data);
 
-          // Handle different message types
-          switch (message.type) {
-            case 'connected':
-              // Server sent client ID and connection confirmation
-              this.callbacks.onStatusChange("connected");
-              break;
+            // Handle different message types
+            switch (message.type) {
+              case "connected":
+                // Server sent client ID and connection confirmation
+                this.callbacks.onStatusChange("connected");
+                break;
 
-            case 'ping':
-              // Respond to heartbeat ping
-              this.ws?.send(JSON.stringify({ type: 'pong', timestamp: message.timestamp }));
-              break;
+              case "ping":
+                // Respond to heartbeat ping
+                this.ws?.send(
+                  JSON.stringify({ type: "pong", timestamp: message.timestamp })
+                );
+                break;
 
-            case 'data':
-              // FFT data frame(s)
-              this.handleDataMessage(message);
-              break;
+              case "error":
+                // Server error message
+                this.callbacks.onStatusChange("error");
+                this.callbacks.onError?.(message.message || "Unknown error");
+                break;
 
-            case 'error':
-              // Server error message
-              this.callbacks.onStatusChange("error");
-              this.callbacks.onError?.(message.message || 'Unknown error');
-              break;
+              case "health_update":
+                // Health/BIT update broadcast (for future use)
+                // Could trigger UI updates or notifications
+                console.log("Health update:", message.data);
+                break;
 
-            case 'health_update':
-              // Health/BIT update broadcast (for future use)
-              // Could trigger UI updates or notifications
-              console.log('Health update:', message.data);
-              break;
+              case "system_update_lock_changed":
+                // System update lock status changed (for future use)
+                // Could trigger UI updates in SystemUpdateWizard
+                console.log("Lock status changed:", message.data);
+                break;
 
-            case 'system_update_lock_changed':
-              // System update lock status changed (for future use)
-              // Could trigger UI updates in SystemUpdateWizard
-              console.log('Lock status changed:', message.data);
-              break;
+              default:
+                console.warn("Unknown JSON message type:", message.type);
+            }
+          }
 
-            default:
-              // Legacy format without type field - handle as data
-              this.handleDataMessage(message);
+          // Handle binary protobuf data messages
+          if (event.data instanceof ArrayBuffer) {
+            await this.handleBinaryDataMessage(event.data);
           }
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
@@ -139,32 +147,87 @@ class OnlineDataStream {
     }
   }
 
-  private handleDataMessage(data: Record<string, unknown>): void {
-    // Convert to batch format
-    let batch: FFTDataBatch;
+  private async handleBinaryDataMessage(
+    arrayBuffer: ArrayBuffer
+  ): Promise<void> {
+    try {
+      const bytes = new Uint8Array(arrayBuffer);
+      const message = sdr_cockpit.SpectralMessage.decode(bytes);
+      let batch: FFTDataBatch;
 
-    if (data.frames && Array.isArray(data.frames)) {
-      // Already a batch
-      batch = {
-        frames: data.frames.map((frame: FFTData) => ({
-          ...frame,
-          bins: Array.isArray(frame.bins)
-            ? new Float32Array(frame.bins)
-            : frame.bins,
-        })),
-      };
-    } else {
-      // Single frame - convert to batch
-      const frameData: Partial<FFTData> = { ...data };
-      delete (frameData as Record<string, unknown>).type; // Remove type field if present
+      // Process based on message type
+      if (
+        message.type === sdr_cockpit.SpectralMessage.MessageType.BATCH &&
+        message.batch &&
+        message.batch.frames
+      ) {
+        // Uncompressed batch of frames (spectrogram mode, delta-encoded)
+        const decodedBins = decodeDeltaBatch(
+          message.batch.frames.map((f) => ({
+            bins: f.bins || new Uint8Array(),
+            isDelta: f.isDelta || false,
+          }))
+        );
 
-      if (Array.isArray(frameData.bins)) {
-        frameData.bins = new Float32Array(frameData.bins);
+        const frames: FFTData[] = message.batch.frames.map((frame, idx) => ({
+          timestamp: Number(frame.timestamp || 0),
+          centerFreq: frame.centerFreq || 0,
+          sampleRate: frame.sampleRate || 0,
+          bins: decodedBins[idx],
+        }));
+        batch = { frames };
+      } else if (
+        message.type ===
+          sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH &&
+        message.compressedData
+      ) {
+        // Compressed batch - decompress first, then decode deltas
+        const [decompressedBytes, _decompressTimeMs] = await decompressDataTimed(
+          message.compressedData
+        );
+        const decompressedBatch =
+          sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
+
+        const decodedBins = decodeDeltaBatch(
+          decompressedBatch.frames.map((f) => ({
+            bins: f.bins || new Uint8Array(),
+            isDelta: f.isDelta || false,
+          }))
+        );
+
+        const frames: FFTData[] = decompressedBatch.frames.map((frame, idx) => ({
+          timestamp: Number(frame.timestamp || 0),
+          centerFreq: frame.centerFreq || 0,
+          sampleRate: frame.sampleRate || 0,
+          bins: decodedBins[idx],
+        }));
+        batch = { frames };
+      } else if (
+        message.type === sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
+        message.singleFrame
+      ) {
+        // Single frame (FFT_ONLY / FFT_WATERFALL mode)
+        const frame = message.singleFrame;
+        const fftData: FFTData = {
+          timestamp: Number(frame.timestamp || 0),
+          centerFreq: frame.centerFreq || 0,
+          sampleRate: frame.sampleRate || 0,
+          bins: bytesToDbBins(frame.bins || new Uint8Array()),
+        };
+        batch = { frames: [fftData] };
+      } else {
+        console.error(
+          "[WebSocket] Unknown protobuf message type:",
+          message.type
+        );
+        return;
       }
-      batch = { frames: [frameData as FFTData] };
-    }
 
-    this.callbacks.onData(batch);
+      this.callbacks.onData(batch);
+    } catch (error) {
+      console.error("[WebSocket] Error handling binary message:", error);
+      throw error;
+    }
   }
 
   disconnect(): void {

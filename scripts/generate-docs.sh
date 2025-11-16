@@ -19,7 +19,7 @@ cd "$(dirname "$0")/.."
 mkdir -p docs/api
 
 # Generate HTML documentation using Redoc
-npx @redocly/cli build-docs openapi.yaml -o docs/api/index.html
+npx @redocly/cli build-docs api/openapi.yaml -o docs/api/index.html
 
 echo -e "${GREEN}✓ Documentation generated at docs/api/index.html${NC}"
 echo ""

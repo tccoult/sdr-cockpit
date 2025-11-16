@@ -643,7 +643,7 @@ function RollupTreeView({
         focusClearTimerRef.current = window.setTimeout(() => {
           focusClearTimerRef.current = null;
           onClearFocus();
-        }, 800);
+        }, 800) as unknown as ReturnType<typeof window.setTimeout>;
       } else {
         onClearFocus();
       }
