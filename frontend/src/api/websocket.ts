@@ -8,7 +8,7 @@ import { MockFFTGenerator } from "../mocks/mockDataGenerator";
 import { sdr_cockpit } from "../proto/spectral_data.js";
 import { FFTData, FFTDataBatch } from "../types/sdr";
 import { decompressData } from "../utils/compression";
-import { bytesToDbBins } from "../utils/spectralConversion";
+import { bytesToDbBins, decodeDeltaBatch } from "../utils/spectralConversion";
 import { getApiMode, getWsBaseUrl } from "./config";
 
 export type DataStreamStatus =
@@ -161,12 +161,18 @@ class OnlineDataStream {
         message.batch &&
         message.batch.frames
       ) {
-        // Uncompressed batch of frames (spectrogram mode)
-        const frames: FFTData[] = message.batch.frames.map((frame) => ({
+        // Uncompressed batch of frames (spectrogram mode, delta-encoded)
+        const decodedBins = decodeDeltaBatch(
+          message.batch.frames.map((f) => ({
+            bins: f.bins || new Uint8Array(),
+          }))
+        );
+
+        const frames: FFTData[] = message.batch.frames.map((frame, idx) => ({
           timestamp: Number(frame.timestamp || 0),
           centerFreq: frame.centerFreq || 0,
           sampleRate: frame.sampleRate || 0,
-          bins: bytesToDbBins(frame.bins || new Uint8Array()),
+          bins: decodedBins[idx],
         }));
         batch = { frames };
       } else if (
@@ -174,16 +180,22 @@ class OnlineDataStream {
           sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH &&
         message.compressedData
       ) {
-        // Compressed batch - decompress first
+        // Compressed batch - decompress first, then decode deltas
         const decompressedBytes = await decompressData(message.compressedData);
         const decompressedBatch =
           sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
 
-        const frames: FFTData[] = decompressedBatch.frames.map((frame) => ({
+        const decodedBins = decodeDeltaBatch(
+          decompressedBatch.frames.map((f) => ({
+            bins: f.bins || new Uint8Array(),
+          }))
+        );
+
+        const frames: FFTData[] = decompressedBatch.frames.map((frame, idx) => ({
           timestamp: Number(frame.timestamp || 0),
           centerFreq: frame.centerFreq || 0,
           sampleRate: frame.sampleRate || 0,
-          bins: bytesToDbBins(frame.bins || new Uint8Array()),
+          bins: decodedBins[idx],
         }));
         batch = { frames };
       } else if (

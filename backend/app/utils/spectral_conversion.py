@@ -159,3 +159,39 @@ def bytes_to_db_bins(data: bytes) -> np.ndarray:
     """
     int16_bins = bytes_to_bins(data)
     return int16_to_db(int16_bins)
+
+
+def compute_delta_frame(current: np.ndarray, previous: np.ndarray) -> np.ndarray:
+    """
+    Compute delta (difference) between current and previous int16 frames.
+
+    Delta encoding is useful for compression since consecutive FFT frames are
+    often similar, resulting in small delta values (many zeros) that compress well.
+
+    Args:
+        current: Current frame int16 values
+        previous: Previous frame int16 values
+
+    Returns:
+        np.ndarray: Delta as int16 (current - previous)
+    """
+    # Cast to int32 to avoid overflow, then back to int16
+    # Differences are likely small so this should be safe
+    delta = (current.astype(np.int32) - previous.astype(np.int32)).astype(np.int16)
+    return delta
+
+
+def apply_delta_frame(delta: np.ndarray, previous: np.ndarray) -> np.ndarray:
+    """
+    Reconstruct frame from delta and previous frame.
+
+    Args:
+        delta: Delta values (int16)
+        previous: Previous frame int16 values
+
+    Returns:
+        np.ndarray: Reconstructed frame (previous + delta)
+    """
+    # Cast to int32 to avoid overflow, then back to int16
+    reconstructed = (previous.astype(np.int32) + delta.astype(np.int32)).astype(np.int16)
+    return reconstructed

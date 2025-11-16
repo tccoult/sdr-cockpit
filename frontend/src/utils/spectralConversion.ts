@@ -130,3 +130,68 @@ export function getByteSizeForBins(numBins: number): number {
 export function getNumBinsFromBytes(byteSize: number): number {
   return byteSize / 2; // 2 bytes per int16 value
 }
+
+/**
+ * Decode a delta-encoded batch of FFT frames.
+ *
+ * First frame contains absolute int16 values.
+ * Subsequent frames contain deltas (differences) from previous frame.
+ * This is used to improve compression ratios for spectrograms.
+ *
+ * @param batchFrames Array of frames where bins are Uint8Array (int16 bytes)
+ * @returns Array of dB bin values for each frame
+ */
+export function decodeDeltaBatch(
+  batchFrames: Array<{ bins: Uint8Array }>
+): Float32Array[] {
+  if (batchFrames.length === 0) return [];
+
+  const result: Float32Array[] = [];
+  const view0 = new DataView(
+    batchFrames[0].bins.buffer,
+    batchFrames[0].bins.byteOffset,
+    batchFrames[0].bins.byteLength
+  );
+  const numBins = batchFrames[0].bins.byteLength / 2;
+
+  // First frame: absolute values
+  let previousInt16 = new Int16Array(numBins);
+  const firstFrameDb = new Float32Array(numBins);
+
+  for (let i = 0; i < numBins; i++) {
+    const int16Value = view0.getInt16(i * 2, true);
+    previousInt16[i] = int16Value;
+
+    // Convert to dB
+    const normalized = (int16Value - INT16_MIN) / INT16_RANGE;
+    firstFrameDb[i] = normalized * DB_RANGE + DB_MIN;
+  }
+  result.push(firstFrameDb);
+
+  // Subsequent frames: deltas
+  for (let frameIdx = 1; frameIdx < batchFrames.length; frameIdx++) {
+    const frame = batchFrames[frameIdx];
+    const view = new DataView(
+      frame.bins.buffer,
+      frame.bins.byteOffset,
+      frame.bins.byteLength
+    );
+    const currentDb = new Float32Array(numBins);
+
+    for (let i = 0; i < numBins; i++) {
+      // Read delta value
+      const delta = view.getInt16(i * 2, true);
+
+      // Reconstruct: previous + delta
+      const reconstructed = previousInt16[i] + delta;
+      previousInt16[i] = reconstructed;
+
+      // Convert to dB
+      const normalized = (reconstructed - INT16_MIN) / INT16_RANGE;
+      currentDb[i] = normalized * DB_RANGE + DB_MIN;
+    }
+    result.push(currentDb);
+  }
+
+  return result;
+}

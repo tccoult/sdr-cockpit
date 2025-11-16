@@ -15,7 +15,12 @@ from app.models.generated import TaskStatus, VisualizationMode
 from app.proto import FFTFrame, FFTFrameBatch, SpectralMessage
 from app.utils.compression import compress_data, should_compress_batch
 from app.utils.fft_generator import MockFFTGenerator
-from app.utils.spectral_conversion import db_bins_to_bytes
+from app.utils.spectral_conversion import (
+    bins_to_bytes,
+    compute_delta_frame,
+    db_bins_to_bytes,
+    db_to_int16,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -190,34 +195,70 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
             if task.status in [TaskStatus.live, TaskStatus.transmitting]:
                 # Send batches for spectrogram mode, single frames for others
                 if task.visualization_mode == VisualizationMode.spectrogram:
-                    # Generate a batch of frames (simulate capturing multiple FFTs at once)
-                    batch_size = 50  # Send 50 frames at once for spectrogram
+                    # Generate a batch of frames with delta encoding
+                    batch_size = 256
                     proto_frames = []
-                    for _ in range(batch_size):
+                    previous_int16 = None
+
+                    for i in range(batch_size):
                         fft_data = generator.generate_fft()
-                        # Convert to protobuf FFTFrame
+
+                        # Convert to int16
+                        current_int16 = db_to_int16(fft_data["bins"])
+
+                        # Use delta encoding for all frames except the first
+                        if i == 0:
+                            # First frame: send absolute values
+                            bins_data = bins_to_bytes(current_int16)
+                        else:
+                            # Subsequent frames: send delta from previous
+                            assert previous_int16 is not None
+                            delta = compute_delta_frame(current_int16, previous_int16)
+                            bins_data = bins_to_bytes(delta)
+
                         proto_frame = FFTFrame(
                             timestamp=fft_data["timestamp"],
                             center_freq=fft_data["centerFreq"],
                             sample_rate=fft_data["sampleRate"],
-                            bins=db_bins_to_bytes(fft_data["bins"]),
+                            bins=bins_data,
                         )
                         proto_frames.append(proto_frame)
 
+                        # Store for next delta
+                        previous_int16 = current_int16
+
                     # Create batch message
                     batch = FFTFrameBatch(frames=proto_frames)
+                    batch_bytes = batch.SerializeToString()
+                    uncompressed_size = len(batch_bytes)
 
                     # Decide whether to compress based on batch size
                     if should_compress_batch(batch_size):
                         # Compress the batch for significant bandwidth reduction
-                        batch_bytes = batch.SerializeToString()
                         compressed_bytes = compress_data(batch_bytes)
+                        compressed_size = len(compressed_bytes)
+                        compression_ratio = (
+                            uncompressed_size / compressed_size if compressed_size > 0 else 0
+                        )
+
+                        logger.debug(
+                            f"[Compression] Batch: {batch_size} frames (delta-encoded) | "
+                            f"Uncompressed: {uncompressed_size:,} bytes | "
+                            f"Compressed: {compressed_size:,} bytes | "
+                            f"Ratio: {compression_ratio:.2f}x | "
+                            f"Savings: {(1 - compressed_size/uncompressed_size)*100:.1f}%"
+                        )
+
                         message = SpectralMessage(
                             type=SpectralMessage.COMPRESSED_BATCH,
                             compressed_data=compressed_bytes,
                         )
                     else:
                         # Send uncompressed for small batches
+                        logger.debug(
+                            f"[No Compression] Batch: {batch_size} frames | "
+                            f"Size: {uncompressed_size:,} bytes"
+                        )
                         message = SpectralMessage(type=SpectralMessage.BATCH, batch=batch)
 
                     # Serialize and send
