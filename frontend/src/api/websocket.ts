@@ -8,6 +8,7 @@ import { MockFFTGenerator } from "../utils/mockDataGenerator";
 import { getApiMode, getWsBaseUrl } from "./config";
 import { sdr_cockpit } from "../proto/spectral_data.js";
 import { bytesToDbBins } from "../utils/spectralConversion";
+import { decompressData } from "../utils/compression";
 
 export type DataStreamStatus =
   | "connecting"
@@ -52,7 +53,7 @@ class OnlineDataStream {
         this.callbacks.onStatusChange("connected");
       };
 
-      this.ws.onmessage = (event) => {
+      this.ws.onmessage = async (event) => {
         try {
           // Handle JSON error messages (sent before switching to binary)
           if (typeof event.data === "string") {
@@ -77,13 +78,34 @@ class OnlineDataStream {
               message.batch &&
               message.batch.frames
             ) {
-              // Batch of frames (spectrogram mode)
+              // Uncompressed batch of frames (spectrogram mode)
               const frames: FFTData[] = message.batch.frames.map((frame) => ({
                 timestamp: Number(frame.timestamp || 0),
                 centerFreq: frame.centerFreq || 0,
                 sampleRate: frame.sampleRate || 0,
                 bins: bytesToDbBins(frame.bins || new Uint8Array()),
               }));
+              batch = { frames };
+            } else if (
+              message.type ===
+                sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH &&
+              message.compressedData
+            ) {
+              // Compressed batch - decompress first
+              const decompressedBytes = await decompressData(
+                message.compressedData
+              );
+              const decompressedBatch =
+                sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
+
+              const frames: FFTData[] = decompressedBatch.frames.map(
+                (frame) => ({
+                  timestamp: Number(frame.timestamp || 0),
+                  centerFreq: frame.centerFreq || 0,
+                  sampleRate: frame.sampleRate || 0,
+                  bins: bytesToDbBins(frame.bins || new Uint8Array()),
+                })
+              );
               batch = { frames };
             } else if (
               message.type ===

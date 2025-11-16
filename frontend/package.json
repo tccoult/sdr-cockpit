@@ -15,6 +15,7 @@
   "dependencies": {
     "d3-interpolate": "^3.0.1",
     "d3-scale": "^4.0.2",
+    "fzstd": "^0.1.1",
     "lucide-react": "^0.548.0",
     "protobufjs": "^7.4.0",
     "react": "^18.2.0",

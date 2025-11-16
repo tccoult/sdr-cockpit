@@ -9,6 +9,7 @@ from app.config.constants import TARGET_FPS
 from app.models.task import VisualizationMode
 from app.proto import FFTFrame, FFTFrameBatch, SpectralMessage
 from app.utils.spectral_conversion import db_bins_to_bytes
+from app.utils.compression import compress_data, should_compress_batch
 
 router = APIRouter()
 
@@ -74,7 +75,19 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
                     # Create batch message
                     batch = FFTFrameBatch(frames=proto_frames)
-                    message = SpectralMessage(type=SpectralMessage.BATCH, batch=batch)
+
+                    # Decide whether to compress based on batch size
+                    if should_compress_batch(batch_size):
+                        # Compress the batch for significant bandwidth reduction
+                        batch_bytes = batch.SerializeToString()
+                        compressed_bytes = compress_data(batch_bytes)
+                        message = SpectralMessage(
+                            type=SpectralMessage.COMPRESSED_BATCH,
+                            compressed_data=compressed_bytes,
+                        )
+                    else:
+                        # Send uncompressed for small batches
+                        message = SpectralMessage(type=SpectralMessage.BATCH, batch=batch)
 
                     # Serialize and send
                     await websocket.send_bytes(message.SerializeToString())
