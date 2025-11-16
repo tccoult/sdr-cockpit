@@ -6,22 +6,21 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { TaskApi } from '../api/tasks'
-import type { Task, CreateRxTaskParams } from '../types/sdr'
-import { TaskType, TaskStatus, TaskOwner } from '../types/sdr'
+import type { Task, CreateRxTaskParams } from '../api/client'
+import { TaskType, TaskStatus, TaskOwner } from '../api/client'
+import type { IApiService } from '../services/api/ApiService'
 
-// Mock the API
-vi.mock('../api', () => ({
-  getTaskApi: vi.fn(),
-  createDataStream: vi.fn(),
+// Mock the API service
+vi.mock('../services/api', () => ({
+  api: {} as IApiService,
 }))
 
 describe('Smoke Tests - Critical User Flows', () => {
-  let mockTaskApi: TaskApi
+  let mockApiService: IApiService
 
   beforeEach(async () => {
-    // Setup mock API
-    mockTaskApi = {
+    // Setup mock API service
+    mockApiService = {
       listTasks: vi.fn().mockResolvedValue([]),
       createRxTask: vi.fn(),
       createTxTask: vi.fn(),
@@ -31,10 +30,18 @@ describe('Smoke Tests - Critical User Flows', () => {
       resumeTask: vi.fn(),
       startRecording: vi.fn(),
       stopRecording: vi.fn(),
+      getBitResults: vi.fn(),
+      getLockStatus: vi.fn(),
+      acquireLock: vi.fn(),
+      releaseLock: vi.fn(),
+      uploadPackage: vi.fn(),
+      getUploadStatus: vi.fn(),
+      startInstall: vi.fn(),
+      getInstallStatus: vi.fn(),
     }
 
-    const { getTaskApi } = await import('../api')
-    vi.mocked(getTaskApi).mockReturnValue(mockTaskApi)
+    const { api } = await import('../services/api')
+    Object.assign(api, mockApiService)
   })
 
   it('Critical Path: User can create RX task and API responds correctly', async () => {
@@ -64,7 +71,7 @@ describe('Smoke Tests - Critical User Flows', () => {
       fps: 30,
     }
 
-    vi.mocked(mockTaskApi.createRxTask).mockResolvedValue(mockTask)
+    vi.mocked(mockApiService.createRxTask).mockResolvedValue(mockTask)
 
     // Create task
     const params: CreateRxTaskParams = {
@@ -75,7 +82,7 @@ describe('Smoke Tests - Critical User Flows', () => {
       fftSize: 2048,
     }
 
-    const task = await mockTaskApi.createRxTask(params)
+    const task = await mockApiService.createRxTask(params)
 
     // Verify we got a valid task back
     expect(task).toBeDefined()
@@ -127,9 +134,9 @@ describe('Smoke Tests - Critical User Flows', () => {
       },
     ]
 
-    vi.mocked(mockTaskApi.listTasks).mockResolvedValue(mockTasks)
+    vi.mocked(mockApiService.listTasks).mockResolvedValue(mockTasks)
 
-    const tasks = await mockTaskApi.listTasks()
+    const tasks = await mockApiService.listTasks()
 
     // Verify we got tasks
     expect(tasks).toBeDefined()
@@ -166,16 +173,16 @@ describe('Smoke Tests - Critical User Flows', () => {
     const pausedTask = { ...liveTask, status: TaskStatus.PAUSED, fps: 0 }
     const resumedTask = { ...liveTask, status: TaskStatus.LIVE, fps: 30 }
 
-    vi.mocked(mockTaskApi.pauseTask).mockResolvedValue(pausedTask)
-    vi.mocked(mockTaskApi.resumeTask).mockResolvedValue(resumedTask)
+    vi.mocked(mockApiService.pauseTask).mockResolvedValue(pausedTask)
+    vi.mocked(mockApiService.resumeTask).mockResolvedValue(resumedTask)
 
     // Pause
-    const paused = await mockTaskApi.pauseTask('task-1')
+    const paused = await mockApiService.pauseTask('task-1')
     expect(paused.status).toBe(TaskStatus.PAUSED)
     expect(paused.fps).toBe(0)
 
     // Resume
-    const resumed = await mockTaskApi.resumeTask('task-1')
+    const resumed = await mockApiService.resumeTask('task-1')
     expect(resumed.status).toBe(TaskStatus.LIVE)
     expect(resumed.fps).toBeGreaterThan(0)
   })
@@ -187,10 +194,10 @@ describe('Smoke Tests - Critical User Flows', () => {
      * 2. Task is removed from system
      */
 
-    vi.mocked(mockTaskApi.deleteTask).mockResolvedValue(undefined)
+    vi.mocked(mockApiService.deleteTask).mockResolvedValue(undefined)
 
     // Should not throw
-    await expect(mockTaskApi.deleteTask('task-1')).resolves.toBeUndefined()
+    await expect(mockApiService.deleteTask('task-1')).resolves.toBeUndefined()
   })
 
   it('Critical Path: API handles errors gracefully', async () => {
@@ -201,7 +208,7 @@ describe('Smoke Tests - Critical User Flows', () => {
      * 3. App can handle and display error
      */
 
-    vi.mocked(mockTaskApi.createRxTask).mockRejectedValue(
+    vi.mocked(mockApiService.createRxTask).mockRejectedValue(
       new Error('Network error: Failed to connect to backend')
     )
 
@@ -214,7 +221,7 @@ describe('Smoke Tests - Critical User Flows', () => {
     }
 
     // Should propagate error
-    await expect(mockTaskApi.createRxTask(params)).rejects.toThrow('Network error')
+    await expect(mockApiService.createRxTask(params)).rejects.toThrow('Network error')
   })
 
   it('Data Contract: Task objects have required fields', () => {
