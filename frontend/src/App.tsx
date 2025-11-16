@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getBitResults, type BitResult } from "./api/health";
+import { api, type BitResult } from "./services/api";
 import { getApiMode } from "./api/config";
 import { useTheme } from "./components/app/useTheme";
 import { Button } from "./components/common/Button";
@@ -112,7 +112,7 @@ function App() {
     // Online mode - poll the API
     const fetchHealth = async () => {
       try {
-        const result = await getBitResults();
+        const result = await api.getBitResults();
         setBitResult(result);
       } catch (error) {
         console.error('Failed to fetch BIT results:', error);

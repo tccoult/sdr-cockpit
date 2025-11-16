@@ -7,7 +7,7 @@ import {
   BitSummary,
   BitTest,
   BitTreeNode,
-} from "../../api/health";
+} from "../../services/api";
 import { Button } from "../common/Button";
 import { TreeNodeData, TreeView } from "../common/TreeView";
 

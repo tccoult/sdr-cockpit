@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle2, Loader2, Lock } from 'lucide-react'
 import { Button } from '../common/Button'
-import { getUpdateApi, LockStatus, UploadProgress, InstallProgress } from '../../api/update'
+import { api, LockStatus, UploadProgress, InstallProgress } from '../../services/api'
 import { getApiMode } from '../../api/config'
 
 export interface SystemUpdateWizardProps {
@@ -29,7 +29,6 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isOnline = getApiMode() === 'online'
-  const api = useMemo(() => getUpdateApi(), [])
 
   // Check lock status on open
   useEffect(() => {
@@ -59,7 +58,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
     } else {
       setStep('upload')
     }
-  }, [isOpen, isOnline, api])
+  }, [isOpen, isOnline])
 
   // Poll upload status
   useEffect(() => {
@@ -90,7 +89,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
 
     const interval = setInterval(pollUploadStatus, 500)
     return () => clearInterval(interval)
-  }, [uploadId, step, api])
+  }, [uploadId, step])
 
   // Poll installation status
   useEffect(() => {
@@ -114,7 +113,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
 
     const interval = setInterval(pollInstallStatus, 500)
     return () => clearInterval(interval)
-  }, [installId, step, api])
+  }, [installId, step])
 
   // Release lock on close (if we own it)
   useEffect(() => {
@@ -123,7 +122,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
         api.releaseLock(lockId).catch(console.error)
       }
     }
-  }, [lockId, isOnline, api])
+  }, [lockId, isOnline])
 
   if (!isOpen) return null
 

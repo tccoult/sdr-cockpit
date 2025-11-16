@@ -6,11 +6,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
 import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../../api/client';
-import { getTaskApi } from '../../api';
+import { api } from '../../services/api';
 import { updateRecording, updateTaskUptime, updateTxProgress } from '../../utils/mockTaskGenerator';
 import { useTaskParams } from '../useTaskParams';
-
-const taskApi = getTaskApi();
 
 // Query keys
 export const taskKeys = {
@@ -28,7 +26,7 @@ export const taskKeys = {
 export function useTasksQuery() {
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: taskKeys.lists(),
-    queryFn: () => taskApi.listTasks(),
+    queryFn: () => api.listTasks(),
     refetchInterval: 1500, // Auto-refresh every 1.5s
   });
 
@@ -80,7 +78,7 @@ export function useTasksQuery() {
 export function useTaskQuery(taskId: string | null) {
   return useQuery({
     queryKey: taskKeys.detail(taskId!),
-    queryFn: () => taskApi.getTask(taskId!),
+    queryFn: () => api.getTask(taskId!),
     enabled: !!taskId, // Only fetch if taskId exists
   });
 }
@@ -92,7 +90,7 @@ export function useCreateRxTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: CreateRxTaskParams) => taskApi.createRxTask(params),
+    mutationFn: (params: CreateRxTaskParams) => api.createRxTask(params),
     onSuccess: () => {
       // Invalidate tasks list to trigger refetch
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
@@ -107,7 +105,7 @@ export function useCreateTxTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: CreateTxTaskParams) => taskApi.createTxTask(params),
+    mutationFn: (params: CreateTxTaskParams) => api.createTxTask(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },
@@ -123,8 +121,8 @@ export function usePauseTask() {
   return useMutation({
     mutationFn: async ({ taskId, currentStatus }: { taskId: string; currentStatus: TaskStatus }) => {
       return currentStatus === TaskStatus.PAUSED
-        ? taskApi.resumeTask(taskId)
-        : taskApi.pauseTask(taskId);
+        ? api.resumeTask(taskId)
+        : api.pauseTask(taskId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
@@ -139,7 +137,7 @@ export function useDeleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskId: string) => taskApi.deleteTask(taskId),
+    mutationFn: (taskId: string) => api.deleteTask(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },
@@ -153,7 +151,7 @@ export function useStartRecording() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskId: string) => taskApi.startRecording(taskId),
+    mutationFn: (taskId: string) => api.startRecording(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },
@@ -167,7 +165,7 @@ export function useStopRecording() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskId: string) => taskApi.stopRecording(taskId),
+    mutationFn: (taskId: string) => api.stopRecording(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },

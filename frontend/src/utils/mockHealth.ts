@@ -3,7 +3,7 @@ import {
   BitStatus,
   BitTest,
   BitTreeNode,
-} from '../api/health'
+} from '../services/api'
 import {
   SystemInfo,
   SystemVersion,
