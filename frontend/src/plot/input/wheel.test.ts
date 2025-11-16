@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyWheel } from "../../input/wheel";
+import { applyWheel } from "./wheel";
 
 const xRange = { min: 0, max: 10 };
 const yRange = { min: 0, max: 5 };

@@ -8,7 +8,7 @@ import {
   finishBox,
   updateBox,
   updatePan,
-} from "../../input/pointer";
+} from "./pointer";
 
 const viewportStub = {
   projectX: (value: number) => value,
