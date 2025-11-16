@@ -99,6 +99,7 @@ class OnlineDataStream {
 
           // Handle binary protobuf data messages
           if (event.data instanceof ArrayBuffer) {
+            console.log("[WebSocket] Received binary message, size:", event.data.byteLength);
             await this.handleBinaryDataMessage(event.data);
           }
         } catch (error) {
@@ -148,62 +149,76 @@ class OnlineDataStream {
   }
 
   private async handleBinaryDataMessage(arrayBuffer: ArrayBuffer): Promise<void> {
-    const bytes = new Uint8Array(arrayBuffer);
-    const message = sdr_cockpit.SpectralMessage.decode(bytes);
+    try {
+      const bytes = new Uint8Array(arrayBuffer);
+      console.log("[WebSocket] Decoding protobuf message...");
+      const message = sdr_cockpit.SpectralMessage.decode(bytes);
+      console.log("[WebSocket] Protobuf message type:", message.type);
 
-    let batch: FFTDataBatch;
+      let batch: FFTDataBatch;
 
-    // Process based on message type
-    if (
-      message.type === sdr_cockpit.SpectralMessage.MessageType.BATCH &&
-      message.batch &&
-      message.batch.frames
-    ) {
-      // Uncompressed batch of frames (spectrogram mode)
-      const frames: FFTData[] = message.batch.frames.map((frame) => ({
-        timestamp: Number(frame.timestamp || 0),
-        centerFreq: frame.centerFreq || 0,
-        sampleRate: frame.sampleRate || 0,
-        bins: bytesToDbBins(frame.bins || new Uint8Array()),
-      }));
-      batch = { frames };
-    } else if (
-      message.type ===
-        sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH &&
-      message.compressedData
-    ) {
-      // Compressed batch - decompress first
-      const decompressedBytes = await decompressData(message.compressedData);
-      const decompressedBatch =
-        sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
+      // Process based on message type
+      if (
+        message.type === sdr_cockpit.SpectralMessage.MessageType.BATCH &&
+        message.batch &&
+        message.batch.frames
+      ) {
+        // Uncompressed batch of frames (spectrogram mode)
+        console.log("[WebSocket] Processing BATCH message with", message.batch.frames.length, "frames");
+        const frames: FFTData[] = message.batch.frames.map((frame) => ({
+          timestamp: Number(frame.timestamp || 0),
+          centerFreq: frame.centerFreq || 0,
+          sampleRate: frame.sampleRate || 0,
+          bins: bytesToDbBins(frame.bins || new Uint8Array()),
+        }));
+        batch = { frames };
+      } else if (
+        message.type ===
+          sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH &&
+        message.compressedData
+      ) {
+        // Compressed batch - decompress first
+        console.log("[WebSocket] Processing COMPRESSED_BATCH message, compressed size:", message.compressedData.length);
+        const decompressedBytes = await decompressData(message.compressedData);
+        console.log("[WebSocket] Decompressed size:", decompressedBytes.length);
+        const decompressedBatch =
+          sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
+        console.log("[WebSocket] Decompressed batch has", decompressedBatch.frames.length, "frames");
 
-      const frames: FFTData[] = decompressedBatch.frames.map((frame) => ({
-        timestamp: Number(frame.timestamp || 0),
-        centerFreq: frame.centerFreq || 0,
-        sampleRate: frame.sampleRate || 0,
-        bins: bytesToDbBins(frame.bins || new Uint8Array()),
-      }));
-      batch = { frames };
-    } else if (
-      message.type ===
-        sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
-      message.singleFrame
-    ) {
-      // Single frame (FFT_ONLY / FFT_WATERFALL mode)
-      const frame = message.singleFrame;
-      const fftData: FFTData = {
-        timestamp: Number(frame.timestamp || 0),
-        centerFreq: frame.centerFreq || 0,
-        sampleRate: frame.sampleRate || 0,
-        bins: bytesToDbBins(frame.bins || new Uint8Array()),
-      };
-      batch = { frames: [fftData] };
-    } else {
-      console.error("Unknown protobuf message type:", message.type);
-      return;
+        const frames: FFTData[] = decompressedBatch.frames.map((frame) => ({
+          timestamp: Number(frame.timestamp || 0),
+          centerFreq: frame.centerFreq || 0,
+          sampleRate: frame.sampleRate || 0,
+          bins: bytesToDbBins(frame.bins || new Uint8Array()),
+        }));
+        batch = { frames };
+      } else if (
+        message.type ===
+          sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
+        message.singleFrame
+      ) {
+        // Single frame (FFT_ONLY / FFT_WATERFALL mode)
+        console.log("[WebSocket] Processing SINGLE_FRAME message");
+        const frame = message.singleFrame;
+        const fftData: FFTData = {
+          timestamp: Number(frame.timestamp || 0),
+          centerFreq: frame.centerFreq || 0,
+          sampleRate: frame.sampleRate || 0,
+          bins: bytesToDbBins(frame.bins || new Uint8Array()),
+        };
+        batch = { frames: [fftData] };
+      } else {
+        console.error("[WebSocket] Unknown protobuf message type:", message.type);
+        return;
+      }
+
+      console.log("[WebSocket] Calling onData callback with batch containing", batch.frames.length, "frames");
+      this.callbacks.onData(batch);
+      console.log("[WebSocket] onData callback completed");
+    } catch (error) {
+      console.error("[WebSocket] Error handling binary message:", error);
+      throw error;
     }
-
-    this.callbacks.onData(batch);
   }
 
   disconnect(): void {

@@ -216,7 +216,11 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
                         message = SpectralMessage(type=SpectralMessage.BATCH, batch=batch)
 
                     # Serialize and send
-                    await websocket.send_bytes(message.SerializeToString())
+                    serialized = message.SerializeToString()
+                    print(
+                        f"[WebSocket] Sending {'COMPRESSED_' if should_compress_batch(batch_size) else ''}BATCH message, size: {len(serialized)} bytes, frames: {batch_size}"
+                    )
+                    await websocket.send_bytes(serialized)
                     # Wait longer between batches
                     await asyncio.sleep(2.0)
                 else:
@@ -237,7 +241,11 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
                     )
 
                     # Serialize and send
-                    await websocket.send_bytes(message.SerializeToString())
+                    serialized = message.SerializeToString()
+                    print(
+                        f"[WebSocket] Sending SINGLE_FRAME message, size: {len(serialized)} bytes"
+                    )
+                    await websocket.send_bytes(serialized)
                     # Target FPS
                     await asyncio.sleep(1.0 / TARGET_FPS)
             else:
