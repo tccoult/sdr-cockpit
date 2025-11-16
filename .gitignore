@@ -54,6 +54,7 @@ dist-ssr/
 *.log
 logs/
 .cache/
+docs/api/  # Generated OpenAPI documentation
 
 # IDEs
 .vscode/

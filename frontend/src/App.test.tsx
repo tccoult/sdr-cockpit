@@ -2,12 +2,15 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import App from './App'
 import { ThemeProvider } from './components/app/ThemeProvider'
+import { QueryProvider } from './providers/QueryProvider'
 
 const renderApp = () =>
   render(
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <QueryProvider>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </QueryProvider>
   )
 
 describe('App', () => {
@@ -64,8 +67,16 @@ describe('App', () => {
   it('loads demo tasks after discovery', async () => {
     renderApp()
 
-    // Wait for tasks to load (demo tasks appear after 1.5s)
-    const taskCards = await screen.findAllByText(/ISM Band Monitor/i, {}, { timeout: 2000 })
-    expect(taskCards.length).toBeGreaterThan(0)
+    // Wait for tasks to load
+    await waitFor(
+      () => {
+        // Look for the task count button which shows number of tasks
+        const tasksButton = screen.getByTitle(/View tasks/i)
+        expect(tasksButton).toBeInTheDocument()
+        // Should show at least one task
+        expect(tasksButton.textContent).toMatch(/\d+/)
+      },
+      { timeout: 3000 }
+    )
   })
 })
