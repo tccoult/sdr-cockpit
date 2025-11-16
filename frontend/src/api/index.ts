@@ -2,9 +2,6 @@
  * Main API client entry point
  */
 
-export { getTaskApi } from './tasks';
-export type { TaskApi } from './tasks';
-
 export { createDataStream } from './websocket';
 export type { DataStreamStatus, DataStreamCallbacks } from './websocket';
 

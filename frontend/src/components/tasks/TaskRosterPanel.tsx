@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Task, TaskType } from "../../types/sdr";
+import { Task, TaskType } from "../../api/client";
 import { Button } from "../common/Button";
 import { TaskCard } from "./TaskCard";
 

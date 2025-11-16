@@ -1,4 +1,4 @@
-import { Task } from "../../../types/sdr";
+import { Task } from "../../../api/client";
 
 export function getTaskStatusLabel(task?: Task | null): string {
   if (!task) {

@@ -3,8 +3,9 @@
  */
 
 import { TARGET_FPS } from "../config/constants";
-import { FFTData, FFTDataBatch, VisualizationMode } from "../types/sdr";
-import { MockFFTGenerator } from "../utils/mockDataGenerator";
+import { FFTData, FFTDataBatch } from "../types/sdr";
+import { VisualizationMode } from "../api/client";
+import { MockFFTGenerator } from "../mocks/mockDataGenerator";
 import { getApiMode, getWsBaseUrl } from "./config";
 
 export type DataStreamStatus =
@@ -20,7 +21,7 @@ export interface DataStreamCallbacks {
 }
 
 /**
- * Online (WebSocket) data stream
+ * Online (WebSocket) data stream with heartbeat support
  */
 class OnlineDataStream {
   private ws: WebSocket | null = null;
@@ -46,42 +47,52 @@ class OnlineDataStream {
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
-        this.callbacks.onStatusChange("connected");
+        // Wait for connected message before marking as connected
       };
 
       this.ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          const message = JSON.parse(event.data);
 
-          // Check for error messages from server
-          if (data.error) {
-            this.callbacks.onStatusChange("error");
-            this.callbacks.onError?.(data.error);
-            return;
+          // Handle different message types
+          switch (message.type) {
+            case 'connected':
+              // Server sent client ID and connection confirmation
+              this.callbacks.onStatusChange("connected");
+              break;
+
+            case 'ping':
+              // Respond to heartbeat ping
+              this.ws?.send(JSON.stringify({ type: 'pong', timestamp: message.timestamp }));
+              break;
+
+            case 'data':
+              // FFT data frame(s)
+              this.handleDataMessage(message);
+              break;
+
+            case 'error':
+              // Server error message
+              this.callbacks.onStatusChange("error");
+              this.callbacks.onError?.(message.message || 'Unknown error');
+              break;
+
+            case 'health_update':
+              // Health/BIT update broadcast (for future use)
+              // Could trigger UI updates or notifications
+              console.log('Health update:', message.data);
+              break;
+
+            case 'system_update_lock_changed':
+              // System update lock status changed (for future use)
+              // Could trigger UI updates in SystemUpdateWizard
+              console.log('Lock status changed:', message.data);
+              break;
+
+            default:
+              // Legacy format without type field - handle as data
+              this.handleDataMessage(message);
           }
-
-          // Convert to batch format
-          let batch: FFTDataBatch;
-
-          if (data.frames && Array.isArray(data.frames)) {
-            // Already a batch
-            batch = {
-              frames: data.frames.map((frame: FFTData) => ({
-                ...frame,
-                bins: Array.isArray(frame.bins)
-                  ? new Float32Array(frame.bins)
-                  : frame.bins,
-              })),
-            };
-          } else {
-            // Single frame - convert to batch
-            if (Array.isArray(data.bins)) {
-              data.bins = new Float32Array(data.bins);
-            }
-            batch = { frames: [data as FFTData] };
-          }
-
-          this.callbacks.onData(batch);
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
         }
@@ -126,6 +137,34 @@ class OnlineDataStream {
       this.callbacks.onStatusChange("error");
       this.callbacks.onError?.("Failed to create WebSocket connection");
     }
+  }
+
+  private handleDataMessage(data: Record<string, unknown>): void {
+    // Convert to batch format
+    let batch: FFTDataBatch;
+
+    if (data.frames && Array.isArray(data.frames)) {
+      // Already a batch
+      batch = {
+        frames: data.frames.map((frame: FFTData) => ({
+          ...frame,
+          bins: Array.isArray(frame.bins)
+            ? new Float32Array(frame.bins)
+            : frame.bins,
+        })),
+      };
+    } else {
+      // Single frame - convert to batch
+      const frameData: Partial<FFTData> = { ...data };
+      delete (frameData as Record<string, unknown>).type; // Remove type field if present
+
+      if (Array.isArray(frameData.bins)) {
+        frameData.bins = new Float32Array(frameData.bins);
+      }
+      batch = { frames: [frameData as FFTData] };
+    }
+
+    this.callbacks.onData(batch);
   }
 
   disconnect(): void {

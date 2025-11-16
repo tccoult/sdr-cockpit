@@ -2,17 +2,17 @@ import { MoreVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  BistResult,
-  BistStatus,
-  BistSummary,
-  BistTest,
-  BistTreeNode,
-} from "../../types/diagnostics";
+  BitResult,
+  BitStatus,
+  BitSummary,
+  BitTest,
+  BitTreeNode,
+} from "../../services/api";
 import { Button } from "../common/Button";
 import { TreeNodeData, TreeView } from "../common/TreeView";
 
 export interface SystemHealthPanelProps {
-  bistResult: BistResult | null;
+  bitResult: BitResult | null;
 }
 
 type PanelView = "tests" | "function" | "hardware";
@@ -25,7 +25,7 @@ interface HighlightState {
 interface RollupDisplayNode extends TreeNodeData {
   kind: "group" | "test";
   name: string;
-  status: BistStatus;
+  status: BitStatus;
   description?: string;
   tests?: string[];
   testId?: string;
@@ -33,36 +33,36 @@ interface RollupDisplayNode extends TreeNodeData {
   durationMs?: number;
 }
 
-const STATUS_PRIORITY: Record<BistStatus, number> = {
-  [BistStatus.FAIL]: 3,
-  [BistStatus.WARN]: 2,
-  [BistStatus.OK]: 1,
-  [BistStatus.UNKNOWN]: 0,
+const STATUS_PRIORITY: Record<BitStatus, number> = {
+  'fail': 3,
+  'warn': 2,
+  'ok': 1,
+  'unknown': 0,
 };
 
 const STATUS_TOKENS: Record<
-  BistStatus,
+  BitStatus,
   { dot: string; text: string; badge: string; tint: string }
 > = {
-  [BistStatus.FAIL]: {
+  'fail': {
     dot: "bg-status-error",
     text: "text-status-error",
     badge: "text-status-error",
     tint: "bg-status-error/10",
   },
-  [BistStatus.WARN]: {
+  'warn': {
     dot: "bg-status-warning",
     text: "text-status-warning",
     badge: "text-status-warning",
     tint: "bg-status-warning/10",
   },
-  [BistStatus.OK]: {
+  'ok': {
     dot: "bg-status-success",
     text: "text-status-success",
     badge: "text-status-success",
     tint: "bg-status-success/10",
   },
-  [BistStatus.UNKNOWN]: {
+  'unknown': {
     dot: "bg-muted-foreground/50",
     text: "text-muted-foreground",
     badge: "text-muted-foreground",
@@ -70,7 +70,7 @@ const STATUS_TOKENS: Record<
   },
 };
 
-export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
+export function SystemHealthPanel({ bitResult }: SystemHealthPanelProps) {
   const [view, setView] = useState<PanelView>("tests");
   const [expandState, setExpandState] = useState<"auto" | "all" | "none">(
     "auto"
@@ -101,7 +101,7 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
     setForcedExpand(null);
     setFocusRequest(null);
     setTestFocusRequest(null);
-  }, [bistResult?.timestamp]);
+  }, [bitResult?.timestamp]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -126,29 +126,29 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
   }, []);
 
   const testsById = useMemo(() => {
-    if (!bistResult) return new Map<string, BistTest>();
-    return new Map(bistResult.tests.map((test) => [test.id, test]));
-  }, [bistResult]);
+    if (!bitResult) return new Map<string, BitTest>();
+    return new Map(bitResult.tests.map((test) => [test.id, test]));
+  }, [bitResult]);
 
   const functionLookup = useMemo(() => {
-    if (!bistResult) return {};
-    return buildNodeLookup(bistResult.functionTree);
-  }, [bistResult]);
+    if (!bitResult) return {};
+    return buildNodeLookup(bitResult.functionTree);
+  }, [bitResult]);
 
   const hardwareLookup = useMemo(() => {
-    if (!bistResult) return {};
-    return buildNodeLookup(bistResult.hardwareTree);
-  }, [bistResult]);
+    if (!bitResult) return {};
+    return buildNodeLookup(bitResult.hardwareTree);
+  }, [bitResult]);
 
   const functionTree = useMemo(() => {
-    if (!bistResult) return null;
-    return createDisplayTree(bistResult.functionTree, testsById);
-  }, [bistResult, testsById]);
+    if (!bitResult) return null;
+    return createDisplayTree(bitResult.functionTree, testsById);
+  }, [bitResult, testsById]);
 
   const hardwareTree = useMemo(() => {
-    if (!bistResult) return null;
-    return createDisplayTree(bistResult.hardwareTree, testsById);
-  }, [bistResult, testsById]);
+    if (!bitResult) return null;
+    return createDisplayTree(bitResult.hardwareTree, testsById);
+  }, [bitResult, testsById]);
 
   const consumeTestFocusRequest = useCallback(
     () => setTestFocusRequest(null),
@@ -159,21 +159,21 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
     const test = testsById.get(testId);
     if (!test) return;
 
-    const directFunctionNodes = bistResult
-      ? getTerminalNodeIds(test.functionNodes, bistResult.functionTree)
+    const directFunctionNodes = bitResult
+      ? getTerminalNodeIds(test.functionNodes || [], bitResult.functionTree)
       : [];
-    const directHardwareNodes = bistResult
-      ? getTerminalNodeIds(test.hardwareNodes, bistResult.hardwareTree)
+    const directHardwareNodes = bitResult
+      ? getTerminalNodeIds(test.hardwareNodes || [], bitResult.hardwareTree)
       : [];
 
-    const functionHighlight = bistResult
+    const functionHighlight = bitResult
       ? directFunctionNodes.flatMap(
-          (nodeId) => findNodePath(bistResult.functionTree, nodeId) ?? [nodeId]
+          (nodeId) => findNodePath(bitResult.functionTree, nodeId) ?? [nodeId]
         )
       : directFunctionNodes;
-    const hardwareHighlight = bistResult
+    const hardwareHighlight = bitResult
       ? directHardwareNodes.flatMap(
-          (nodeId) => findNodePath(bistResult.hardwareTree, nodeId) ?? [nodeId]
+          (nodeId) => findNodePath(bitResult.hardwareTree, nodeId) ?? [nodeId]
         )
       : directHardwareNodes;
 
@@ -190,10 +190,10 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
   };
 
   const handleFocusNode = (scope: keyof HighlightState, nodeId: string) => {
-    if (!bistResult) return;
+    if (!bitResult) return;
 
     const tree =
-      scope === "function" ? bistResult.functionTree : bistResult.hardwareTree;
+      scope === "function" ? bitResult.functionTree : bitResult.hardwareTree;
     const path = findNodePath(tree, nodeId) ?? [nodeId];
 
     setHighlighted((prev) => {
@@ -216,23 +216,23 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
   };
 
   const sortedTests = useMemo(() => {
-    if (!bistResult) return [];
-    return [...bistResult.tests].sort((a, b) => {
+    if (!bitResult) return [];
+    return [...bitResult.tests].sort((a, b) => {
       const diff = STATUS_PRIORITY[b.status] - STATUS_PRIORITY[a.status];
       if (diff !== 0) return diff;
       return a.name.localeCompare(b.name);
     });
-  }, [bistResult]);
+  }, [bitResult]);
 
-  if (!bistResult) {
+  if (!bitResult) {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="max-w-sm rounded-lg border border-border/60 bg-card p-6 text-center shadow-sm">
           <h3 className="text-sm font-semibold text-foreground">
-            No diagnostics available
+            No health data available
           </h3>
           <p className="mt-2 text-xs text-muted-foreground">
-            Run system diagnostics to view Built-In Test results.
+            Run system health tests to view Built-In Test results.
           </p>
         </div>
       </div>
@@ -251,7 +251,7 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
             Built-In Test
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Last updated {formatRelativeTimestamp(bistResult.timestamp)}
+            Last updated {formatRelativeTimestamp(bitResult.timestamp)}
           </p>
         </div>
         <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-2">
@@ -345,12 +345,12 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
           {view === "tests" && (
             <TestsView
               tests={sortedTests}
-              summary={bistResult.summary}
+              summary={bitResult.summary}
               activeTestId={activeTestId}
               functionLookup={functionLookup}
               hardwareLookup={hardwareLookup}
-              functionTree={bistResult.functionTree}
-              hardwareTree={bistResult.hardwareTree}
+              functionTree={bitResult.functionTree}
+              hardwareTree={bitResult.hardwareTree}
               highlighted={highlighted}
               onSelectTest={handleSelectTest}
               onFocusNode={handleFocusNode}
@@ -361,7 +361,7 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
           {view !== "tests" && currentTree && (
             <RollupTreeView
               tree={currentTree}
-              summary={bistResult.summary}
+              summary={bitResult.summary}
               expandState={expandState}
               highlightedNodeIds={highlightedNodes}
               activeTestId={activeTestId}
@@ -394,13 +394,13 @@ export function SystemHealthPanel({ bistResult }: SystemHealthPanelProps) {
 }
 
 interface TestsViewProps {
-  tests: BistTest[];
-  summary: BistSummary;
+  tests: BitTest[];
+  summary: BitSummary;
   activeTestId: string | null;
-  functionLookup: Record<string, BistTreeNode>;
-  hardwareLookup: Record<string, BistTreeNode>;
-  functionTree: BistTreeNode;
-  hardwareTree: BistTreeNode;
+  functionLookup: Record<string, BitTreeNode>;
+  hardwareLookup: Record<string, BitTreeNode>;
+  functionTree: BitTreeNode;
+  hardwareTree: BitTreeNode;
   highlighted: HighlightState;
   onSelectTest: (testId: string) => void;
   onFocusNode: (scope: keyof HighlightState, nodeId: string) => void;
@@ -492,11 +492,11 @@ function TestsView({
                 .filter(Boolean)
                 .join(" · ");
               const directFunctionNodes = getTerminalNodeIds(
-                test.functionNodes,
+                test.functionNodes || [],
                 functionTree
               ).filter((nodeId) => functionLookup[nodeId]);
               const directHardwareNodes = getTerminalNodeIds(
-                test.hardwareNodes,
+                test.hardwareNodes || [],
                 hardwareTree
               ).filter((nodeId) => hardwareLookup[nodeId]);
               const detailPanelId = `test-${test.id}-details`;
@@ -590,11 +590,11 @@ function TestsView({
 
 interface RollupTreeViewProps {
   tree: RollupDisplayNode;
-  summary: BistSummary;
+  summary: BitSummary;
   expandState: "auto" | "all" | "none";
   highlightedNodeIds: string[];
   activeTestId: string | null;
-  testsById: Map<string, BistTest>;
+  testsById: Map<string, BitTest>;
   onFocusTest: (testId: string) => void;
   forcedExpandIds: string[];
   focusNodeId: string | null;
@@ -617,7 +617,7 @@ function RollupTreeView({
     if (expandState !== "auto") return undefined;
     return (node: RollupDisplayNode) =>
       node.kind === "group" &&
-      (node.status === BistStatus.FAIL || node.status === BistStatus.WARN);
+      (node.status === "fail" || node.status === "warn");
   }, [expandState]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -691,7 +691,7 @@ interface RollupTreeNodeProps {
   node: RollupDisplayNode;
   highlightedNodeIds: string[];
   activeTestId: string | null;
-  testsById: Map<string, BistTest>;
+  testsById: Map<string, BitTest>;
   onFocusTest: (testId: string) => void;
 }
 
@@ -709,7 +709,7 @@ function RollupTreeNode({
       <button
         type="button"
         onClick={() => onFocusTest(node.testId!)}
-        title={test?.description}
+        title={test?.description ?? undefined}
         data-tree-node-id={node.testId}
         className={cn(
           "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition",
@@ -770,7 +770,7 @@ interface TagGroupProps {
   scope: keyof HighlightState;
   testId: string;
   nodeIds: string[];
-  lookup: Record<string, BistTreeNode>;
+  lookup: Record<string, BitTreeNode>;
   highlighted: string[];
   onTagSelect: (
     testId: string,
@@ -824,12 +824,12 @@ function TagGroup({
   );
 }
 
-function SummaryBanner({ summary }: { summary: BistSummary }) {
+function SummaryBanner({ summary }: { summary: BitSummary }) {
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs">
-      <SummaryChip label="Fail" value={summary.fail} status={BistStatus.FAIL} />
-      <SummaryChip label="Warn" value={summary.warn} status={BistStatus.WARN} />
-      <SummaryChip label="Ok" value={summary.ok} status={BistStatus.OK} />
+      <SummaryChip label="Fail" value={summary.fail} status={"fail"} />
+      <SummaryChip label="Warn" value={summary.warn} status={"warn"} />
+      <SummaryChip label="Ok" value={summary.ok} status={"ok"} />
       <span className="text-[11px] text-muted-foreground">
         Total tests: {summary.total}
       </span>
@@ -844,7 +844,7 @@ function SummaryChip({
 }: {
   label: string;
   value: number;
-  status: BistStatus;
+  status: BitStatus;
 }) {
   return (
     <div
@@ -861,7 +861,7 @@ function SummaryChip({
   );
 }
 
-function StatusBadge({ status }: { status: BistStatus }) {
+function StatusBadge({ status }: { status: BitStatus }) {
   return (
     <span
       className={cn(
@@ -874,23 +874,23 @@ function StatusBadge({ status }: { status: BistStatus }) {
   );
 }
 
-function statusLabel(status: BistStatus) {
+function statusLabel(status: BitStatus) {
   switch (status) {
-    case BistStatus.FAIL:
+    case "fail":
       return "Fail";
-    case BistStatus.WARN:
+    case "warn":
       return "Warn";
-    case BistStatus.OK:
+    case "ok":
       return "Ok";
     default:
       return "Unknown";
   }
 }
 
-function buildNodeLookup(tree: BistTreeNode): Record<string, BistTreeNode> {
-  const map: Record<string, BistTreeNode> = {};
+function buildNodeLookup(tree: BitTreeNode): Record<string, BitTreeNode> {
+  const map: Record<string, BitTreeNode> = {};
 
-  const traverse = (node: BistTreeNode) => {
+  const traverse = (node: BitTreeNode) => {
     map[node.id] = node;
     node.children?.forEach(traverse);
   };
@@ -900,8 +900,8 @@ function buildNodeLookup(tree: BistTreeNode): Record<string, BistTreeNode> {
 }
 
 function createDisplayTree(
-  node: BistTreeNode,
-  testsById: Map<string, BistTest>
+  node: BitTreeNode,
+  testsById: Map<string, BitTest>
 ): RollupDisplayNode {
   const children: RollupDisplayNode[] = [];
 
@@ -917,10 +917,10 @@ function createDisplayTree(
       kind: "test",
       name: test.name,
       status: test.status,
-      description: test.description,
+      description: test.description ?? undefined,
       testId: test.id,
-      lastRun: test.lastRun,
-      durationMs: test.durationMs,
+      lastRun: test.lastRun ?? undefined,
+      durationMs: test.durationMs ?? undefined,
     });
   });
 
@@ -929,13 +929,13 @@ function createDisplayTree(
     kind: "group",
     name: node.name,
     status: node.status,
-    description: node.description,
-    tests: node.tests,
+    description: node.description ?? undefined,
+    tests: node.tests ?? undefined,
     children: children.length > 0 ? children : undefined,
   };
 }
 
-function findNodePath(node: BistTreeNode, targetId: string): string[] | null {
+function findNodePath(node: BitTreeNode, targetId: string): string[] | null {
   if (node.id === targetId) {
     return [node.id];
   }
@@ -950,7 +950,7 @@ function findNodePath(node: BistTreeNode, targetId: string): string[] | null {
   return null;
 }
 
-function getTerminalNodeIds(nodeIds: string[], tree: BistTreeNode): string[] {
+function getTerminalNodeIds(nodeIds: string[], tree: BitTreeNode): string[] {
   if (!nodeIds.length) return [];
   const unique = Array.from(new Set(nodeIds));
   const paths = unique.map((id) => ({ id, path: findNodePath(tree, id) }));

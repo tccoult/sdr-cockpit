@@ -88,6 +88,30 @@ jobs:
       - name: Run simulator checks
         run: ./scripts/check-simulator.sh
 
+  generate-api-docs:
+    name: Generate API Documentation
+    needs: [frontend-checks, backend-checks]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate OpenAPI HTML documentation
+        run: ./scripts/generate-docs.sh
+
+      - name: Upload API documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation
+          path: docs/api/index.html
+          retention-days: 90
+
   integration-tests:
     name: Integration Tests
     needs: [frontend-checks, backend-checks, simulator-checks]
@@ -134,7 +158,7 @@ jobs:
           sleep 5
 
           for i in {1..10}; do
-            if curl -f http://localhost:8000/api/health; then
+            if curl -f http://localhost:8000/api/healthcheck; then
               echo "Backend API health check passed!"
               exit 0
             fi
