@@ -1,5 +1,5 @@
 import { CircleDot, Pause, Play, Square } from "lucide-react";
-import { Task, TaskStatus, TaskType } from "../../../types/sdr";
+import { Task, TaskStatus, TaskType } from "../../../api/client";
 import { formatFrequency } from "../../../utils/formatters";
 import { Button } from "../../common/Button";
 import { getTaskStatusLabel } from "./taskStatus";

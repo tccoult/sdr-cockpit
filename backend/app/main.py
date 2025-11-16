@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.api.routes import tasks
+from app.api.routes import tasks, health, update
 from app.api import websocket
-from app.models.task import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
+from app.models.generated import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
 from app.config.constants import TARGET_FPS
 
 app = FastAPI(
@@ -30,6 +30,8 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(tasks.router)
+app.include_router(health.router)
+app.include_router(update.router)
 app.include_router(websocket.router)
 
 
@@ -43,50 +45,50 @@ async def startup_event():
         Task(
             id="test-fft-only",
             name="FFT Only (Sparse Updates)",
-            type=TaskType.RX,
+            type=TaskType.rx,
             frequency=915e6,
             sampleRate=2.4e6,
             bandwidth=2.4e6,
             fftSize=2048,
-            owner=TaskOwner.EXTERNAL,
+            owner=TaskOwner.external,
             ownerName="Test Generator",
-            status=TaskStatus.LIVE,
+            status=TaskStatus.live,
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
-            visualizationMode=VisualizationMode.FFT_ONLY,
+            visualizationMode=VisualizationMode.fft_only,
         ),
         Task(
             id="test-fft-waterfall",
             name="FFT + Waterfall (Continuous)",
-            type=TaskType.RX,
+            type=TaskType.rx,
             frequency=433.92e6,
             sampleRate=1e6,
             bandwidth=1e6,
             fftSize=2048,
-            owner=TaskOwner.EXTERNAL,
+            owner=TaskOwner.external,
             ownerName="Test Generator",
-            status=TaskStatus.LIVE,
+            status=TaskStatus.live,
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
-            visualizationMode=VisualizationMode.FFT_WATERFALL,
+            visualizationMode=VisualizationMode.fft_waterfall,
         ),
         Task(
             id="test-spectrogram",
             name="Spectrogram (Batch Updates)",
-            type=TaskType.RX,
+            type=TaskType.rx,
             frequency=2.45e9,
             sampleRate=10e6,
             bandwidth=10e6,
             fftSize=1024,
-            owner=TaskOwner.EXTERNAL,
+            owner=TaskOwner.external,
             ownerName="Test Generator",
-            status=TaskStatus.LIVE,
+            status=TaskStatus.live,
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
-            visualizationMode=VisualizationMode.SPECTROGRAM,
+            visualizationMode=VisualizationMode.spectrogram,
         ),
     ]
 
@@ -100,8 +102,8 @@ async def root():
     return {"message": "SDR Cockpit API", "version": "0.1.0", "status": "running"}
 
 
-@app.get("/api/health")
-async def health():
+@app.get("/api/healthcheck")
+async def healthcheck():
     """Health check endpoint"""
     return {"status": "healthy", "service": "backend"}
 

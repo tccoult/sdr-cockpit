@@ -55,19 +55,6 @@ export function buildColorLUT(colorMap: ColorMap): Uint8ClampedArray {
 }
 
 /**
- * Convert dB value to color index (0-255)
- */
-export function dbToColorIndex(
-  dbValue: number,
-  minDb: number = -100,
-  maxDb: number = 0
-): number {
-  const normalized = (dbValue - minDb) / (maxDb - minDb);
-  const clamped = Math.max(0, Math.min(1, normalized));
-  return Math.round(clamped * 255);
-}
-
-/**
  * Plasma - Modern, vibrant, perceptually uniform
  */
 export const PLASMA: ColorMap = {
@@ -82,21 +69,5 @@ export const PLASMA: ColorMap = {
     [244, 136, 73],
     [254, 188, 43],
     [240, 249, 33],
-  ],
-};
-
-// designed to more closely blend with the current thememing
-export const PLASMA_PLUS: ColorMap = {
-  name: "Plasma+",
-  id: "plasma_plus",
-  colors: [
-    [30, 5, 150], // deeper violet base (vs. indigo)
-    [100, 5, 190], // more magenta energy
-    [155, 25, 180], // saturated violet-magenta
-    [200, 65, 145], // transition toward warm pink
-    [232, 95, 105], // coral midpoint (less brown)
-    [250, 140, 70], // bright orange
-    [255, 192, 45], // golden yellow
-    [245, 250, 60], // luminous highlight
   ],
 };

@@ -3,7 +3,7 @@
  * Creates realistic-looking SDR tasks with various states
  */
 
-import { Task, TaskType, TaskStatus, TaskOwner, VisualizationMode } from '../types/sdr';
+import { Task, TaskType, TaskStatus, TaskOwner, VisualizationMode } from '../api/client';
 
 let taskIdCounter = 1;
 

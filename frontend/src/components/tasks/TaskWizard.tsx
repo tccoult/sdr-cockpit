@@ -1,7 +1,7 @@
 import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
 import { Button } from '../common/Button'
 import { Input } from '../common/Input'
-import { CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr'
+import { CreateRxTaskParams, CreateTxTaskParams } from '../../api/client'
 
 type TaskMode = 'select' | 'rx' | 'tx'
 
@@ -9,7 +9,7 @@ interface TaskWizardProps {
   isOpen: boolean
   onClose: () => void
   onCreateRxTask: (params: CreateRxTaskParams) => void
-  onCreateTxTask: (params: CreateTxTaskParams) => void
+  onCreateTxTask: (params: CreateTxTaskParams & { file: File }) => void
 }
 
 const labelClass =
@@ -91,6 +91,7 @@ export function TaskWizard({
 
     onCreateTxTask({
       name: txName || txFile.name,
+      filename: txFile.name,
       file: txFile,
       frequency: txUseOriginalFreq ? undefined : parseFloat(txFrequency) * 1e6,
       loop: txLoop,
