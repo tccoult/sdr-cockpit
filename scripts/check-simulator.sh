@@ -9,16 +9,11 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT/simulator"
 
-# Activate venv if it exists
-if [ -f .venv/bin/activate ]; then
-    source .venv/bin/activate
-fi
-
 echo "Running simulator checks..."
 echo ""
 
 echo "→ Running tests..."
-python -m pytest -v
+uv run pytest -v
 
 echo ""
 echo "✅ Simulator checks passed!"

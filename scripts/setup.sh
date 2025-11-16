@@ -16,8 +16,8 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python not found. Please install Python 3.11+"
+if ! command -v uv &> /dev/null; then
+    echo "❌ uv not found. Please install uv (https://docs.astral.sh/uv/getting-started/installation/)"
     exit 1
 fi
 
@@ -34,10 +34,7 @@ fi
 if [ ! -d "$PROJECT_ROOT/backend/.venv" ]; then
     echo "📦 Installing backend dependencies..."
     cd "$PROJECT_ROOT/backend"
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -q --upgrade pip
-    pip install -q -r requirements.txt
+    uv sync
 else
     echo "✅ Backend dependencies already installed"
 fi
@@ -46,10 +43,7 @@ fi
 if [ ! -d "$PROJECT_ROOT/simulator/.venv" ]; then
     echo "📦 Installing simulator dependencies..."
     cd "$PROJECT_ROOT/simulator"
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -q --upgrade pip
-    pip install -q -r requirements.txt
+    uv sync
 else
     echo "✅ Simulator dependencies already installed"
 fi

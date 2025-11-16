@@ -35,7 +35,7 @@ echo ""
 # Generate Python models
 echo "→ Generating Python models from OpenAPI..."
 cd "$PROJECT_ROOT/backend"
-.venv/bin/datamodel-codegen \
+uv run datamodel-codegen \
     --input ../api/openapi.yaml \
     --output app/models/generated.py \
     --snake-case-field \
@@ -50,17 +50,17 @@ echo ""
 
 # Format Python with black
 echo "→ Formatting Python models with black..."
-.venv/bin/black app/models/generated.py
+uv run black app/models/generated.py
 echo "✅ Python models formatted"
 echo ""
 
 # Generate Python protobuf code
 echo "→ Generating Python protobuf code..."
-cd "$PROJECT_ROOT"
-python -m grpc_tools.protoc \
-    -I=api \
-    --python_out=backend/app/proto \
-    api/spectral_data.proto
+cd "$PROJECT_ROOT/backend"
+uv run python -m grpc_tools.protoc \
+    -I=../api \
+    --python_out=app/proto \
+    ../api/spectral_data.proto
 echo "✅ Python protobuf generated"
 echo ""
 

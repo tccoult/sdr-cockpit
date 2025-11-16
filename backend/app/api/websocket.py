@@ -1,6 +1,7 @@
 """WebSocket handler for FFT data streaming with multi-client support"""
 
 import asyncio
+import logging
 import time
 import uuid
 from typing import Dict, Set, Optional
@@ -13,6 +14,8 @@ from app.models.generated import VisualizationMode, TaskStatus
 from app.proto import FFTFrame, FFTFrameBatch, SpectralMessage
 from app.utils.spectral_conversion import db_bins_to_bytes
 from app.utils.compression import compress_data, should_compress_batch
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -98,7 +101,7 @@ async def heartbeat_monitor(client_id: str) -> None:
 
         # Check for timeout
         if now - session.last_heartbeat > HEARTBEAT_TIMEOUT:
-            print(f"Client {client_id} heartbeat timeout, disconnecting")
+            logger.debug(f"Client {client_id} heartbeat timeout, disconnecting")
             try:
                 await session.websocket.close()
             except Exception:
@@ -217,7 +220,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
                     # Serialize and send
                     serialized = message.SerializeToString()
-                    print(
+                    logger.debug(
                         f"[WebSocket] Sending {'COMPRESSED_' if should_compress_batch(batch_size) else ''}BATCH message, size: {len(serialized)} bytes, frames: {batch_size}"
                     )
                     await websocket.send_bytes(serialized)
@@ -242,7 +245,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
                     # Serialize and send
                     serialized = message.SerializeToString()
-                    print(
+                    logger.debug(
                         f"[WebSocket] Sending SINGLE_FRAME message, size: {len(serialized)} bytes"
                     )
                     await websocket.send_bytes(serialized)
@@ -255,7 +258,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        print(f"WebSocket error for client {client_id}, task {task_id}: {e}")
+        logger.error(f"WebSocket error for client {client_id}, task {task_id}: {e}")
     finally:
         # Clean up
         heartbeat_task.cancel()

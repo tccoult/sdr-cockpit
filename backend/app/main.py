@@ -1,5 +1,7 @@
 """FastAPI application entry point"""
 
+import logging
+import os
 import time
 from pathlib import Path
 
@@ -12,6 +14,16 @@ from app.api.routes import tasks, health, update
 from app.api import websocket
 from app.models.generated import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
 from app.config.constants import TARGET_FPS
+
+# Configure logging
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="SDR Cockpit API",
