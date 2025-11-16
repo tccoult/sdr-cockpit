@@ -2,14 +2,14 @@
  * WebSocket client with auto-reconnection and protobuf binary data support
  */
 
-import { TARGET_FPS } from "../config/constants";
-import { FFTData, FFTDataBatch } from "../types/sdr";
 import { VisualizationMode } from "../api/client";
+import { TARGET_FPS } from "../config/constants";
 import { MockFFTGenerator } from "../mocks/mockDataGenerator";
-import { getApiMode, getWsBaseUrl } from "./config";
 import { sdr_cockpit } from "../proto/spectral_data.js";
-import { bytesToDbBins } from "../utils/spectralConversion";
+import { FFTData, FFTDataBatch } from "../types/sdr";
 import { decompressData } from "../utils/compression";
+import { bytesToDbBins } from "../utils/spectralConversion";
+import { getApiMode, getWsBaseUrl } from "./config";
 
 export type DataStreamStatus =
   | "connecting"
@@ -99,7 +99,6 @@ class OnlineDataStream {
 
           // Handle binary protobuf data messages
           if (event.data instanceof ArrayBuffer) {
-            console.log("[WebSocket] Received binary message, size:", event.data.byteLength);
             await this.handleBinaryDataMessage(event.data);
           }
         } catch (error) {
@@ -148,13 +147,12 @@ class OnlineDataStream {
     }
   }
 
-  private async handleBinaryDataMessage(arrayBuffer: ArrayBuffer): Promise<void> {
+  private async handleBinaryDataMessage(
+    arrayBuffer: ArrayBuffer
+  ): Promise<void> {
     try {
       const bytes = new Uint8Array(arrayBuffer);
-      console.log("[WebSocket] Decoding protobuf message...");
       const message = sdr_cockpit.SpectralMessage.decode(bytes);
-      console.log("[WebSocket] Protobuf message type:", message.type);
-
       let batch: FFTDataBatch;
 
       // Process based on message type
@@ -164,7 +162,6 @@ class OnlineDataStream {
         message.batch.frames
       ) {
         // Uncompressed batch of frames (spectrogram mode)
-        console.log("[WebSocket] Processing BATCH message with", message.batch.frames.length, "frames");
         const frames: FFTData[] = message.batch.frames.map((frame) => ({
           timestamp: Number(frame.timestamp || 0),
           centerFreq: frame.centerFreq || 0,
@@ -178,12 +175,9 @@ class OnlineDataStream {
         message.compressedData
       ) {
         // Compressed batch - decompress first
-        console.log("[WebSocket] Processing COMPRESSED_BATCH message, compressed size:", message.compressedData.length);
         const decompressedBytes = await decompressData(message.compressedData);
-        console.log("[WebSocket] Decompressed size:", decompressedBytes.length);
         const decompressedBatch =
           sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
-        console.log("[WebSocket] Decompressed batch has", decompressedBatch.frames.length, "frames");
 
         const frames: FFTData[] = decompressedBatch.frames.map((frame) => ({
           timestamp: Number(frame.timestamp || 0),
@@ -193,12 +187,10 @@ class OnlineDataStream {
         }));
         batch = { frames };
       } else if (
-        message.type ===
-          sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
+        message.type === sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
         message.singleFrame
       ) {
         // Single frame (FFT_ONLY / FFT_WATERFALL mode)
-        console.log("[WebSocket] Processing SINGLE_FRAME message");
         const frame = message.singleFrame;
         const fftData: FFTData = {
           timestamp: Number(frame.timestamp || 0),
@@ -208,13 +200,14 @@ class OnlineDataStream {
         };
         batch = { frames: [fftData] };
       } else {
-        console.error("[WebSocket] Unknown protobuf message type:", message.type);
+        console.error(
+          "[WebSocket] Unknown protobuf message type:",
+          message.type
+        );
         return;
       }
 
-      console.log("[WebSocket] Calling onData callback with batch containing", batch.frames.length, "frames");
       this.callbacks.onData(batch);
-      console.log("[WebSocket] onData callback completed");
     } catch (error) {
       console.error("[WebSocket] Error handling binary message:", error);
       throw error;

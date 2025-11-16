@@ -176,7 +176,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
             # Handle incoming messages (for pong responses)
             try:
                 # Non-blocking receive
-                message = await asyncio.wait_for(websocket.receive_json(), timeout=0.001)
+                message = await asyncio.wait_for(websocket.receive_json(), timeout=0.0)
 
                 if message.get("type") == "pong":
                     session.last_heartbeat = time.time()
@@ -222,13 +222,12 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
                     # Serialize and send
                     serialized = message.SerializeToString()
-                    logger.debug(
-                        f"Sending {'COMPRESSED_' if should_compress_batch(batch_size) else ''}BATCH message, size: {len(serialized)} bytes, frames: {batch_size}"
-                    )
                     await websocket.send_bytes(serialized)
                     # Wait longer between batches
-                    await asyncio.sleep(2.0)
+                    await asyncio.sleep(0.1)
                 else:
+                    t1 = time.time()
+
                     # Regular streaming - send single frames
                     fft_data = generator.generate_fft()
 
@@ -247,10 +246,11 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
                     # Serialize and send
                     serialized = message.SerializeToString()
-                    logger.debug(f"Sending SINGLE_FRAME message, size: {len(serialized)} bytes")
                     await websocket.send_bytes(serialized)
+
                     # Target FPS
-                    await asyncio.sleep(1.0 / TARGET_FPS)
+                    t2 = time.time()
+                    await asyncio.sleep(1.0 / TARGET_FPS - (t2 - t1))
             else:
                 # If paused, just wait a bit
                 await asyncio.sleep(0.1)

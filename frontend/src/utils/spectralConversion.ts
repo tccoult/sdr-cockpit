@@ -39,27 +39,41 @@ export function dbToInt16(dbValues: Float32Array | number[]): Int16Array {
  * Convert int16 representation back to dB values.
  */
 export function int16ToDb(int16Values: Int16Array | Uint8Array): Float32Array {
-  // If we receive Uint8Array (raw bytes), convert to Int16Array first
-  const int16Array =
-    int16Values instanceof Uint8Array
-      ? new Int16Array(
-          int16Values.buffer,
-          int16Values.byteOffset,
-          int16Values.byteLength / 2
-        )
-      : int16Values;
+  if (int16Values instanceof Uint8Array) {
+    // Decode bytes directly to Float32Array, avoiding intermediate Int16Array
+    // This skips alignment issues and one extra iteration
+    const numSamples = int16Values.byteLength / 2;
+    const result = new Float32Array(numSamples);
 
-  const result = new Float32Array(int16Array.length);
+    // Create DataView to read int16 values without alignment concerns
+    const view = new DataView(int16Values.buffer, int16Values.byteOffset, int16Values.byteLength);
 
-  for (let i = 0; i < int16Array.length; i++) {
-    // Normalize to 0-1 range
-    const normalized = (int16Array[i] - INT16_MIN) / INT16_RANGE;
+    for (let i = 0; i < numSamples; i++) {
+      // Read int16 value (little-endian, matches protobuf encoding)
+      const int16Value = view.getInt16(i * 2, true);
 
-    // Scale to dB range
-    result[i] = normalized * DB_RANGE + DB_MIN;
+      // Normalize to 0-1 range
+      const normalized = (int16Value - INT16_MIN) / INT16_RANGE;
+
+      // Scale to dB range
+      result[i] = normalized * DB_RANGE + DB_MIN;
+    }
+
+    return result;
+  } else {
+    // Int16Array path - just convert values
+    const result = new Float32Array(int16Values.length);
+
+    for (let i = 0; i < int16Values.length; i++) {
+      // Normalize to 0-1 range
+      const normalized = (int16Values[i] - INT16_MIN) / INT16_RANGE;
+
+      // Scale to dB range
+      result[i] = normalized * DB_RANGE + DB_MIN;
+    }
+
+    return result;
   }
-
-  return result;
 }
 
 /**
@@ -73,8 +87,15 @@ export function binsToBytes(bins: Int16Array): Uint8Array {
  * Convert bytes from protobuf back to int16 bin array.
  */
 export function bytesToBins(data: Uint8Array): Int16Array {
-  // Create a new Int16Array view of the data
-  return new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
+  // Check if the buffer is properly aligned (byteOffset must be multiple of 2)
+  if (data.byteOffset % 2 === 0) {
+    // Can create view directly
+    return new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
+  } else {
+    // Buffer is not aligned, need to copy the data
+    const alignedBuffer = new Uint8Array(data);
+    return new Int16Array(alignedBuffer.buffer);
+  }
 }
 
 /**

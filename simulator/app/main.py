@@ -6,9 +6,11 @@ Supports different modes via SDR_MODE environment variable:
 - random: Random noise for stress testing
 - realistic: Simulated signals (sweeps, carriers, etc.)
 """
+
 import logging
 import os
 import time
+
 import numpy as np
 
 # Configure logging
@@ -66,7 +68,6 @@ def main():
     try:
         while True:
             data = generate_data(mode)
-            logger.debug(f"Generated {len(data)} samples (mode: {mode})")
             time.sleep(1)
     except KeyboardInterrupt:
         logger.info("\nSimulator stopped")
