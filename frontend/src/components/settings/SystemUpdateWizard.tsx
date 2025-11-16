@@ -1,46 +1,128 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
+import { X, Upload, CheckCircle2, Loader2, Lock } from 'lucide-react'
 import { Button } from '../common/Button'
-import { UpdateStatus, UpdateState } from '../../types/diagnostics'
+import { api, LockStatus, UploadProgress, InstallProgress } from '../../services/api'
+import { getApiMode } from '../../api/config'
 
 export interface SystemUpdateWizardProps {
   isOpen: boolean
   onClose: () => void
 }
 
-type WizardStep = 'upload' | 'validate' | 'confirm' | 'install' | 'complete'
+type WizardStep = 'check-lock' | 'upload' | 'validate' | 'confirm' | 'install' | 'complete' | 'locked'
 
 /**
  * Multi-step wizard for system updates.
- * Handles file upload, validation, installation, and reboot.
+ * Handles lock acquisition, file upload, validation, installation, and reboot.
  */
 export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps) {
-  const [step, setStep] = useState<WizardStep>('upload')
+  const [step, setStep] = useState<WizardStep>('check-lock')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [updateState, setUpdateState] = useState<UpdateState>({
-    status: UpdateStatus.IDLE,
-    progress: 0,
-    message: '',
-  })
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadId, setUploadId] = useState<string | null>(null)
+  const [installId, setInstallId] = useState<string | null>(null)
+  const [lockId, setLockId] = useState<string | null>(null)
+  const [lockStatus, setLockStatus] = useState<LockStatus | null>(null)
+  const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [rebootCountdown, setRebootCountdown] = useState<number | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isOnline = getApiMode() === 'online'
 
-  // Prevent ESC from closing during reboot confirmation (step === 'complete' but rebootCountdown === null)
-  const shouldPreventEscClose = step === 'complete' && rebootCountdown === null
-
+  // Check lock status on open
   useEffect(() => {
-    if (!isOpen || !shouldPreventEscClose) return
+    if (!isOpen) return
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        e.preventDefault()
+    const checkLock = async () => {
+      try {
+        const status = await api.getLockStatus()
+        setLockStatus(status)
+
+        if (status.isLocked) {
+          setStep('locked')
+        } else {
+          // Acquire lock
+          const lock = await api.acquireLock()
+          setLockId(lock.lockId)
+          setStep('upload')
+        }
+      } catch (err) {
+        setError((err as Error).message)
+        setStep('upload') // Fallback to upload in offline mode
       }
     }
 
-    document.addEventListener('keydown', handleEscape, true) // Use capture phase
-    return () => document.removeEventListener('keydown', handleEscape, true)
-  }, [isOpen, shouldPreventEscClose])
+    if (isOnline) {
+      checkLock()
+    } else {
+      setStep('upload')
+    }
+  }, [isOpen, isOnline])
+
+  // Poll upload status
+  useEffect(() => {
+    if (!uploadId || step !== 'validate') return
+
+    const pollUploadStatus = async () => {
+      try {
+        const status: UploadProgress = await api.getUploadStatus(uploadId)
+
+        if (status.status === "validating") {
+          setUploadProgress(status.percentComplete)
+        } else if (status.status === "idle" && status.validationResults) {
+          // Validation complete
+          if (status.validationResults.checksumValid && status.validationResults.signatureValid) {
+            setStep('confirm')
+          } else {
+            setError('Package validation failed')
+          }
+          return // Stop polling
+        } else if (status.status === "error") {
+          setError(status.error || 'Upload failed')
+          return
+        }
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    }
+
+    const interval = setInterval(pollUploadStatus, 500)
+    return () => clearInterval(interval)
+  }, [uploadId, step])
+
+  // Poll installation status
+  useEffect(() => {
+    if (!installId || step !== 'install') return
+
+    const pollInstallStatus = async () => {
+      try {
+        const status: InstallProgress = await api.getInstallStatus(installId)
+        setInstallProgress(status)
+
+        if (status.status === "complete") {
+          setStep('complete')
+          return // Stop polling
+        } else if (status.status === "error") {
+          setError(status.error || 'Installation failed')
+        }
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    }
+
+    const interval = setInterval(pollInstallStatus, 500)
+    return () => clearInterval(interval)
+  }, [installId, step])
+
+  // Release lock on close (if we own it)
+  useEffect(() => {
+    return () => {
+      if (lockId && isOnline) {
+        api.releaseLock(lockId).catch(console.error)
+      }
+    }
+  }, [lockId, isOnline])
 
   if (!isOpen) return null
 
@@ -48,54 +130,40 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
     const file = event.target.files?.[0]
     if (file) {
       setSelectedFile(file)
-      // Mock validation
-      setTimeout(() => {
-        setStep('validate')
-        setUpdateState({
-          status: UpdateStatus.VALIDATING,
-          progress: 50,
-          message: 'Validating update package...',
-        })
-        setTimeout(() => {
-          setUpdateState({
-            status: UpdateStatus.IDLE,
-            progress: 100,
-            message: 'Validation successful',
-          })
-          setStep('confirm')
-        }, 1500)
-      }, 500)
     }
   }
 
-  const handleStartUpdate = () => {
-    setStep('install')
-    setUpdateState({
-      status: UpdateStatus.INSTALLING,
-      progress: 0,
-      message: 'Installing update...',
-    })
+  const handleUpload = async () => {
+    if (!selectedFile) return
 
-    // Mock installation progress
-    let progress = 0
-    const interval = setInterval(() => {
-      progress += 10
-      setUpdateState({
-        status: UpdateStatus.INSTALLING,
-        progress,
-        message: progress < 100 ? 'Installing update...' : 'Update complete',
+    setError(null)
+    setStep('validate')
+    setUploadProgress(0)
+
+    try {
+      const id = await api.uploadPackage(selectedFile, (progress) => {
+        setUploadProgress(progress)
       })
+      setUploadId(id)
+    } catch (err) {
+      setError((err as Error).message)
+      setStep('upload')
+    }
+  }
 
-      if (progress >= 100) {
-        clearInterval(interval)
-        setUpdateState({
-          status: UpdateStatus.COMPLETE,
-          progress: 100,
-          message: 'Update installed successfully',
-        })
-        setStep('complete')
-      }
-    }, 500)
+  const handleStartUpdate = async () => {
+    if (!uploadId) return
+
+    setError(null)
+    setStep('install')
+
+    try {
+      const id = await api.startInstall(uploadId)
+      setInstallId(id)
+    } catch (err) {
+      setError((err as Error).message)
+      setStep('confirm')
+    }
   }
 
   const handleReboot = () => {
@@ -106,13 +174,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
       setRebootCountdown(countdown)
       if (countdown <= 0) {
         clearInterval(interval)
-        // Mock reboot (in reality this would trigger backend reboot)
-        setUpdateState({
-          status: UpdateStatus.COMPLETE,
-          progress: 100,
-          message: 'System rebooting...',
-        })
-        // Close dialog after reboot completes
+        // In production, this would trigger backend reboot
         setTimeout(() => {
           handleCancel()
         }, 1000)
@@ -121,345 +183,278 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
   }
 
   const handleCancel = () => {
-    setStep('upload')
+    // Release lock if we own it
+    if (lockId && isOnline) {
+      api.releaseLock(lockId).catch(console.error)
+    }
+
+    setStep('check-lock')
     setSelectedFile(null)
-    setUpdateState({
-      status: UpdateStatus.IDLE,
-      progress: 0,
-      message: '',
-    })
+    setUploadProgress(0)
+    setUploadId(null)
+    setInstallId(null)
+    setLockId(null)
+    setLockStatus(null)
+    setInstallProgress(null)
+    setError(null)
     setRebootCountdown(null)
     onClose()
   }
 
-  // Prevent close during active update or reboot
-  const isUpdateInProgress = step === 'install' || rebootCountdown !== null
-  const handleBackdropClick = () => {
-    if (!isUpdateInProgress) {
-      handleCancel()
+  const renderStep = () => {
+    if (step === 'check-lock') {
+      return (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-sm text-muted-foreground">Checking system lock status...</p>
+        </div>
+      )
     }
+
+    if (step === 'locked') {
+      return (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Lock className="h-12 w-12 text-status-warning" />
+          <h3 className="mt-4 text-lg font-semibold text-foreground">System Update In Progress</h3>
+          <p className="mt-2 text-sm text-muted-foreground text-center">
+            {lockStatus?.lockedBy ? (
+              <>System update is currently locked by <span className="font-mono">{lockStatus.lockedBy}</span></>
+            ) : (
+              'Another user is performing a system update'
+            )}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Please wait until the update is complete before attempting another update.
+          </p>
+          <Button onClick={handleCancel} variant="secondary" className="mt-6">
+            Close
+          </Button>
+        </div>
+      )
+    }
+
+    if (step === 'upload') {
+      return (
+        <div className="space-y-4">
+          <div className="text-center">
+            <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-2 text-sm font-semibold text-foreground">Upload Update Package</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Select a signed .pkg file from your computer
+            </p>
+          </div>
+
+          <div className="rounded-sm border-2 border-dashed border-border/60 bg-muted/40 p-8 text-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pkg"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Button onClick={() => fileInputRef.current?.click()} variant="secondary">
+              Choose File
+            </Button>
+            {selectedFile && (
+              <p className="mt-3 text-xs text-foreground font-mono">{selectedFile.name}</p>
+            )}
+          </div>
+
+          {error && (
+            <div className="rounded-sm border border-status-error/30 bg-status-error/10 p-3">
+              <p className="text-xs text-status-error">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button onClick={handleCancel} variant="secondary" className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleUpload} disabled={!selectedFile} className="flex-1">
+              Upload
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 'validate') {
+      return (
+        <div className="space-y-4">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+            <h3 className="mt-2 text-sm font-semibold text-foreground">
+              {uploadProgress < 100 ? 'Uploading' : 'Validating'} Package
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {uploadProgress < 100
+                ? 'Transferring update package to system...'
+                : 'Verifying checksum and signature...'}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-mono text-foreground">{Math.round(uploadProgress)}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {selectedFile && (
+            <div className="rounded-sm border border-border/60 bg-card p-3">
+              <p className="text-xs font-mono text-foreground">{selectedFile.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (step === 'confirm') {
+      return (
+        <div className="space-y-4">
+          <div className="text-center">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-status-success" />
+            <h3 className="mt-2 text-sm font-semibold text-foreground">Ready to Install</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Package validated successfully</p>
+          </div>
+
+          {selectedFile && (
+            <div className="rounded-sm border border-border/60 bg-card p-3">
+              <p className="text-xs font-mono text-foreground">{selectedFile.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
+          )}
+
+          <div className="rounded-sm border border-status-warning/30 bg-status-warning/10 p-3">
+            <p className="text-xs text-status-warning">
+              ⚠ System will reboot after installation completes
+            </p>
+          </div>
+
+          {error && (
+            <div className="rounded-sm border border-status-error/30 bg-status-error/10 p-3">
+              <p className="text-xs text-status-error">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button onClick={handleCancel} variant="secondary" className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleStartUpdate} className="flex-1">
+              Install Update
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 'install') {
+      const progress = installProgress?.percentComplete || 0
+      const currentStep = installProgress?.currentStep || 'Installing'
+      const timeRemaining = installProgress?.timeRemainingSeconds
+
+      return (
+        <div className="space-y-4">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{currentStep}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {timeRemaining ? `Approximately ${timeRemaining}s remaining` : 'Please wait...'}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-mono text-foreground">{progress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-sm border border-status-warning/30 bg-status-warning/10 p-3">
+            <p className="text-xs text-status-warning">
+              ⚠ Do not power off the system during installation
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 'complete') {
+      return (
+        <div className="space-y-4">
+          <div className="text-center">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-status-success" />
+            <h3 className="mt-2 text-sm font-semibold text-foreground">Update Complete</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {rebootCountdown !== null
+                ? `System will reboot in ${rebootCountdown}s`
+                : 'System reboot required to apply update'}
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-status-warning/30 bg-status-warning/10 p-3">
+            <p className="text-xs text-status-warning">
+              All active tasks will be stopped during reboot
+            </p>
+          </div>
+
+          {rebootCountdown === null && (
+            <div className="flex gap-2 pt-2">
+              <Button onClick={handleCancel} variant="secondary" className="flex-1">
+                Reboot Later
+              </Button>
+              <Button onClick={handleReboot} className="flex-1">
+                Reboot Now
+              </Button>
+            </div>
+          )}
+
+          {rebootCountdown !== null && (
+            <div className="text-center">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return null
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-        onClick={handleBackdropClick}
-      />
-
-      {/* Modal */}
-      <div
-        className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-sm border border-border/70 bg-card/95 text-foreground shadow-2xl shadow-black/40 backdrop-blur supports-[backdrop-filter]:bg-card/80"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/70 p-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            System Update
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="relative w-full max-w-md rounded-sm border border-border/70 bg-card p-6 shadow-2xl">
+        {step !== 'install' && step !== 'complete' && (
           <button
-            type="button"
             onClick={handleCancel}
-            disabled={isUpdateInProgress}
-            className="rounded-md p-1 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            className="absolute right-4 top-4 rounded-sm p-1 hover:bg-muted"
           >
-            <X size={20} />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
-        </div>
+        )}
 
-        {/* Content */}
-        <div className="p-6">
-          {step === 'upload' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
-              <UploadStep
-                onFileSelect={() => fileInputRef.current?.click()}
-                fileInputRef={fileInputRef}
-                onFileChange={handleFileSelect}
-              />
-            </div>
-          )}
+        <h2 className="mb-4 text-lg font-semibold text-foreground">System Update</h2>
 
-          {step === 'validate' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
-              <ValidateStep
-                fileName={selectedFile?.name || ''}
-                fileSize={selectedFile?.size || 0}
-                progress={updateState.progress}
-                message={updateState.message}
-              />
-            </div>
-          )}
-
-          {step === 'confirm' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
-              <ConfirmStep
-                fileName={selectedFile?.name || ''}
-                fileSize={selectedFile?.size || 0}
-                onConfirm={handleStartUpdate}
-                onCancel={handleCancel}
-              />
-            </div>
-          )}
-
-          {step === 'install' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
-              <InstallStep
-                progress={updateState.progress}
-                message={updateState.message}
-              />
-            </div>
-          )}
-
-          {step === 'complete' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
-              <CompleteStep
-                onReboot={handleReboot}
-                onClose={handleCancel}
-                rebootCountdown={rebootCountdown}
-              />
-            </div>
-          )}
-        </div>
+        {renderStep()}
       </div>
-    </>
-  )
-}
-
-// Step Components
-
-interface UploadStepProps {
-  onFileSelect: () => void
-  fileInputRef: React.RefObject<HTMLInputElement>
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-}
-
-function UploadStep({ onFileSelect, fileInputRef, onFileChange }: UploadStepProps) {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Upload a system update package to install new software or firmware.
-      </p>
-
-      <div
-        className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-sm border-2 border-dashed border-border/60 bg-muted/40 p-12 text-center transition hover:border-border hover:bg-muted/70"
-        onClick={onFileSelect}
-      >
-        <Upload size={48} className="text-muted-foreground" />
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">
-            Click to upload update file
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            .rpm, .tar.gz, or .zip files
-          </p>
-        </div>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".rpm,.tar.gz,.zip"
-        className="hidden"
-        onChange={onFileChange}
-      />
-    </div>
-  )
-}
-
-interface ValidateStepProps {
-  fileName: string
-  fileSize: number
-  progress: number
-  message: string
-}
-
-function ValidateStep({ fileName, fileSize, progress, message }: ValidateStepProps) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-sm border border-border/60 bg-muted/40 p-4">
-        <Upload size={32} className="text-muted-foreground" />
-        <div className="flex-1 overflow-hidden">
-          <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
-          <p className="text-xs text-muted-foreground">
-            {(fileSize / 1024 / 1024).toFixed(2)} MB
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{message}</span>
-          <span className="font-semibold text-foreground">{progress}%</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-md bg-muted/60">
-          <div
-            className="h-full bg-status-success transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-interface ConfirmStepProps {
-  fileName: string
-  fileSize: number
-  onConfirm: () => void
-  onCancel: () => void
-}
-
-function ConfirmStep({ fileName, fileSize, onConfirm, onCancel }: ConfirmStepProps) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-sm border border-status-success/50 bg-status-success/10 p-4">
-        <CheckCircle2 size={24} className="text-status-success" />
-        <div className="flex-1">
-          <p className="text-sm font-medium text-status-success">
-            Update package validated
-          </p>
-          <p className="text-xs text-status-success/80">
-            Ready to install
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2 rounded-sm border border-border/60 bg-muted/40 p-4">
-        <InfoRow label="File" value={fileName} />
-        <InfoRow label="Size" value={`${(fileSize / 1024 / 1024).toFixed(2)} MB`} />
-        <InfoRow label="Version" value="1.2.0" />
-      </div>
-
-      <div className="rounded-sm border border-status-warning/50 bg-status-warning/10 p-3">
-        <div className="flex gap-2">
-          <AlertTriangle size={16} className="flex-shrink-0 text-status-warning" />
-          <p className="text-xs text-status-warning">
-            The system will be unavailable during the update process. Ensure all tasks are stopped.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <Button onClick={onCancel} variant="secondary" className="flex-1">
-          Cancel
-        </Button>
-        <Button onClick={onConfirm} variant="primary" className="flex-1">
-          Install Update
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-interface InstallStepProps {
-  progress: number
-  message: string
-}
-
-function InstallStep({ progress, message }: InstallStepProps) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-center py-6">
-        <Loader2 size={64} className="animate-spin text-status-success" />
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{message}</span>
-          <span className="font-semibold text-foreground">{progress}%</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-sm bg-muted/60">
-          <div
-            className="h-full bg-status-success transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
-      <p className="text-center text-xs text-muted-foreground">
-        Do not close this window or power off the device
-      </p>
-    </div>
-  )
-}
-
-interface CompleteStepProps {
-  onReboot: () => void
-  onClose: () => void
-  rebootCountdown: number | null
-}
-
-function CompleteStep({ onReboot, onClose, rebootCountdown }: CompleteStepProps) {
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-center gap-4 py-6">
-        <CheckCircle2 size={64} className="text-status-success" />
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-foreground">
-            Update Complete
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The system update has been installed successfully
-          </p>
-        </div>
-      </div>
-
-      {rebootCountdown !== null ? (
-        <div className="space-y-3">
-          <div className="rounded-sm border border-status-warning/50 bg-status-warning/10 p-4 text-center">
-            <p className="text-sm font-medium text-status-warning">
-              System rebooting in {rebootCountdown} seconds...
-            </p>
-          </div>
-          {/* Progress bar showing countdown */}
-          <div className="space-y-2">
-            <div className="h-2 overflow-hidden rounded-sm bg-muted/60">
-              <div
-                className="h-full bg-status-warning transition-all duration-1000 ease-linear"
-                style={{ width: `${(rebootCountdown / 10) * 100}%` }}
-              />
-            </div>
-            <p className="text-center text-xs text-muted-foreground">
-              Rebooting system...
-            </p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="rounded-sm border border-status-warning/50 bg-status-warning/10 p-3">
-            <div className="flex gap-2">
-              <AlertTriangle size={16} className="flex-shrink-0 text-status-warning" />
-              <p className="text-xs text-status-warning">
-                A system reboot is required to complete the update.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <Button onClick={onClose} variant="secondary" className="flex-1">
-              Reboot Later
-            </Button>
-            <Button onClick={onReboot} variant="primary" className="flex-1">
-              Reboot Now
-            </Button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-interface InfoRowProps {
-  label: string
-  value: string
-}
-
-function InfoRow({ label, value }: InfoRowProps) {
-  return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
     </div>
   )
 }

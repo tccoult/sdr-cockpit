@@ -1,4 +1,4 @@
-import { Task } from "../../types/sdr";
+import { Task } from "../../api/client";
 import { formatDuration, formatFrequency } from "../../utils/formatters";
 
 type TaskCardProps = {

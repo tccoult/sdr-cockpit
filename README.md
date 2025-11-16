@@ -58,6 +58,16 @@ sudo ./scripts/deploy-systemd.sh  # Deploy as systemd service
 
 For air-gapped deployments, use `./scripts/build-rpm.sh` to create a bundled RPM package.
 
+## API Documentation
+
+Interactive API documentation is available:
+
+- **Generate docs**: `./scripts/generate-docs.sh`
+- **View docs**: Open `docs/api/index.html` in your browser
+- **Live API**: http://localhost:8000/docs (FastAPI auto-generated Swagger UI)
+
+The API is defined in `openapi.yaml` which serves as the single source of truth for both frontend and backend types.
+
 ## Project Structure
 
 ```

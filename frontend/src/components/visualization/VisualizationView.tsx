@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { FrequencyRange, VisualizationMode } from "../../types/sdr";
+import { FrequencyRange } from "../../types/sdr";
+import { VisualizationMode } from "../../api/client";
 import { ColorMap } from "../../utils/colorMaps";
 import { useTheme } from "../app/useTheme";
 import { FFTDisplay, type FFTRangeMetrics } from "./FFTDisplay";

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Task, TaskType, TaskStatus, TaskOwner } from '../../types/sdr'
+import { Task, TaskType, TaskStatus, TaskOwner } from '../../api/client'
 import { TaskRosterPanel } from './TaskRosterPanel'
 
 type MockTaskCardProps = {
