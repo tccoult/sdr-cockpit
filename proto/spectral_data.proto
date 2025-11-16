@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package sdr_cockpit;
+
+// Single FFT frame with int16 log magnitude bins
+message FFTFrame {
+  // Timestamp in milliseconds since Unix epoch
+  uint64 timestamp = 1;
+
+  // Center frequency in Hz
+  double center_freq = 2;
+
+  // Sample rate in Hz
+  double sample_rate = 3;
+
+  // FFT bin values as int16 log magnitude
+  // Encoding: dB value mapped to int16 range
+  // Formula: int16_value = ((dB + 120) / 130) * 65535 - 32768
+  // Range: -120 dB to +10 dB (130 dB dynamic range)
+  // Resolution: ~0.002 dB per step
+  bytes bins = 4;  // Raw int16 bytes (length = num_bins * 2)
+}
+
+// Batch of FFT frames for spectrogram streaming
+message FFTFrameBatch {
+  // Array of FFT frames
+  repeated FFTFrame frames = 1;
+
+  // Optional: batch-level metadata (can override per-frame values if all same)
+  optional uint64 batch_timestamp = 2;
+  optional double center_freq = 3;
+  optional double sample_rate = 4;
+}
+
+// Wrapper message for different message types
+message SpectralMessage {
+  enum MessageType {
+    SINGLE_FRAME = 0;
+    BATCH = 1;
+    COMPRESSED_BATCH = 2;  // For Phase 2: zstd compressed
+  }
+
+  MessageType type = 1;
+
+  oneof payload {
+    FFTFrame single_frame = 2;
+    FFTFrameBatch batch = 3;
+    bytes compressed_data = 4;  // For Phase 2: zstd compressed FFTFrameBatch
+  }
+}

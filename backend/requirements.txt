@@ -4,6 +4,8 @@ uvicorn[standard]==0.38.0
 pydantic==2.12.3
 python-multipart==0.0.20
 numpy==2.0.2
+protobuf>=6.31.1,<7.0.0
+grpcio-tools>=1.76.0
 
 # Development and testing
 pytest==8.4.2

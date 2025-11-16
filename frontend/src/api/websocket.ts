@@ -6,6 +6,8 @@ import { TARGET_FPS } from "../config/constants";
 import { FFTData, FFTDataBatch, VisualizationMode } from "../types/sdr";
 import { MockFFTGenerator } from "../utils/mockDataGenerator";
 import { getApiMode, getWsBaseUrl } from "./config";
+import { sdr_cockpit } from "../proto/spectral_data.js";
+import { bytesToDbBins } from "../utils/spectralConversion";
 
 export type DataStreamStatus =
   | "connecting"
@@ -43,6 +45,7 @@ class OnlineDataStream {
 
     try {
       this.ws = new WebSocket(wsUrl);
+      this.ws.binaryType = "arraybuffer"; // Required for binary protobuf messages
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
@@ -51,37 +54,58 @@ class OnlineDataStream {
 
       this.ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-
-          // Check for error messages from server
-          if (data.error) {
-            this.callbacks.onStatusChange("error");
-            this.callbacks.onError?.(data.error);
-            return;
-          }
-
-          // Convert to batch format
-          let batch: FFTDataBatch;
-
-          if (data.frames && Array.isArray(data.frames)) {
-            // Already a batch
-            batch = {
-              frames: data.frames.map((frame: FFTData) => ({
-                ...frame,
-                bins: Array.isArray(frame.bins)
-                  ? new Float32Array(frame.bins)
-                  : frame.bins,
-              })),
-            };
-          } else {
-            // Single frame - convert to batch
-            if (Array.isArray(data.bins)) {
-              data.bins = new Float32Array(data.bins);
+          // Handle JSON error messages (sent before switching to binary)
+          if (typeof event.data === "string") {
+            const data = JSON.parse(event.data);
+            if (data.error) {
+              this.callbacks.onStatusChange("error");
+              this.callbacks.onError?.(data.error);
+              return;
             }
-            batch = { frames: [data as FFTData] };
           }
 
-          this.callbacks.onData(batch);
+          // Handle binary protobuf messages
+          if (event.data instanceof ArrayBuffer) {
+            const bytes = new Uint8Array(event.data);
+            const message = sdr_cockpit.SpectralMessage.decode(bytes);
+
+            let batch: FFTDataBatch;
+
+            // Process based on message type
+            if (
+              message.type === sdr_cockpit.SpectralMessage.MessageType.BATCH &&
+              message.batch &&
+              message.batch.frames
+            ) {
+              // Batch of frames (spectrogram mode)
+              const frames: FFTData[] = message.batch.frames.map((frame) => ({
+                timestamp: Number(frame.timestamp || 0),
+                centerFreq: frame.centerFreq || 0,
+                sampleRate: frame.sampleRate || 0,
+                bins: bytesToDbBins(frame.bins || new Uint8Array()),
+              }));
+              batch = { frames };
+            } else if (
+              message.type ===
+                sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
+              message.singleFrame
+            ) {
+              // Single frame (FFT_ONLY / FFT_WATERFALL mode)
+              const frame = message.singleFrame;
+              const fftData: FFTData = {
+                timestamp: Number(frame.timestamp || 0),
+                centerFreq: frame.centerFreq || 0,
+                sampleRate: frame.sampleRate || 0,
+                bins: bytesToDbBins(frame.bins || new Uint8Array()),
+              };
+              batch = { frames: [fftData] };
+            } else {
+              console.error("Unknown message type:", message.type);
+              return;
+            }
+
+            this.callbacks.onData(batch);
+          }
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
         }

@@ -7,6 +7,8 @@ from app.utils.fft_generator import MockFFTGenerator
 from app.api.routes.tasks import tasks
 from app.config.constants import TARGET_FPS
 from app.models.task import VisualizationMode
+from app.proto import FFTFrame, FFTFrameBatch, SpectralMessage
+from app.utils.spectral_conversion import db_bins_to_bytes
 
 router = APIRouter()
 
@@ -58,14 +60,45 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
                 if task.visualization_mode == VisualizationMode.SPECTROGRAM:
                     # Generate a batch of frames (simulate capturing multiple FFTs at once)
                     batch_size = 50  # Send 50 frames at once for spectrogram
-                    frames = [generator.generate_fft() for _ in range(batch_size)]
-                    await websocket.send_json({"frames": frames})
+                    proto_frames = []
+                    for _ in range(batch_size):
+                        fft_data = generator.generate_fft()
+                        # Convert to protobuf FFTFrame
+                        proto_frame = FFTFrame(
+                            timestamp=fft_data["timestamp"],
+                            center_freq=fft_data["centerFreq"],
+                            sample_rate=fft_data["sampleRate"],
+                            bins=db_bins_to_bytes(fft_data["bins"]),
+                        )
+                        proto_frames.append(proto_frame)
+
+                    # Create batch message
+                    batch = FFTFrameBatch(frames=proto_frames)
+                    message = SpectralMessage(type=SpectralMessage.BATCH, batch=batch)
+
+                    # Serialize and send
+                    await websocket.send_bytes(message.SerializeToString())
                     # Wait longer between batches
                     await asyncio.sleep(2.0)
                 else:
                     # Regular streaming - send single frames
                     fft_data = generator.generate_fft()
-                    await websocket.send_json(fft_data)
+
+                    # Convert to protobuf FFTFrame
+                    proto_frame = FFTFrame(
+                        timestamp=fft_data["timestamp"],
+                        center_freq=fft_data["centerFreq"],
+                        sample_rate=fft_data["sampleRate"],
+                        bins=db_bins_to_bytes(fft_data["bins"]),
+                    )
+
+                    # Create message wrapper
+                    message = SpectralMessage(
+                        type=SpectralMessage.SINGLE_FRAME, single_frame=proto_frame
+                    )
+
+                    # Serialize and send
+                    await websocket.send_bytes(message.SerializeToString())
                     # Target FPS
                     await asyncio.sleep(1.0 / TARGET_FPS)
             else:
