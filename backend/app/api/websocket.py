@@ -4,16 +4,18 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import Dict, Set, Optional
 from dataclasses import dataclass, field
-from fastapi import WebSocket, WebSocketDisconnect, APIRouter
-from app.utils.fft_generator import MockFFTGenerator
+from typing import Dict, Optional, Set
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from app.api.routes.tasks import tasks
 from app.config.constants import TARGET_FPS
-from app.models.generated import VisualizationMode, TaskStatus
+from app.models.generated import TaskStatus, VisualizationMode
 from app.proto import FFTFrame, FFTFrameBatch, SpectralMessage
-from app.utils.spectral_conversion import db_bins_to_bytes
 from app.utils.compression import compress_data, should_compress_batch
+from app.utils.fft_generator import MockFFTGenerator
+from app.utils.spectral_conversion import db_bins_to_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +223,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
                     # Serialize and send
                     serialized = message.SerializeToString()
                     logger.debug(
-                        f"[WebSocket] Sending {'COMPRESSED_' if should_compress_batch(batch_size) else ''}BATCH message, size: {len(serialized)} bytes, frames: {batch_size}"
+                        f"Sending {'COMPRESSED_' if should_compress_batch(batch_size) else ''}BATCH message, size: {len(serialized)} bytes, frames: {batch_size}"
                     )
                     await websocket.send_bytes(serialized)
                     # Wait longer between batches
@@ -245,9 +247,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
 
                     # Serialize and send
                     serialized = message.SerializeToString()
-                    logger.debug(
-                        f"[WebSocket] Sending SINGLE_FRAME message, size: {len(serialized)} bytes"
-                    )
+                    logger.debug(f"Sending SINGLE_FRAME message, size: {len(serialized)} bytes")
                     await websocket.send_bytes(serialized)
                     # Target FPS
                     await asyncio.sleep(1.0 / TARGET_FPS)
