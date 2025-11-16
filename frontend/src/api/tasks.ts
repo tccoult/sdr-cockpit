@@ -1,9 +1,11 @@
 /**
  * Task API client
+ *
+ * Now using type-safe openapi-fetch client with auto-generated types.
  */
 
-import { Task, CreateRxTaskParams, CreateTxTaskParams } from '../api/client';
-import { getApiBaseUrl, getApiMode } from './config';
+import { apiClient, Task, CreateRxTaskParams, CreateTxTaskParams } from '../api/client';
+import { getApiMode } from './config';
 import {
   generateDemoTasks,
   createMockRxTask,
@@ -29,107 +31,111 @@ export interface TaskApi {
 }
 
 /**
- * Online (server-backed) task API implementation
+ * Online (server-backed) task API implementation using openapi-fetch
  */
 class OnlineTaskApi implements TaskApi {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = `${getApiBaseUrl()}/api/tasks`;
-  }
-
   async listTasks(): Promise<Task[]> {
-    const response = await fetch(this.baseUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to list tasks: ${response.statusText}`);
+    const { data, error } = await apiClient.GET('/api/tasks/');
+    if (error) {
+      throw new Error(`Failed to list tasks: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async createRxTask(params: CreateRxTaskParams): Promise<Task> {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+    const { data, error } = await apiClient.POST('/api/tasks/', {
+      body: params,
     });
-    if (!response.ok) {
-      throw new Error(`Failed to create RX task: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to create RX task: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async createTxTask(params: CreateTxTaskParams & { file?: File }): Promise<Task> {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const { data, error } = await apiClient.POST('/api/tasks/', {
+      body: {
         name: params.name,
         filename: params.file?.name || params.filename,
         frequency: params.frequency,
         loop: params.loop,
-      }),
+      },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to create TX task: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to create TX task: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async getTask(id: string): Promise<Task> {
-    const response = await fetch(`${this.baseUrl}/${id}`);
-    if (!response.ok) {
-      throw new Error(`Failed to get task: ${response.statusText}`);
+    const { data, error } = await apiClient.GET('/api/tasks/{task_id}', {
+      params: {
+        path: { task_id: id },
+      },
+    });
+    if (error) {
+      throw new Error(`Failed to get task: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async deleteTask(id: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
-      method: 'DELETE',
+    const { error } = await apiClient.DELETE('/api/tasks/{task_id}', {
+      params: {
+        path: { task_id: id },
+      },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to delete task: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to delete task: ${error}`);
     }
   }
 
   async pauseTask(id: string): Promise<Task> {
-    const response = await fetch(`${this.baseUrl}/${id}/pause`, {
-      method: 'POST',
+    const { data, error } = await apiClient.POST('/api/tasks/{task_id}/pause', {
+      params: {
+        path: { task_id: id },
+      },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to pause task: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to pause task: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async resumeTask(id: string): Promise<Task> {
-    const response = await fetch(`${this.baseUrl}/${id}/resume`, {
-      method: 'POST',
+    const { data, error } = await apiClient.POST('/api/tasks/{task_id}/resume', {
+      params: {
+        path: { task_id: id },
+      },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to resume task: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to resume task: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async startRecording(id: string): Promise<Task> {
-    const response = await fetch(`${this.baseUrl}/${id}/record`, {
-      method: 'POST',
+    const { data, error } = await apiClient.POST('/api/tasks/{task_id}/record', {
+      params: {
+        path: { task_id: id },
+      },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to start recording: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to start recording: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 
   async stopRecording(id: string): Promise<Task> {
-    const response = await fetch(`${this.baseUrl}/${id}/record`, {
-      method: 'DELETE',
+    const { data, error } = await apiClient.DELETE('/api/tasks/{task_id}/record', {
+      params: {
+        path: { task_id: id },
+      },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to stop recording: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Failed to stop recording: ${error}`);
     }
-    return response.json();
+    return data!;
   }
 }
 
