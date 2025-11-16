@@ -26,6 +26,7 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
          * @property {number|null} [centerFreq] FFTFrame centerFreq
          * @property {number|null} [sampleRate] FFTFrame sampleRate
          * @property {Uint8Array|null} [bins] FFTFrame bins
+         * @property {boolean|null} [isDelta] FFTFrame isDelta
          */
 
         /**
@@ -76,6 +77,14 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
         FFTFrame.prototype.bins = $util.newBuffer([]);
 
         /**
+         * FFTFrame isDelta.
+         * @member {boolean} isDelta
+         * @memberof sdr_cockpit.FFTFrame
+         * @instance
+         */
+        FFTFrame.prototype.isDelta = false;
+
+        /**
          * Creates a new FFTFrame instance using the specified properties.
          * @function create
          * @memberof sdr_cockpit.FFTFrame
@@ -107,6 +116,8 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
                 writer.uint32(/* id 3, wireType 1 =*/25).double(message.sampleRate);
             if (message.bins != null && Object.hasOwnProperty.call(message, "bins"))
                 writer.uint32(/* id 4, wireType 2 =*/34).bytes(message.bins);
+            if (message.isDelta != null && Object.hasOwnProperty.call(message, "isDelta"))
+                writer.uint32(/* id 5, wireType 0 =*/40).bool(message.isDelta);
             return writer;
         };
 
@@ -159,6 +170,10 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
                         message.bins = reader.bytes();
                         break;
                     }
+                case 5: {
+                        message.isDelta = reader.bool();
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -206,6 +221,9 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
             if (message.bins != null && message.hasOwnProperty("bins"))
                 if (!(message.bins && typeof message.bins.length === "number" || $util.isString(message.bins)))
                     return "bins: buffer expected";
+            if (message.isDelta != null && message.hasOwnProperty("isDelta"))
+                if (typeof message.isDelta !== "boolean")
+                    return "isDelta: boolean expected";
             return null;
         };
 
@@ -239,6 +257,8 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
                     $util.base64.decode(object.bins, message.bins = $util.newBuffer($util.base64.length(object.bins)), 0);
                 else if (object.bins.length >= 0)
                     message.bins = object.bins;
+            if (object.isDelta != null)
+                message.isDelta = Boolean(object.isDelta);
             return message;
         };
 
@@ -270,6 +290,7 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
                     if (options.bytes !== Array)
                         object.bins = $util.newBuffer(object.bins);
                 }
+                object.isDelta = false;
             }
             if (message.timestamp != null && message.hasOwnProperty("timestamp"))
                 if (typeof message.timestamp === "number")
@@ -282,6 +303,8 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
                 object.sampleRate = options.json && !isFinite(message.sampleRate) ? String(message.sampleRate) : message.sampleRate;
             if (message.bins != null && message.hasOwnProperty("bins"))
                 object.bins = options.bytes === String ? $util.base64.encode(message.bins, 0, message.bins.length) : options.bytes === Array ? Array.prototype.slice.call(message.bins) : message.bins;
+            if (message.isDelta != null && message.hasOwnProperty("isDelta"))
+                object.isDelta = message.isDelta;
             return object;
         };
 

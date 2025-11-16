@@ -17,6 +17,9 @@ export namespace sdr_cockpit {
 
         /** FFTFrame bins */
         bins?: (Uint8Array|null);
+
+        /** FFTFrame isDelta */
+        isDelta?: (boolean|null);
     }
 
     /** Represents a FFTFrame. */
@@ -39,6 +42,9 @@ export namespace sdr_cockpit {
 
         /** FFTFrame bins. */
         public bins: Uint8Array;
+
+        /** FFTFrame isDelta. */
+        public isDelta: boolean;
 
         /**
          * Creates a new FFTFrame instance using the specified properties.

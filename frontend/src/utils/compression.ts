@@ -32,6 +32,26 @@ export async function decompressData(
 }
 
 /**
+ * Decompress zstandard compressed data with timing.
+ *
+ * @param compressedData - Compressed bytes from backend
+ * @returns Tuple of [decompressed data, decompression time in ms]
+ */
+export async function decompressDataTimed(
+  compressedData: Uint8Array
+): Promise<[Uint8Array, number]> {
+  try {
+    const startTime = performance.now();
+    const decompressed = await decompress(compressedData);
+    const elapsedMs = performance.now() - startTime;
+    return [decompressed, elapsedMs];
+  } catch (error) {
+    console.error("Failed to decompress data:", error);
+    throw new Error(`Decompression failed: ${error}`);
+  }
+}
+
+/**
  * Get decompression statistics.
  *
  * @param compressedSize - Size of compressed data in bytes

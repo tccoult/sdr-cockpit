@@ -24,7 +24,7 @@ echo ""
 
 # Start backend in background with DEBUG logging
 cd "$PROJECT_ROOT/backend"
-LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+ZSTD_COMPRESSION_LEVEL=3 LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 # Start frontend in foreground

@@ -19,6 +19,12 @@ message FFTFrame {
   // Range: -120 dB to +10 dB (130 dB dynamic range)
   // Resolution: ~0.002 dB per step
   bytes bins = 4;  // Raw int16 bytes (length = num_bins * 2)
+
+  // Delta encoding flag
+  // If true: bins contains delta (difference) from previous frame
+  // If false: bins contains absolute int16 values
+  // Default false for backward compatibility
+  bool is_delta = 5;
 }
 
 // Batch of FFT frames for spectrogram streaming

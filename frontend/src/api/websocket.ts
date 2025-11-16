@@ -7,7 +7,7 @@ import { TARGET_FPS } from "../config/constants";
 import { MockFFTGenerator } from "../mocks/mockDataGenerator";
 import { sdr_cockpit } from "../proto/spectral_data.js";
 import { FFTData, FFTDataBatch } from "../types/sdr";
-import { decompressData } from "../utils/compression";
+import { decompressDataTimed } from "../utils/compression";
 import { bytesToDbBins, decodeDeltaBatch } from "../utils/spectralConversion";
 import { getApiMode, getWsBaseUrl } from "./config";
 
@@ -165,6 +165,7 @@ class OnlineDataStream {
         const decodedBins = decodeDeltaBatch(
           message.batch.frames.map((f) => ({
             bins: f.bins || new Uint8Array(),
+            isDelta: f.isDelta || false,
           }))
         );
 
@@ -181,13 +182,16 @@ class OnlineDataStream {
         message.compressedData
       ) {
         // Compressed batch - decompress first, then decode deltas
-        const decompressedBytes = await decompressData(message.compressedData);
+        const [decompressedBytes, _decompressTimeMs] = await decompressDataTimed(
+          message.compressedData
+        );
         const decompressedBatch =
           sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
 
         const decodedBins = decodeDeltaBatch(
           decompressedBatch.frames.map((f) => ({
             bins: f.bins || new Uint8Array(),
+            isDelta: f.isDelta || false,
           }))
         );
 

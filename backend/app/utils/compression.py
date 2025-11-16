@@ -3,15 +3,25 @@ Zstandard compression utilities for spectral data streaming.
 
 Uses zstd for compressing batches of FFT frames in spectrogram mode.
 Provides significant bandwidth reduction for repeated spectral data.
+
+Compression level can be configured via ZSTD_COMPRESSION_LEVEL env var:
+- 0: Disable compression (send uncompressed batches)
+- 1-3: Fast compression, lower ratio (good for very high throughput)
+- 5: Default - balanced compression and speed
+- 9: Better compression, slower (good for bandwidth-constrained links)
+- 22: Maximum compression, very slow (not recommended for real-time)
 """
 
-import zstandard as zstd
-from typing import Optional
+import os
+import time
+from typing import Optional, Tuple
 
-# Zstd compression level (1-22, default 3)
+import zstandard as zstd
+
+# Zstd compression level (1-22, configurable via env var)
 # Higher = better compression but slower
-# Level 3 is a good balance for real-time streaming
-DEFAULT_COMPRESSION_LEVEL = 3
+# Level 3 is a good balance for real-time streaming with good compression
+COMPRESSION_LEVEL = int(os.getenv("ZSTD_COMPRESSION_LEVEL", "3"))
 
 # Minimum batch size to compress (frames)
 # Below this threshold, compression overhead isn't worth it
@@ -30,8 +40,13 @@ def get_compressor() -> zstd.ZstdCompressor:
     """
     global _compressor
     if _compressor is None:
-        _compressor = zstd.ZstdCompressor(level=DEFAULT_COMPRESSION_LEVEL)
+        _compressor = zstd.ZstdCompressor(level=COMPRESSION_LEVEL)
     return _compressor
+
+
+def get_compression_level() -> int:
+    """Get the current compression level."""
+    return COMPRESSION_LEVEL
 
 
 def compress_data(data: bytes) -> bytes:
@@ -53,6 +68,23 @@ def compress_data(data: bytes) -> bytes:
     compressor = get_compressor()
     compressed = compressor.compress(data)
     return bytes(compressed)  # Ensure return type is bytes
+
+
+def compress_data_timed(data: bytes) -> Tuple[bytes, float]:
+    """
+    Compress data using zstandard and return timing.
+
+    Args:
+        data: Raw bytes to compress
+
+    Returns:
+        tuple: (compressed_data, compression_time_ms)
+    """
+    compressor = get_compressor()
+    start = time.perf_counter()
+    compressed = compressor.compress(data)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    return bytes(compressed), elapsed_ms
 
 
 def decompress_data(compressed_data: bytes) -> bytes:
@@ -79,8 +111,9 @@ def decompress_data(compressed_data: bytes) -> bytes:
 
 def should_compress_batch(batch_size: int) -> bool:
     """
-    Determine if a batch should be compressed based on size.
+    Determine if a batch should be compressed based on size and compression level.
 
+    Compression can be disabled by setting ZSTD_COMPRESSION_LEVEL=0.
     Compression has overhead, so small batches aren't worth compressing.
 
     Args:
@@ -89,6 +122,10 @@ def should_compress_batch(batch_size: int) -> bool:
     Returns:
         bool: True if batch should be compressed
     """
+    # Level 0 = disable compression
+    if COMPRESSION_LEVEL == 0:
+        return False
+
     return batch_size >= MIN_BATCH_SIZE_FOR_COMPRESSION
 
 
