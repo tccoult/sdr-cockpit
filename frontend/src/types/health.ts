@@ -2,7 +2,7 @@
  * System health and version types
  *
  * NOTE: BIT (Built-In Test) types are now auto-generated from OpenAPI spec.
- * Import BIT types from: import { BitResult, BitTest, ... } from '../api/health'
+ * Import BIT types from: import { BitResult, BitTest, ... } from '../services/api'
  */
 
 /**

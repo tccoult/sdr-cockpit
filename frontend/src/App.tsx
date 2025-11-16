@@ -23,7 +23,7 @@ import { SettingsMenuItem } from './components/settings/SettingsMenu';
 import { getHealthIndicator } from './styles/theme';
 import { TaskStatus } from './api/client';
 import { PLASMA } from './utils/colorMaps';
-import { getMockSystemInfo } from './utils/mockHealth';
+import { getMockSystemInfo } from './mocks/mockHealth';
 
 const TASK_DRAWER_WIDTH = 300;
 const SYSTEM_HEALTH_PANEL_WIDTH = 300;

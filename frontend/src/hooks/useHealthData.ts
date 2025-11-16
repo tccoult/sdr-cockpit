@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { api, type BitResult } from '../services/api';
 import { getApiMode } from '../api/config';
-import { getMockBitResult } from '../utils/mockHealth';
+import { getMockBitResult } from '../mocks/mockHealth';
 
 export function useHealthData() {
   const [bitResult, setBitResult] = useState<BitResult>(() => getMockBitResult());

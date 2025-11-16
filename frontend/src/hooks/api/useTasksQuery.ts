@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
 import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../../api/client';
 import { api } from '../../services/api';
-import { updateRecording, updateTaskUptime, updateTxProgress } from '../../utils/mockTaskGenerator';
+import { updateRecording, updateTaskUptime, updateTxProgress } from '../../mocks/mockTaskGenerator';
 import { useTaskParams } from '../useTaskParams';
 
 // Query keys

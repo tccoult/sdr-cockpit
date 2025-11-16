@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FFTDataBatch } from '../types/sdr';
 import { VisualizationMode } from '../api/client';
 import { createDataStream, DataStreamStatus } from '../api';
-import { dispatchFFTData } from '../utils/mockDataGenerator';
+import { dispatchFFTData } from '../mocks/mockDataGenerator';
 
 export interface UseDataStreamOptions {
   taskId: string | null;

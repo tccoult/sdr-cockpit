@@ -5,7 +5,7 @@
 import { TARGET_FPS } from "../config/constants";
 import { FFTData, FFTDataBatch } from "../types/sdr";
 import { VisualizationMode } from "../api/client";
-import { MockFFTGenerator } from "../utils/mockDataGenerator";
+import { MockFFTGenerator } from "../mocks/mockDataGenerator";
 import { getApiMode, getWsBaseUrl } from "./config";
 
 export type DataStreamStatus =

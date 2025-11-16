@@ -7,7 +7,7 @@
 
 import { apiClient, type Task, type CreateRxTaskParams, type CreateTxTaskParams, type components } from '../../api/client';
 import { getApiBaseUrl, getApiMode } from '../../api/config';
-import { getMockBitResult } from '../../utils/mockHealth';
+import { getMockBitResult } from '../../mocks/mockHealth';
 import {
   generateDemoTasks,
   createMockRxTask,
@@ -15,7 +15,7 @@ import {
   toggleTaskPause,
   startRecording as mockStartRecording,
   stopRecording as mockStopRecording,
-} from '../../utils/mockTaskGenerator';
+} from '../../mocks/mockTaskGenerator';
 
 // Re-export all API-related types for convenience
 export type BitResult = components['schemas']['BitResult'];
