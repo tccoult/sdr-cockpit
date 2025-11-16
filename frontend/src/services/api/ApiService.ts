@@ -205,7 +205,7 @@ class OnlineApiService implements IApiService {
         reject(new Error('Upload failed'));
       });
 
-      xhr.open('POST', `${this.baseUrl}/upload`);
+      xhr.open('POST', `${this.baseUrl}/api/system/update/upload`);
       xhr.send(formData);
     });
   }

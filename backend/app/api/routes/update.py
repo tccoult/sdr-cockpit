@@ -189,14 +189,17 @@ async def upload_package(
     try:
         # Stream file to disk in chunks
         chunk_size = 1024 * 1024  # 1MB chunks
-        total_bytes = 0
+        bytes_received = 0
 
         with open(upload_path, "wb") as f:
             while chunk := await file.read(chunk_size):
                 f.write(chunk)
-                total_bytes += len(chunk)
-                uploads[upload_id]["bytes_received"] = total_bytes
-                uploads[upload_id]["total_bytes"] = total_bytes
+                bytes_received += len(chunk)
+                uploads[upload_id]["bytes_received"] = bytes_received
+                # total_bytes will be set to final size after upload completes
+
+        # Set total_bytes to final size now that upload is complete
+        uploads[upload_id]["total_bytes"] = bytes_received
 
         # Simulate validation in background
         background_tasks.add_task(validate_package, upload_id)

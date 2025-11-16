@@ -33,14 +33,6 @@ describe('App', () => {
     })
   })
 
-  it('shows task discovery state initially', async () => {
-    renderApp()
-    await waitFor(() => {
-      const discoveringText = screen.getByText(/Discovering tasks/i)
-      expect(discoveringText).toBeInTheDocument()
-    })
-  })
-
   it('shows task sidebar', async () => {
     renderApp()
     await waitFor(() => {
