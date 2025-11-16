@@ -1,60 +1,63 @@
-import { X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api, type BitResult } from "./services/api";
-import { getApiMode } from "./api/config";
-import { useTheme } from "./components/app/useTheme";
-import { Button } from "./components/common/Button";
-import { Drawer } from "./components/common/Drawer";
-import { CompactHeader, HealthStatus } from "./components/layout/CompactHeader";
-import { MobileNav, MobileView } from "./components/layout/MobileNav";
-import { DisplaySettings } from "./components/settings/DisplaySettings";
-import { SettingsMenuItem } from "./components/settings/SettingsMenu";
-import { SystemSettings } from "./components/settings/SystemSettings";
-import { SystemUpdateWizard } from "./components/settings/SystemUpdateWizard";
-import { VersionInfo } from "./components/settings/VersionInfo";
-import { SystemHealthPanel } from "./components/system-health/SystemHealthPanel";
-import { ActiveTaskPanel } from "./components/tasks/ActiveTaskPanel/ActiveTaskPanel";
-import { TaskRosterPanel } from "./components/tasks/TaskRosterPanel";
-import { TaskWizard } from "./components/tasks/TaskWizard";
-import { VisualizationView } from "./components/visualization/VisualizationView";
-import { useDataStream, useTasks } from "./hooks";
-import { getHealthIndicator } from "./styles/theme";
-import { TaskStatus } from "./api/client";
-import { PLASMA } from "./utils/colorMaps";
-import { getMockBitResult, getMockSystemInfo } from "./utils/mockHealth";
+/**
+ * SDR Cockpit Main Application
+ * Refactored for clarity and maintainability
+ */
+
+import { useEffect, useState } from 'react';
+import { useTheme } from './components/app/useTheme';
+import { CompactHeader, HealthStatus } from './components/layout/CompactHeader';
+import { MobileNav, MobileView } from './components/layout/MobileNav';
+import { DesktopView } from './components/layout/DesktopView';
+import { MobileContentView } from './components/layout/MobileContentView';
+import { DesktopDrawers } from './components/layout/DesktopDrawers';
+import { Modals } from './components/layout/Modals';
+import {
+  useTasks,
+  useDataStream,
+  useHealthData,
+  useUIPreferences,
+  useMobile,
+  useKeyboardShortcuts,
+} from './hooks';
+import { SettingsMenuItem } from './components/settings/SettingsMenu';
+import { getHealthIndicator } from './styles/theme';
+import { TaskStatus } from './api/client';
+import { PLASMA } from './utils/colorMaps';
+import { getMockSystemInfo } from './utils/mockHealth';
 
 const TASK_DRAWER_WIDTH = 300;
 const SYSTEM_HEALTH_PANEL_WIDTH = 300;
-const HEADER_HEIGHT = 48;
 
 function App() {
   const colorMap = PLASMA;
   const { theme, toggleTheme } = useTheme();
+  const isMobile = useMobile();
 
-  // UI state
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(true); // Open by default
-  const [isSystemHealthPanelOpen, setIsSystemHealthPanelOpen] = useState(false);
-  const [isTaskDrawerPinned, setIsTaskDrawerPinned] = useState(true); // Keep task bar docked initially
-  const [isSystemHealthPanelPinned, setIsSystemHealthPanelPinned] =
-    useState(false);
-  const [renderFps, setRenderFps] = useState(0);
-
-  // Mobile navigation state
-  const [mobileView, setMobileView] = useState<MobileView>("visualization");
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Settings modal state
-  const [activeSettingsPanel, setActiveSettingsPanel] =
-    useState<SettingsMenuItem | null>(null);
-  const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
-
-  // Health data state
-  const [bitResult, setBitResult] = useState<BitResult>(() => getMockBitResult());
+  // Data hooks
+  const bitResult = useHealthData();
   const systemInfo = getMockSystemInfo();
 
-  // Task management hook
+  // UI state
+  const [renderFps, setRenderFps] = useState(0);
+  const [mobileView, setMobileView] = useState<MobileView>('visualization');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isTaskWizardOpen, setIsTaskWizardOpen] = useState(false);
+  const [activeSettingsPanel, setActiveSettingsPanel] = useState<SettingsMenuItem | null>(null);
+  const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
+
+  // UI preferences (with localStorage)
+  const {
+    isTaskDrawerOpen,
+    setIsTaskDrawerOpen,
+    isTaskDrawerPinned,
+    setIsTaskDrawerPinned,
+    isHealthPanelOpen,
+    setIsHealthPanelOpen,
+    isHealthPanelPinned,
+    setIsHealthPanelPinned,
+  } = useUIPreferences();
+
+  // Task management
   const {
     tasks,
     selectedTask,
@@ -69,111 +72,41 @@ function App() {
     stopRecording,
   } = useTasks();
 
-  // Data streaming hook
+  // Data streaming
   const { fps, streamStatus, streamError } = useDataStream({
     taskId: selectedTaskId,
     centerFreq: selectedTask?.frequency,
     sampleRate: selectedTask?.sampleRate,
     fftSize: selectedTask?.fftSize ?? undefined,
-    enabled: !isWizardOpen, // Pause streaming when wizard is open
-    paused: selectedTask?.status === TaskStatus.PAUSED, // Pause when task is paused
+    enabled: !isTaskWizardOpen,
+    paused: selectedTask?.status === TaskStatus.PAUSED,
     visualizationMode: selectedTask?.visualizationMode ?? undefined,
   });
 
-  const totalTasks = tasks.length;
+  // Keyboard shortcuts (ESC)
+  useKeyboardShortcuts({
+    activeSettingsPanel,
+    setActiveSettingsPanel,
+    isUpdateWizardOpen,
+    setIsUpdateWizardOpen,
+    isMobileNavOpen,
+    setIsMobileNavOpen,
+    isHealthPanelOpen: isHealthPanelOpen,
+    setIsHealthPanelOpen,
+    isHealthPanelPinned,
+    isTaskDrawerOpen,
+    setIsTaskDrawerOpen,
+    isTaskDrawerPinned,
+  });
 
-  // Determine health status (placeholder logic)
-  const healthStatus: HealthStatus = streamError
-    ? "error"
-    : streamStatus === "connecting"
-    ? "warning"
-    : streamStatus === "connected"
-    ? "healthy"
-    : "unknown";
-
+  // Reset render FPS when wizard opens or no task selected
   useEffect(() => {
-    if (isWizardOpen || !selectedTaskId) {
+    if (isTaskWizardOpen || !selectedTaskId) {
       setRenderFps(0);
     }
-  }, [isWizardOpen, selectedTaskId]);
+  }, [isTaskWizardOpen, selectedTaskId]);
 
-  // Poll health/BIT data every 3 seconds in online mode
-  useEffect(() => {
-    const apiMode = getApiMode();
-
-    if (apiMode === 'offline') {
-      // In offline mode, just update periodically with new mock data
-      const interval = setInterval(() => {
-        setBitResult(getMockBitResult());
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-
-    // Online mode - poll the API
-    const fetchHealth = async () => {
-      try {
-        const result = await api.getBitResults();
-        setBitResult(result);
-      } catch (error) {
-        console.error('Failed to fetch BIT results:', error);
-      }
-    };
-
-    // Initial fetch
-    fetchHealth();
-
-    // Poll every 3 seconds
-    const interval = setInterval(fetchHealth, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Detect mobile screen size (< 1024px)
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 1023px)");
-
-    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsMobile(e.matches);
-    };
-
-    // Set initial value
-    handleMediaChange(mediaQuery);
-
-    // Listen for changes
-    mediaQuery.addEventListener("change", handleMediaChange);
-    return () => mediaQuery.removeEventListener("change", handleMediaChange);
-  }, []);
-
-  // ESC key handling for modals
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (activeSettingsPanel) {
-          setActiveSettingsPanel(null);
-        } else if (isUpdateWizardOpen) {
-          setIsUpdateWizardOpen(false);
-        } else if (isMobileNavOpen) {
-          setIsMobileNavOpen(false);
-        } else if (!isSystemHealthPanelPinned && isSystemHealthPanelOpen) {
-          setIsSystemHealthPanelOpen(false);
-        } else if (!isTaskDrawerPinned && isTaskDrawerOpen) {
-          setIsTaskDrawerOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [
-    activeSettingsPanel,
-    isUpdateWizardOpen,
-    isMobileNavOpen,
-    isSystemHealthPanelOpen,
-    isSystemHealthPanelPinned,
-    isTaskDrawerOpen,
-    isTaskDrawerPinned,
-  ]);
-
-  // Close unpinned drawers when selecting a task
+  // Handlers
   const handleSelectTask = (taskId: string) => {
     selectTask(taskId);
     if (!isTaskDrawerPinned) {
@@ -181,16 +114,14 @@ function App() {
     }
   };
 
-  // Handle settings menu selection
   const handleSettingsSelect = (item: SettingsMenuItem) => {
-    if (item === "update") {
+    if (item === 'update') {
       setIsUpdateWizardOpen(true);
     } else {
       setActiveSettingsPanel(item);
     }
   };
 
-  // Handle hamburger button click (mobile nav or task drawer based on screen size)
   const handleToggleMenu = () => {
     if (isMobile) {
       setIsMobileNavOpen((prev) => !prev);
@@ -199,269 +130,133 @@ function App() {
     }
   };
 
-  // Calculate main area margin based on pinned drawers (desktop only)
+  // Layout calculations
   const mainMarginLeft = isMobile
-    ? "0"
+    ? '0'
     : isTaskDrawerPinned && isTaskDrawerOpen
     ? `${TASK_DRAWER_WIDTH}px`
-    : "0";
+    : '0';
   const mainMarginRight = isMobile
-    ? "0"
-    : isSystemHealthPanelPinned && isSystemHealthPanelOpen
+    ? '0'
+    : isHealthPanelPinned && isHealthPanelOpen
     ? `${SYSTEM_HEALTH_PANEL_WIDTH}px`
-    : "0";
+    : '0';
 
-  // Get health indicator for mobile nav
+  // Health status
+  const healthStatus: HealthStatus = streamError
+    ? 'error'
+    : streamStatus === 'connecting'
+    ? 'warning'
+    : streamStatus === 'connected'
+    ? 'healthy'
+    : 'unknown';
+
   const healthIndicator = getHealthIndicator(healthStatus);
 
   return (
     <>
       <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
-        {/* Compact Header */}
+        {/* Header */}
         <CompactHeader
           selectedTask={selectedTask}
           dataFps={fps}
           renderFps={renderFps}
-          totalTasks={totalTasks}
+          totalTasks={tasks.length}
           healthStatus={healthStatus}
-          isHealthPanelOpen={isSystemHealthPanelOpen}
+          isHealthPanelOpen={isHealthPanelOpen}
           isMobile={isMobile}
           onToggleTaskDrawer={handleToggleMenu}
-          onToggleHealthPanel={() =>
-            setIsSystemHealthPanelOpen((prev) => !prev)
-          }
+          onToggleHealthPanel={() => setIsHealthPanelOpen((prev) => !prev)}
           onOpenSettings={handleSettingsSelect}
         />
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <main
           className="relative flex-1 overflow-hidden transition-all duration-200"
-          style={{
-            marginLeft: mainMarginLeft,
-            marginRight: mainMarginRight,
-          }}
+          style={{ marginLeft: mainMarginLeft, marginRight: mainMarginRight }}
         >
-          {/* Desktop View: Visualization only */}
+          {/* Desktop View */}
           <div className="hidden h-full lg:block">
-            {selectedTask ? (
-              <div className="flex h-full w-full flex-col p-2">
-                <VisualizationView
-                  taskId={selectedTask.id}
-                  centerFreq={selectedTask.frequency}
-                  sampleRate={selectedTask.sampleRate}
-                  colorMap={colorMap}
-                  visualizationMode={selectedTask.visualizationMode ?? undefined}
-                  dataError={streamError || undefined}
-                  isConnecting={streamStatus === "connecting"}
-                  onRenderFpsChange={setRenderFps}
-                />
-              </div>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
-                <div className="text-6xl">📡</div>
-                <div>
-                  <p className="text-xl font-semibold text-foreground">
-                    No Task Selected
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground/90">
-                    Select a task from the roster to view spectrum activity.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setIsWizardOpen(true)}
-                  variant="secondary"
-                  size="lg"
-                >
-                  + Create New Task
-                </Button>
-              </div>
-            )}
+            <DesktopView
+              selectedTask={selectedTask}
+              colorMap={colorMap}
+              streamError={streamError}
+              streamStatus={streamStatus}
+              onRenderFpsChange={setRenderFps}
+              onCreateTask={() => setIsTaskWizardOpen(true)}
+            />
           </div>
 
-          {/* Mobile View: Selected panel only */}
+          {/* Mobile View */}
           <div className="h-full lg:hidden">
-            {mobileView === "visualization" && (
-              <>
-                {selectedTask ? (
-                  <div className="flex h-full w-full flex-col p-2">
-                    <VisualizationView
-                      taskId={selectedTask.id}
-                      centerFreq={selectedTask.frequency}
-                      sampleRate={selectedTask.sampleRate}
-                      colorMap={colorMap}
-                      visualizationMode={selectedTask.visualizationMode ?? undefined}
-                      dataError={streamError || undefined}
-                      isConnecting={streamStatus === "connecting"}
-                      onRenderFpsChange={setRenderFps}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
-                    <div className="text-6xl">📡</div>
-                    <div>
-                      <p className="text-xl font-semibold text-foreground">
-                        No Task Selected
-                      </p>
-                      <p className="mt-2 text-sm text-muted-foreground/90">
-                        Select a task from the Tasks view.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {mobileView === "tasks" && (
-              <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-                <div className="border-b border-border/60 bg-card/80 p-3">
-                  <ActiveTaskPanel
-                    task={selectedTask}
-                    onPauseTask={pauseTask}
-                    onStopTask={stopTask}
-                    onRecordTask={startRecording}
-                    onStopRecording={stopRecording}
-                  />
-                </div>
-                <div className="flex flex-1 min-h-0 overflow-hidden">
-                  <TaskRosterPanel
-                    tasks={tasks}
-                    selectedTaskId={selectedTaskId}
-                    isDiscovering={isDiscovering}
-                    onSelectTask={selectTask}
-                    onCreateTask={() => setIsWizardOpen(true)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {mobileView === "health" && (
-              <div className="h-full overflow-auto bg-background">
-                <SystemHealthPanel bitResult={bitResult} />
-              </div>
-            )}
+            <MobileContentView
+              mobileView={mobileView}
+              selectedTask={selectedTask}
+              selectedTaskId={selectedTaskId}
+              tasks={tasks}
+              isDiscovering={isDiscovering}
+              bitResult={bitResult}
+              colorMap={colorMap}
+              streamError={streamError}
+              streamStatus={streamStatus}
+              onRenderFpsChange={setRenderFps}
+              onSelectTask={selectTask}
+              onCreateTask={() => setIsTaskWizardOpen(true)}
+              onPauseTask={pauseTask}
+              onStopTask={stopTask}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+            />
           </div>
         </main>
       </div>
 
-      {/* Desktop Drawers - hidden on mobile */}
-      <div className="hidden lg:block">
-        {/* Task Drawer */}
-        <Drawer
-          isOpen={isTaskDrawerOpen}
-          onClose={() => setIsTaskDrawerOpen(false)}
-          position="left"
-          title="Tasks"
-          isPinned={isTaskDrawerPinned}
-          onTogglePin={() => setIsTaskDrawerPinned((prev) => !prev)}
-          width={`${TASK_DRAWER_WIDTH}px`}
-          offsetTop={HEADER_HEIGHT}
-        >
-          <div className="p-3">
-            <ActiveTaskPanel
-              task={selectedTask}
-              onPauseTask={pauseTask}
-              onStopTask={stopTask}
-              onRecordTask={startRecording}
-              onStopRecording={stopRecording}
-            />
-          </div>
+      {/* Desktop Drawers */}
+      <DesktopDrawers
+        isTaskDrawerOpen={isTaskDrawerOpen}
+        isTaskDrawerPinned={isTaskDrawerPinned}
+        selectedTask={selectedTask}
+        selectedTaskId={selectedTaskId}
+        tasks={tasks}
+        isDiscovering={isDiscovering}
+        onCloseTaskDrawer={() => setIsTaskDrawerOpen(false)}
+        onToggleTaskDrawerPin={() => setIsTaskDrawerPinned((prev) => !prev)}
+        onSelectTask={handleSelectTask}
+        onCreateTask={() => setIsTaskWizardOpen(true)}
+        onPauseTask={pauseTask}
+        onStopTask={stopTask}
+        onStartRecording={startRecording}
+        onStopRecording={stopRecording}
+        isHealthPanelOpen={isHealthPanelOpen}
+        isHealthPanelPinned={isHealthPanelPinned}
+        bitResult={bitResult}
+        onCloseHealthPanel={() => setIsHealthPanelOpen(false)}
+        onToggleHealthPanelPin={() => setIsHealthPanelPinned((prev) => !prev)}
+      />
 
-          <div className="border-t border-border/60">
-            <TaskRosterPanel
-              tasks={tasks}
-              selectedTaskId={selectedTaskId}
-              isDiscovering={isDiscovering}
-              onSelectTask={handleSelectTask}
-              onCreateTask={() => setIsWizardOpen(true)}
-            />
-          </div>
-        </Drawer>
-
-        {/* System Health Drawer */}
-        <Drawer
-          isOpen={isSystemHealthPanelOpen}
-          onClose={() => setIsSystemHealthPanelOpen(false)}
-          position="right"
-          title="System Health"
-          isPinned={isSystemHealthPanelPinned}
-          onTogglePin={() => setIsSystemHealthPanelPinned((prev) => !prev)}
-          width={`${SYSTEM_HEALTH_PANEL_WIDTH}px`}
-          offsetTop={HEADER_HEIGHT}
-        >
-          <SystemHealthPanel bitResult={bitResult} />
-        </Drawer>
-      </div>
-
-      {/* Mobile Navigation - only on mobile */}
+      {/* Mobile Navigation */}
       <MobileNav
         isOpen={isMobileNavOpen}
         onClose={() => setIsMobileNavOpen(false)}
         currentView={mobileView}
         onViewChange={setMobileView}
         onOpenSettings={handleSettingsSelect}
-        isDarkMode={theme === "dark"}
+        isDarkMode={theme === 'dark'}
         onToggleTheme={toggleTheme}
         healthIndicator={healthIndicator}
       />
 
-      {/* Task Wizard */}
-      <TaskWizard
-        isOpen={isWizardOpen}
-        onClose={() => setIsWizardOpen(false)}
+      {/* Modals */}
+      <Modals
+        isTaskWizardOpen={isTaskWizardOpen}
+        onCloseTaskWizard={() => setIsTaskWizardOpen(false)}
         onCreateRxTask={createRxTask}
         onCreateTxTask={createTxTask}
-      />
-
-      {/* Settings Modal */}
-      {activeSettingsPanel && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => setActiveSettingsPanel(null)}
-          />
-
-          {/* Modal */}
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-150 rounded-sm border border-border/70 bg-card text-foreground shadow-xl shadow-black/20">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/70 p-4">
-              <h2 className="text-lg font-semibold text-foreground">
-                {activeSettingsPanel === "system"
-                  ? "System Settings"
-                  : activeSettingsPanel === "display"
-                  ? "Display Settings"
-                  : "Version Info"}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setActiveSettingsPanel(null)}
-                className="rounded-md p-1 text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="max-h-[70vh] overflow-y-auto">
-              {activeSettingsPanel === "system" && <SystemSettings />}
-              {activeSettingsPanel === "display" && <DisplaySettings />}
-              {activeSettingsPanel === "version" && (
-                <VersionInfo
-                  versionTree={systemInfo.versionTree}
-                  overallVersion={systemInfo.version}
-                  buildDate={systemInfo.buildDate}
-                  platform={systemInfo.platform}
-                />
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* System Update Wizard */}
-      <SystemUpdateWizard
-        isOpen={isUpdateWizardOpen}
-        onClose={() => setIsUpdateWizardOpen(false)}
+        activeSettingsPanel={activeSettingsPanel}
+        systemInfo={systemInfo}
+        onCloseSettings={() => setActiveSettingsPanel(null)}
+        isUpdateWizardOpen={isUpdateWizardOpen}
+        onCloseUpdateWizard={() => setIsUpdateWizardOpen(false)}
       />
     </>
   );
