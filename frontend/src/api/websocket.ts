@@ -3,7 +3,8 @@
  */
 
 import { TARGET_FPS } from "../config/constants";
-import { FFTData, FFTDataBatch, VisualizationMode } from "../types/sdr";
+import { FFTData, FFTDataBatch } from "../types/sdr";
+import { VisualizationMode } from "../api/client";
 import { MockFFTGenerator } from "../utils/mockDataGenerator";
 import { getApiMode, getWsBaseUrl } from "./config";
 

@@ -2,7 +2,7 @@
  * Task API client
  */
 
-import { Task, CreateRxTaskParams, CreateTxTaskParams } from '../types/sdr';
+import { Task, CreateRxTaskParams, CreateTxTaskParams } from '../api/client';
 import { getApiBaseUrl, getApiMode } from './config';
 import {
   generateDemoTasks,
@@ -58,13 +58,13 @@ class OnlineTaskApi implements TaskApi {
     return response.json();
   }
 
-  async createTxTask(params: CreateTxTaskParams): Promise<Task> {
+  async createTxTask(params: CreateTxTaskParams & { file?: File }): Promise<Task> {
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: params.name,
-        filename: params.file.name,
+        filename: params.file?.name || params.filename,
         frequency: params.frequency,
         loop: params.loop,
       }),
@@ -156,12 +156,12 @@ class OfflineTaskApi implements TaskApi {
     return task;
   }
 
-  async createTxTask(params: CreateTxTaskParams): Promise<Task> {
+  async createTxTask(params: CreateTxTaskParams & { file?: File }): Promise<Task> {
     const task = createMockTxTask({
       name: params.name,
       frequency: params.frequency || 433.92e6,
       loop: params.loop,
-      filename: params.file.name,
+      filename: params.file?.name || params.filename,
     });
     this.tasks.set(task.id, task);
     return task;

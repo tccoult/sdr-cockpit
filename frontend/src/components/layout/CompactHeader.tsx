@@ -1,7 +1,7 @@
 import { Menu, ChevronDown } from 'lucide-react'
 import { ThemeToggle } from '../app/ThemeToggle'
 import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
-import { Task } from '../../types/sdr'
+import { Task } from '../../api/client'
 import { formatFrequency, formatSampleRate } from '../../utils/formatters'
 import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
 import { getHealthIndicator } from '../../styles/theme'

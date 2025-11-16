@@ -1,5 +1,8 @@
 /**
  * Type definitions for SDR data and visualization
+ *
+ * NOTE: Task-related types are now auto-generated from OpenAPI spec.
+ * Import from: import { Task, TaskType, TaskStatus, ... } from '../api/client'
  */
 
 /**
@@ -47,102 +50,4 @@ export interface DisplaySettings {
 export interface VisualizationState {
   frequencyRange: FrequencyRange;
   displaySettings: DisplaySettings;
-}
-
-/**
- * Task types
- */
-export enum TaskType {
-  RX = 'rx',
-  TX = 'tx',
-}
-
-/**
- * Task status
- */
-export enum TaskStatus {
-  LIVE = 'live',
-  PAUSED = 'paused',
-  TRANSMITTING = 'transmitting',
-  STOPPED = 'stopped',
-}
-
-/**
- * Task owner type
- */
-export enum TaskOwner {
-  SELF = 'self',
-  EXTERNAL = 'external',
-}
-
-/**
- * Visualization mode determines how data is displayed
- */
-export enum VisualizationMode {
-  FFT_ONLY = 'fft-only',
-  FFT_WATERFALL = 'fft-waterfall',
-  SPECTROGRAM = 'spectrogram',
-}
-
-/**
- * Recording information
- */
-export interface RecordingInfo {
-  filename: string;
-  duration: number;      // Recording duration in seconds
-  fileSize: number;      // File size in bytes
-  isRecording: boolean;
-}
-
-/**
- * TX playback information
- */
-export interface PlaybackInfo {
-  filename: string;
-  progress: number;      // 0-1
-  isLooping: boolean;
-  duration: number;      // Total duration in seconds
-}
-
-/**
- * SDR Task
- */
-export interface Task {
-  id: string;
-  name: string;
-  type: TaskType;
-  frequency: number;        // Center frequency in Hz
-  sampleRate: number;       // Sample rate in Hz
-  bandwidth?: number;       // Bandwidth in Hz
-  fftSize?: number;         // FFT size (bins)
-  owner: TaskOwner;
-  ownerName: string;        // "You" or external source name
-  status: TaskStatus;
-  uptime: number;           // Uptime in seconds
-  recording?: RecordingInfo;
-  playback?: PlaybackInfo;
-  createdAt: number;        // Unix timestamp in ms
-  fps?: number;             // Current frame rate
-  visualizationMode?: VisualizationMode; // How to visualize the data
-}
-
-/**
- * Task creation parameters
- */
-export interface CreateRxTaskParams {
-  name: string;
-  frequency: number;
-  sampleRate: number;
-  bandwidth: number;
-  fftSize: number;
-}
-
-/**
- * Task creation parameters for TX
- */
-export interface CreateTxTaskParams {
-  name: string;
-  file: File;
-  frequency?: number;       // Override frequency (optional)
-  loop: boolean;
 }

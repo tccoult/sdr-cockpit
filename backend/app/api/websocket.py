@@ -9,7 +9,7 @@ from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from app.utils.fft_generator import MockFFTGenerator
 from app.api.routes.tasks import tasks
 from app.config.constants import TARGET_FPS
-from app.models.task import VisualizationMode
+from app.models.generated import VisualizationMode
 
 router = APIRouter()
 
@@ -181,7 +181,7 @@ async def websocket_task_data(websocket: WebSocket, task_id: str):
             # Only send data if task is live/transmitting
             if task.status in ["live", "transmitting"]:
                 # Send batches for spectrogram mode, single frames for others
-                if task.visualization_mode == VisualizationMode.SPECTROGRAM:
+                if task.visualization_mode == VisualizationMode.spectrogram:
                     # Generate a batch of frames (simulate capturing multiple FFTs at once)
                     batch_size = 50  # Send 50 frames at once for spectrogram
                     frames = [generator.generate_fft() for _ in range(batch_size)]

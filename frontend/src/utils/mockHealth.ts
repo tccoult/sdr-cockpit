@@ -3,15 +3,17 @@ import {
   BitStatus,
   BitTest,
   BitTreeNode,
+} from '../api/health'
+import {
   SystemInfo,
   SystemVersion,
 } from '../types/health'
 
 const STATUS_ORDER: Record<BitStatus, number> = {
-  [BitStatus.UNKNOWN]: 0,
-  [BitStatus.OK]: 1,
-  [BitStatus.WARN]: 2,
-  [BitStatus.FAIL]: 3,
+  'unknown': 0,
+  'ok': 1,
+  'warn': 2,
+  'fail': 3,
 }
 
 const getMostSevere = (a: BitStatus, b: BitStatus) =>
@@ -23,11 +25,11 @@ const getMostSevere = (a: BitStatus, b: BitStatus) =>
 export function getMockBitResult(): BitResult {
   const now = Date.now()
 
-  const tests: BitTest[] = [
+  const tests = [
     {
       id: 'rf-if-linearity',
       name: 'IF Output Linearity',
-      status: BitStatus.FAIL,
+      status: "fail" as BitStatus,
       description: 'Mixer IF output amplitude dropped below the minimum threshold.',
       lastRun: now - 1000 * 60 * 3,
       durationMs: 1320,
@@ -43,7 +45,7 @@ export function getMockBitResult(): BitResult {
     {
       id: 'clock-discipline',
       name: 'Clock PLL Discipline',
-      status: BitStatus.WARN,
+      status: "warn" as BitStatus,
       description: 'PLL lock acquisition exceeded nominal settling time.',
       lastRun: now - 1000 * 60 * 7,
       durationMs: 980,
@@ -59,7 +61,7 @@ export function getMockBitResult(): BitResult {
     {
       id: 'gps-holdover',
       name: 'GPS Holdover Stability',
-      status: BitStatus.WARN,
+      status: "warn" as BitStatus,
       description: 'Oscillator drift is elevated while operating in holdover mode.',
       lastRun: now - 1000 * 60 * 15,
       durationMs: 1430,
@@ -75,7 +77,7 @@ export function getMockBitResult(): BitResult {
     {
       id: 'dsp-integrity',
       name: 'DSP Pipeline Integrity',
-      status: BitStatus.OK,
+      status: "ok" as BitStatus,
       description: 'FFT and decimation stages produced expected reference signatures.',
       lastRun: now - 1000 * 60 * 2,
       durationMs: 760,
@@ -85,7 +87,7 @@ export function getMockBitResult(): BitResult {
     {
       id: 'memory-margin',
       name: 'Memory Margin Test',
-      status: BitStatus.OK,
+      status: "ok" as BitStatus,
       description: 'DDR burst transfers completed without error at operational temperature.',
       lastRun: now - 1000 * 60 * 12,
       durationMs: 1120,
@@ -95,7 +97,7 @@ export function getMockBitResult(): BitResult {
     {
       id: 'telemetry-link',
       name: 'Telemetry Channel Verification',
-      status: BitStatus.OK,
+      status: "ok" as BitStatus,
       description: 'Downlink telemetry frames were acknowledged across all priority queues.',
       lastRun: now - 1000 * 60 * 5,
       durationMs: 540,
@@ -105,7 +107,7 @@ export function getMockBitResult(): BitResult {
     {
       id: 'firmware-handshake',
       name: 'Firmware Interface Handshake',
-      status: BitStatus.OK,
+      status: "ok" as BitStatus,
       description: 'Control plane firmware responded with synchronized sequence IDs.',
       lastRun: now - 1000 * 60 * 9,
       durationMs: 680,
@@ -125,9 +127,9 @@ export function getMockBitResult(): BitResult {
   const summary = tests.reduce(
     (acc, test) => {
       acc.total += 1
-      if (test.status === BitStatus.FAIL) acc.fail += 1
-      else if (test.status === BitStatus.WARN) acc.warn += 1
-      else if (test.status === BitStatus.OK) acc.ok += 1
+      if (test.status === "fail") acc.fail += 1
+      else if (test.status === "warn") acc.warn += 1
+      else if (test.status === "ok") acc.ok += 1
       return acc
     },
     { total: 0, ok: 0, warn: 0, fail: 0 }
@@ -139,14 +141,17 @@ export function getMockBitResult(): BitResult {
     tests,
     functionTree,
     hardwareTree,
-  }
+  } as BitResult
 }
 
 function buildAssignments(tests: BitTest[], key: 'functionNodes' | 'hardwareNodes') {
   const assignments = new Map<string, string[]>()
 
   tests.forEach((test) => {
-    test[key].forEach((nodeId) => {
+    const nodes = test[key]
+    if (!nodes) return
+
+    nodes.forEach((nodeId: string) => {
       const existing = assignments.get(nodeId) ?? []
       if (!existing.includes(test.id)) {
         existing.push(test.id)
@@ -166,14 +171,14 @@ function rollupTree(
   const children = node.children?.map((child) => rollupTree(child, assignments, testsById))
   const assignedTests = assignments.get(node.id) ?? []
 
-  let status = assignedTests.length > 0 ? BitStatus.OK : BitStatus.UNKNOWN
+  let status: BitStatus = assignedTests.length > 0 ? "ok" : "unknown"
 
   assignedTests.forEach((testId) => {
-    const testStatus = testsById.get(testId)?.status ?? BitStatus.UNKNOWN
+    const testStatus: BitStatus = testsById.get(testId)?.status ?? "unknown"
     status = getMostSevere(status, testStatus)
   })
 
-  children?.forEach((child) => {
+  children?.forEach((child: BitTreeNode) => {
     status = getMostSevere(status, child.status)
   })
 
@@ -189,44 +194,44 @@ function createFunctionTree(): BitTreeNode {
   return {
     id: 'system-functions',
     name: 'System Functions',
-    status: BitStatus.UNKNOWN,
+    status: "unknown" as BitStatus,
     children: [
       {
         id: 'signal-flow',
         name: 'Signal Flow',
-        status: BitStatus.UNKNOWN,
+        status: "unknown" as BitStatus,
         children: [
           {
             id: 'rf-path',
             name: 'RF Path',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
             children: [
               {
                 id: 'conversion-stage',
                 name: 'Conversion Stage',
-                status: BitStatus.UNKNOWN,
+                status: "unknown" as BitStatus,
               },
               {
                 id: 'gain-stabilization',
                 name: 'Gain Stabilization',
-                status: BitStatus.UNKNOWN,
+                status: "unknown" as BitStatus,
               },
             ],
           },
           {
             id: 'baseband-processing',
             name: 'Baseband Processing',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
             children: [
               {
                 id: 'dsp-pipeline',
                 name: 'DSP Pipeline',
-                status: BitStatus.UNKNOWN,
+                status: "unknown" as BitStatus,
               },
               {
                 id: 'memory-buffering',
                 name: 'Memory Buffering',
-                status: BitStatus.UNKNOWN,
+                status: "unknown" as BitStatus,
               },
             ],
           },
@@ -235,34 +240,34 @@ function createFunctionTree(): BitTreeNode {
       {
         id: 'timing-chain',
         name: 'Timing Chain',
-        status: BitStatus.UNKNOWN,
+        status: "unknown" as BitStatus,
         children: [
           {
             id: 'sync-control',
             name: 'Sync Control',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'frequency-distribution',
             name: 'Frequency Distribution',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
         ],
       },
       {
         id: 'system-services',
         name: 'System Services',
-        status: BitStatus.UNKNOWN,
+        status: "unknown" as BitStatus,
         children: [
           {
             id: 'firmware-interfaces',
             name: 'Firmware Interfaces',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'telemetry',
             name: 'Telemetry Streams',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
         ],
       },
@@ -274,32 +279,32 @@ function createHardwareTree(): BitTreeNode {
   return {
     id: 'chassis',
     name: 'Chassis',
-    status: BitStatus.UNKNOWN,
+    status: "unknown" as BitStatus,
     children: [
       {
         id: 'rf-frontend',
         name: 'RF Frontend',
-        status: BitStatus.UNKNOWN,
+        status: "unknown" as BitStatus,
         children: [
           {
             id: 'lna-module',
             name: 'LNA Module',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'attenuator-bank',
             name: 'Attenuator Bank',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'mixer-stage',
             name: 'Mixer Stage',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
             children: [
               {
                 id: 'if-output',
                 name: 'IF Output Network',
-                status: BitStatus.UNKNOWN,
+                status: "unknown" as BitStatus,
               },
             ],
           },
@@ -308,44 +313,44 @@ function createHardwareTree(): BitTreeNode {
       {
         id: 'clocking',
         name: 'Clocking',
-        status: BitStatus.UNKNOWN,
+        status: "unknown" as BitStatus,
         children: [
           {
             id: 'pll-unit',
             name: 'PLL Unit',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'oscillator-board',
             name: 'Oscillator Board',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'distribution-amplifier',
             name: 'Distribution Amplifier',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
         ],
       },
       {
         id: 'processing-blade',
         name: 'Processing Blade',
-        status: BitStatus.UNKNOWN,
+        status: "unknown" as BitStatus,
         children: [
           {
             id: 'fpga',
             name: 'FPGA Fabric',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'dsp-complex',
             name: 'DSP Complex',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
           {
             id: 'ddr-bank',
             name: 'DDR Bank',
-            status: BitStatus.UNKNOWN,
+            status: "unknown" as BitStatus,
           },
         ],
       },

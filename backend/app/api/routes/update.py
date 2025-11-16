@@ -8,7 +8,7 @@ from typing import Dict, Optional, TypedDict
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
-from app.models.update import (
+from app.models.generated import (
     UpdateStatus,
     UploadStatusResponse,
     LockStatusResponse,
@@ -177,7 +177,7 @@ async def upload_package(
 
     # Initialize upload state
     uploads[upload_id] = {
-        "status": UpdateStatus.UPLOADING,
+        "status": UpdateStatus.uploading,
         "bytes_received": 0,
         "total_bytes": 0,
         "filename": file.filename or "unknown.pkg",
@@ -204,7 +204,7 @@ async def upload_package(
         return {"uploadId": upload_id}
 
     except Exception as e:
-        uploads[upload_id]["status"] = UpdateStatus.ERROR
+        uploads[upload_id]["status"] = UpdateStatus.error
         uploads[upload_id]["error"] = str(e)
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
@@ -216,12 +216,12 @@ async def validate_package(upload_id: str):
     if upload_id not in uploads:
         return
 
-    uploads[upload_id]["status"] = UpdateStatus.VALIDATING
+    uploads[upload_id]["status"] = UpdateStatus.validating
 
     # Simulate validation
     await asyncio.sleep(1)
 
-    uploads[upload_id]["status"] = UpdateStatus.IDLE
+    uploads[upload_id]["status"] = UpdateStatus.idle
     uploads[upload_id]["validation_results"] = {
         "checksumValid": True,
         "signatureValid": True,
@@ -267,14 +267,14 @@ async def start_installation(
         raise HTTPException(status_code=404, detail="Upload not found")
 
     upload = uploads[request.upload_id]
-    if upload["status"] != UpdateStatus.IDLE or upload["validation_results"] is None:
+    if upload["status"] != UpdateStatus.idle or upload["validation_results"] is None:
         raise HTTPException(status_code=400, detail="Upload not ready for installation")
 
     install_id = str(uuid.uuid4())
 
     # Initialize installation state
     install_state: InstallState = {
-        "status": UpdateStatus.INSTALLING,
+        "status": UpdateStatus.installing,
         "percent_complete": 0,
         "time_remaining_seconds": 30,
         "current_step": "Extracting",
@@ -324,7 +324,7 @@ async def simulate_installation(install_id: str) -> None:
                 install["time_remaining_seconds"] = int(total_duration * (1 - elapsed_ratio))
 
     # Mark as complete
-    install["status"] = UpdateStatus.COMPLETE
+    install["status"] = UpdateStatus.complete
     install["percent_complete"] = 100
     install["time_remaining_seconds"] = 0
     install["current_step"] = "Complete"

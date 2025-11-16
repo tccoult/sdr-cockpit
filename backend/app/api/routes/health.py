@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, TypedDict
 
 from fastapi import APIRouter
 
-from app.models.health import (
+from app.models.generated import (
     BitMetrics,
     BitResult,
     BitStatus,
@@ -33,10 +33,10 @@ router = APIRouter(prefix="/api/health", tags=["health"])
 
 # Status severity order for rollup calculations
 STATUS_ORDER = {
-    BitStatus.UNKNOWN: 0,
-    BitStatus.OK: 1,
-    BitStatus.WARN: 2,
-    BitStatus.FAIL: 3,
+    BitStatus.unknown: 0,
+    BitStatus.ok: 1,
+    BitStatus.warn: 2,
+    BitStatus.fail: 3,
 }
 
 
@@ -131,21 +131,21 @@ def generate_random_tests() -> List[BitTest]:
         warn_prob: float = config["warn_prob"]
 
         if rand < fail_prob:
-            status = BitStatus.FAIL
+            status = BitStatus.fail
         elif rand < fail_prob + warn_prob:
-            status = BitStatus.WARN
+            status = BitStatus.warn
         else:
-            status = BitStatus.OK
+            status = BitStatus.ok
 
         # Adjust metrics based on status if metrics exist
         metrics: Optional[BitMetrics] = None
         config_metrics = config["metrics"]
         if config_metrics:
             metrics_data = config_metrics.copy()
-            if status == BitStatus.FAIL:
+            if status == BitStatus.fail:
                 # Make actual worse than threshold
                 metrics_data["actual"] = str(float(metrics_data["threshold"]) * 0.7)
-            elif status == BitStatus.WARN:
+            elif status == BitStatus.warn:
                 # Make actual close to threshold
                 metrics_data["actual"] = str(float(metrics_data["threshold"]) * 0.95)
             metrics = BitMetrics(**metrics_data)
@@ -175,11 +175,12 @@ def build_assignments(tests: List[BitTest], key: str) -> Dict[str, List[str]]:
 
     for test in tests:
         node_list = test.function_nodes if key == "functionNodes" else test.hardware_nodes
-        for node_id in node_list:
-            if node_id not in assignments:
-                assignments[node_id] = []
-            if test.id not in assignments[node_id]:
-                assignments[node_id].append(test.id)
+        if node_list:
+            for node_id in node_list:
+                if node_id not in assignments:
+                    assignments[node_id] = []
+                if test.id not in assignments[node_id]:
+                    assignments[node_id].append(test.id)
 
     return assignments
 
@@ -197,7 +198,7 @@ def rollup_tree(
     assigned_tests = assignments.get(node.id, [])
 
     # Start with OK if there are assigned tests, UNKNOWN otherwise
-    status = BitStatus.OK if assigned_tests else BitStatus.UNKNOWN
+    status = BitStatus.ok if assigned_tests else BitStatus.unknown
 
     # Roll up status from assigned tests
     for test_id in assigned_tests:
@@ -225,31 +226,31 @@ def create_function_tree() -> BitTreeNode:
     return BitTreeNode(
         id="system-functions",
         name="System Functions",
-        status=BitStatus.UNKNOWN,
+        status=BitStatus.unknown,
         tests=None,
         children=[
             BitTreeNode(
                 id="signal-flow",
                 name="Signal Flow",
-                status=BitStatus.UNKNOWN,
+                status=BitStatus.unknown,
                 tests=None,
                 children=[
                     BitTreeNode(
                         id="rf-path",
                         name="RF Path",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                         children=[
                             BitTreeNode(
                                 id="conversion-stage",
                                 name="Conversion Stage",
-                                status=BitStatus.UNKNOWN,
+                                status=BitStatus.unknown,
                                 tests=None,
                             ),
                             BitTreeNode(
                                 id="gain-stabilization",
                                 name="Gain Stabilization",
-                                status=BitStatus.UNKNOWN,
+                                status=BitStatus.unknown,
                                 tests=None,
                             ),
                         ],
@@ -257,19 +258,19 @@ def create_function_tree() -> BitTreeNode:
                     BitTreeNode(
                         id="baseband-processing",
                         name="Baseband Processing",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                         children=[
                             BitTreeNode(
                                 id="dsp-pipeline",
                                 name="DSP Pipeline",
-                                status=BitStatus.UNKNOWN,
+                                status=BitStatus.unknown,
                                 tests=None,
                             ),
                             BitTreeNode(
                                 id="memory-buffering",
                                 name="Memory Buffering",
-                                status=BitStatus.UNKNOWN,
+                                status=BitStatus.unknown,
                                 tests=None,
                             ),
                         ],
@@ -279,19 +280,19 @@ def create_function_tree() -> BitTreeNode:
             BitTreeNode(
                 id="timing-chain",
                 name="Timing Chain",
-                status=BitStatus.UNKNOWN,
+                status=BitStatus.unknown,
                 tests=None,
                 children=[
                     BitTreeNode(
                         id="sync-control",
                         name="Sync Control",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="frequency-distribution",
                         name="Frequency Distribution",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                 ],
@@ -299,19 +300,19 @@ def create_function_tree() -> BitTreeNode:
             BitTreeNode(
                 id="system-services",
                 name="System Services",
-                status=BitStatus.UNKNOWN,
+                status=BitStatus.unknown,
                 tests=None,
                 children=[
                     BitTreeNode(
                         id="firmware-interfaces",
                         name="Firmware Interfaces",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="telemetry",
                         name="Telemetry Streams",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                 ],
@@ -325,37 +326,37 @@ def create_hardware_tree() -> BitTreeNode:
     return BitTreeNode(
         id="chassis",
         name="Chassis",
-        status=BitStatus.UNKNOWN,
+        status=BitStatus.unknown,
         tests=None,
         children=[
             BitTreeNode(
                 id="rf-frontend",
                 name="RF Frontend",
-                status=BitStatus.UNKNOWN,
+                status=BitStatus.unknown,
                 tests=None,
                 children=[
                     BitTreeNode(
                         id="lna-module",
                         name="LNA Module",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="attenuator-bank",
                         name="Attenuator Bank",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="mixer-stage",
                         name="Mixer Stage",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                         children=[
                             BitTreeNode(
                                 id="if-output",
                                 name="IF Output Network",
-                                status=BitStatus.UNKNOWN,
+                                status=BitStatus.unknown,
                                 tests=None,
                             ),
                         ],
@@ -365,25 +366,25 @@ def create_hardware_tree() -> BitTreeNode:
             BitTreeNode(
                 id="clocking",
                 name="Clocking",
-                status=BitStatus.UNKNOWN,
+                status=BitStatus.unknown,
                 tests=None,
                 children=[
                     BitTreeNode(
                         id="pll-unit",
                         name="PLL Unit",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="oscillator-board",
                         name="Oscillator Board",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="distribution-amplifier",
                         name="Distribution Amplifier",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                 ],
@@ -391,25 +392,25 @@ def create_hardware_tree() -> BitTreeNode:
             BitTreeNode(
                 id="processing-blade",
                 name="Processing Blade",
-                status=BitStatus.UNKNOWN,
+                status=BitStatus.unknown,
                 tests=None,
                 children=[
                     BitTreeNode(
                         id="fpga",
                         name="FPGA Fabric",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="dsp-complex",
                         name="DSP Complex",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                     BitTreeNode(
                         id="ddr-bank",
                         name="DDR Bank",
-                        status=BitStatus.UNKNOWN,
+                        status=BitStatus.unknown,
                         tests=None,
                     ),
                 ],
@@ -438,9 +439,9 @@ async def get_bit_results():
     # Calculate summary
     summary = BitSummary(
         total=len(tests),
-        ok=sum(1 for t in tests if t.status == BitStatus.OK),
-        warn=sum(1 for t in tests if t.status == BitStatus.WARN),
-        fail=sum(1 for t in tests if t.status == BitStatus.FAIL),
+        ok=sum(1 for t in tests if t.status == BitStatus.ok),
+        warn=sum(1 for t in tests if t.status == BitStatus.warn),
+        fail=sum(1 for t in tests if t.status == BitStatus.fail),
     )
 
     return BitResult(

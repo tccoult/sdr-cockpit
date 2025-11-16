@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getBitResults } from "./api/health";
+import { getBitResults, type BitResult } from "./api/health";
 import { getApiMode } from "./api/config";
 import { useTheme } from "./components/app/useTheme";
 import { Button } from "./components/common/Button";
@@ -19,7 +19,7 @@ import { TaskWizard } from "./components/tasks/TaskWizard";
 import { VisualizationView } from "./components/visualization/VisualizationView";
 import { useDataStream, useTasks } from "./hooks";
 import { getHealthIndicator } from "./styles/theme";
-import { TaskStatus } from "./types/sdr";
+import { TaskStatus } from "./api/client";
 import { PLASMA } from "./utils/colorMaps";
 import { getMockBitResult, getMockSystemInfo } from "./utils/mockHealth";
 
@@ -51,7 +51,7 @@ function App() {
   const [isUpdateWizardOpen, setIsUpdateWizardOpen] = useState(false);
 
   // Health data state
-  const [bitResult, setBitResult] = useState(() => getMockBitResult());
+  const [bitResult, setBitResult] = useState<BitResult>(() => getMockBitResult());
   const systemInfo = getMockSystemInfo();
 
   // Task management hook
@@ -74,10 +74,10 @@ function App() {
     taskId: selectedTaskId,
     centerFreq: selectedTask?.frequency,
     sampleRate: selectedTask?.sampleRate,
-    fftSize: selectedTask?.fftSize,
+    fftSize: selectedTask?.fftSize ?? undefined,
     enabled: !isWizardOpen, // Pause streaming when wizard is open
     paused: selectedTask?.status === TaskStatus.PAUSED, // Pause when task is paused
-    visualizationMode: selectedTask?.visualizationMode,
+    visualizationMode: selectedTask?.visualizationMode ?? undefined,
   });
 
   const totalTasks = tasks.length;
@@ -250,7 +250,7 @@ function App() {
                   centerFreq={selectedTask.frequency}
                   sampleRate={selectedTask.sampleRate}
                   colorMap={colorMap}
-                  visualizationMode={selectedTask.visualizationMode}
+                  visualizationMode={selectedTask.visualizationMode ?? undefined}
                   dataError={streamError || undefined}
                   isConnecting={streamStatus === "connecting"}
                   onRenderFpsChange={setRenderFps}
@@ -289,7 +289,7 @@ function App() {
                       centerFreq={selectedTask.frequency}
                       sampleRate={selectedTask.sampleRate}
                       colorMap={colorMap}
-                      visualizationMode={selectedTask.visualizationMode}
+                      visualizationMode={selectedTask.visualizationMode ?? undefined}
                       dataError={streamError || undefined}
                       isConnecting={streamStatus === "connecting"}
                       onRenderFpsChange={setRenderFps}

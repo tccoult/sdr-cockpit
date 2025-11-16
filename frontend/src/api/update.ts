@@ -1,47 +1,25 @@
 /**
  * System Update API client
+ *
+ * Now using type-safe openapi-fetch client with auto-generated types.
  */
 
-import { UpdateStatus } from '../types/health';
+import { apiClient, type components } from './client';
 import { getApiBaseUrl, getApiMode } from './config';
 
-export interface LockStatus {
-  isLocked: boolean;
-  lockedBy?: string;
-  lockedSince?: number;
-  expiresAt?: number;
-}
-
-export interface UploadProgress {
-  uploadId: string;
-  status: UpdateStatus;
-  bytesReceived: number;
-  totalBytes: number;
-  percentComplete: number;
-  validationResults?: {
-    checksumValid: boolean;
-    signatureValid: boolean;
-    version?: string;
-  };
-  error?: string;
-}
-
-export interface InstallProgress {
-  installId: string;
-  status: UpdateStatus;
-  percentComplete: number;
-  timeRemainingSeconds?: number;
-  currentStep?: string;
-  error?: string;
-}
+// Re-export generated types from OpenAPI schema
+export type UpdateStatus = components['schemas']['UpdateStatus'];
+export type LockStatus = components['schemas']['LockStatusResponse'];
+export type UploadProgress = components['schemas']['UploadStatusResponse'];
+export type InstallProgress = components['schemas']['InstallStatusResponse'];
 
 /**
- * System Update API interface
+ * Update API interface
  */
 export interface UpdateApi {
-  acquireLock(): Promise<{ lockId: string; expiresAt: number }>;
   getLockStatus(): Promise<LockStatus>;
-  releaseLock(clientId?: string): Promise<void>;
+  acquireLock(): Promise<{ lockId: string; expiresAt: number }>;
+  releaseLock(lockId: string): Promise<void>;
   uploadPackage(file: File, onProgress?: (progress: number) => void): Promise<string>;
   getUploadStatus(uploadId: string): Promise<UploadProgress>;
   startInstall(uploadId: string): Promise<string>;
@@ -49,7 +27,7 @@ export interface UpdateApi {
 }
 
 /**
- * Online (server-backed) update API implementation
+ * Online (server-backed) update API using type-safe client
  */
 class OnlineUpdateApi implements UpdateApi {
   private baseUrl: string;
@@ -58,31 +36,41 @@ class OnlineUpdateApi implements UpdateApi {
     this.baseUrl = `${getApiBaseUrl()}/api/system/update`;
   }
 
-  async acquireLock(): Promise<{ lockId: string; expiresAt: number }> {
-    const response = await fetch(`${this.baseUrl}/lock`, { method: 'POST' });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(error.detail || 'Failed to acquire lock');
-    }
-    return response.json();
-  }
-
   async getLockStatus(): Promise<LockStatus> {
-    const response = await fetch(`${this.baseUrl}/lock`);
-    if (!response.ok) {
-      throw new Error(`Failed to get lock status: ${response.statusText}`);
+    const { data, error } = await apiClient.GET('/api/system/update/lock');
+
+    if (error) {
+      throw new Error(`Failed to get lock status: ${error}`);
     }
-    return response.json();
+
+    if (!data) {
+      throw new Error('No data returned from lock status endpoint');
+    }
+
+    return data;
   }
 
-  async releaseLock(clientId?: string): Promise<void> {
-    const url = new URL(`${this.baseUrl}/lock`);
-    if (clientId) {
-      url.searchParams.set('client_id', clientId);
+  async acquireLock(): Promise<{ lockId: string; expiresAt: number }> {
+    const { data, error } = await apiClient.POST('/api/system/update/lock');
+
+    if (error) {
+      throw new Error(`Failed to acquire lock: ${JSON.stringify(error)}`);
     }
-    const response = await fetch(url.toString(), { method: 'DELETE' });
-    if (!response.ok) {
-      throw new Error(`Failed to release lock: ${response.statusText}`);
+
+    if (!data) {
+      throw new Error('No data returned from acquire lock endpoint');
+    }
+
+    return data;
+  }
+
+  async releaseLock(lockId: string): Promise<void> {
+    const { error } = await apiClient.DELETE('/api/system/update/lock', {
+      params: { query: { client_id: lockId } },
+    });
+
+    if (error) {
+      throw new Error(`Failed to release lock: ${JSON.stringify(error)}`);
     }
   }
 
@@ -93,7 +81,6 @@ class OnlineUpdateApi implements UpdateApi {
 
       const xhr = new XMLHttpRequest();
 
-      // Track upload progress
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable && onProgress) {
           const percent = (e.loaded / e.total) * 100;
@@ -104,18 +91,18 @@ class OnlineUpdateApi implements UpdateApi {
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            const result = JSON.parse(xhr.responseText);
-            resolve(result.uploadId);
-          } catch (e) {
-            reject(new Error('Invalid response from server'));
+            const response = JSON.parse(xhr.responseText);
+            resolve(response.uploadId);
+          } catch (error) {
+            reject(new Error('Failed to parse upload response'));
           }
         } else {
-          reject(new Error(`Upload failed: ${xhr.statusText}`));
+          reject(new Error(`Upload failed with status ${xhr.status}`));
         }
       });
 
       xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'));
+        reject(new Error('Network error during upload'));
       });
 
       xhr.open('POST', `${this.baseUrl}/upload`);
@@ -124,32 +111,51 @@ class OnlineUpdateApi implements UpdateApi {
   }
 
   async getUploadStatus(uploadId: string): Promise<UploadProgress> {
-    const response = await fetch(`${this.baseUrl}/upload-status/${uploadId}`);
-    if (!response.ok) {
-      throw new Error(`Failed to get upload status: ${response.statusText}`);
+    const { data, error } = await apiClient.GET('/api/system/update/upload-status/{upload_id}', {
+      params: { path: { upload_id: uploadId } },
+    });
+
+    if (error) {
+      throw new Error(`Failed to get upload status: ${JSON.stringify(error)}`);
     }
-    return response.json();
+
+    if (!data) {
+      throw new Error('No data returned from upload status endpoint');
+    }
+
+    return data;
   }
 
   async startInstall(uploadId: string): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/install`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ upload_id: uploadId }),
+    const { data, error } = await apiClient.POST('/api/system/update/install', {
+      body: { upload_id: uploadId },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to start installation: ${response.statusText}`);
+
+    if (error) {
+      throw new Error(`Failed to start install: ${JSON.stringify(error)}`);
     }
-    const result = await response.json();
-    return result.installId;
+
+    if (!data) {
+      throw new Error('No data returned from start install endpoint');
+    }
+
+    return data.installId;
   }
 
   async getInstallStatus(installId: string): Promise<InstallProgress> {
-    const response = await fetch(`${this.baseUrl}/install-status/${installId}`);
-    if (!response.ok) {
-      throw new Error(`Failed to get install status: ${response.statusText}`);
+    const { data, error } = await apiClient.GET('/api/system/update/install-status/{install_id}', {
+      params: { path: { install_id: installId } },
+    });
+
+    if (error) {
+      throw new Error(`Failed to get install status: ${JSON.stringify(error)}`);
     }
-    return response.json();
+
+    if (!data) {
+      throw new Error('No data returned from install status endpoint');
+    }
+
+    return data;
   }
 }
 
@@ -157,43 +163,43 @@ class OnlineUpdateApi implements UpdateApi {
  * Offline (mock) update API implementation
  */
 class OfflineUpdateApi implements UpdateApi {
-  private mockLock: { lockId: string; expiresAt: number } | null = null;
+  private mockLockId: string | null = null;
   private mockUploadId: string | null = null;
   private mockInstallId: string | null = null;
 
-  async acquireLock(): Promise<{ lockId: string; expiresAt: number }> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    this.mockLock = {
-      lockId: `mock-${Date.now()}`,
-      expiresAt: Date.now() + 20 * 60 * 1000,
-    };
-    return this.mockLock;
-  }
-
   async getLockStatus(): Promise<LockStatus> {
     await new Promise(resolve => setTimeout(resolve, 50));
-    if (!this.mockLock) {
-      return { isLocked: false };
-    }
     return {
-      isLocked: true,
-      lockedBy: this.mockLock.lockId,
-      lockedSince: Date.now() - 1000,
-      expiresAt: this.mockLock.expiresAt,
+      isLocked: this.mockLockId !== null,
+      lockedBy: this.mockLockId,
+      lockedSince: this.mockLockId ? Date.now() - 5000 : null,
+      expiresAt: this.mockLockId ? Date.now() + 1200000 : null,
     };
   }
 
-  async releaseLock(): Promise<void> {
+  async acquireLock(): Promise<{ lockId: string; expiresAt: number }> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    this.mockLockId = `mock-lock-${Date.now()}`;
+    return {
+      lockId: this.mockLockId,
+      expiresAt: Date.now() + 1200000,
+    };
+  }
+
+  async releaseLock(lockId: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 50));
-    this.mockLock = null;
+    if (this.mockLockId === lockId) {
+      this.mockLockId = null;
+    }
   }
 
   async uploadPackage(_file: File, onProgress?: (progress: number) => void): Promise<string> {
     // Simulate upload progress
-    for (let i = 0; i <= 100; i += 10) {
+    const steps = 20;
+    for (let i = 0; i <= steps; i++) {
       await new Promise(resolve => setTimeout(resolve, 100));
       if (onProgress) {
-        onProgress(i);
+        onProgress((i / steps) * 100);
       }
     }
     this.mockUploadId = `mock-upload-${Date.now()}`;
@@ -204,19 +210,19 @@ class OfflineUpdateApi implements UpdateApi {
     await new Promise(resolve => setTimeout(resolve, 50));
     return {
       uploadId: _uploadId,
-      status: UpdateStatus.IDLE,
-      bytesReceived: 1024 * 1024 * 100,
-      totalBytes: 1024 * 1024 * 100,
+      status: 'idle',
+      bytesReceived: 100000,
+      totalBytes: 100000,
       percentComplete: 100,
       validationResults: {
         checksumValid: true,
         signatureValid: true,
-        version: '1.3.0',
+        version: '1.0.0',
       },
     };
   }
 
-  async startInstall(): Promise<string> {
+  async startInstall(_: string): Promise<string> {
     await new Promise(resolve => setTimeout(resolve, 100));
     this.mockInstallId = `mock-install-${Date.now()}`;
     return this.mockInstallId;
@@ -224,10 +230,9 @@ class OfflineUpdateApi implements UpdateApi {
 
   async getInstallStatus(installId: string): Promise<InstallProgress> {
     await new Promise(resolve => setTimeout(resolve, 50));
-    // This would need more sophisticated state management in a real implementation
     return {
       installId,
-      status: UpdateStatus.INSTALLING,
+      status: 'installing',
       percentComplete: 50,
       timeRemainingSeconds: 15,
       currentStep: 'Updating',

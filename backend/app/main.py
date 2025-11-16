@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 
 from app.api.routes import tasks, health, update
 from app.api import websocket
-from app.models.task import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
+from app.models.generated import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
 from app.config.constants import TARGET_FPS
 
 app = FastAPI(

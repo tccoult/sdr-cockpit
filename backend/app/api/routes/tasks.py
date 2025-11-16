@@ -5,7 +5,7 @@ from typing import Dict, List, Union
 from fastapi import APIRouter, HTTPException
 
 from app.config.constants import TARGET_FPS
-from app.models.task import (
+from app.models.generated import (
     Task,
     CreateRxTaskParams,
     CreateTxTaskParams,
@@ -48,14 +48,14 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
         task = Task(
             id=task_id,
             name=params.name,
-            type=TaskType.RX,
+            type=TaskType.rx,
             frequency=params.frequency,
             sampleRate=params.sample_rate,
             bandwidth=params.bandwidth,
             fftSize=params.fft_size,
-            owner=TaskOwner.SELF,
+            owner=TaskOwner.self,
             ownerName="You",
-            status=TaskStatus.LIVE,
+            status=TaskStatus.live,
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
@@ -65,14 +65,14 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
         task = Task(
             id=task_id,
             name=params.name,
-            type=TaskType.TX,
+            type=TaskType.tx,
             frequency=params.frequency or 433.92e6,
             sampleRate=1e6,
             bandwidth=1e6,
             fftSize=2048,
-            owner=TaskOwner.SELF,
+            owner=TaskOwner.self,
             ownerName="You",
-            status=TaskStatus.TRANSMITTING,
+            status=TaskStatus.transmitting,
             uptime=0,
             createdAt=now,
             fps=TARGET_FPS,
@@ -110,7 +110,7 @@ async def update_task(task_id: str, params: UpdateTaskParams):
         task.name = params.name
     if params.status is not None:
         task.status = params.status
-        task.fps = TARGET_FPS if params.status == TaskStatus.LIVE else 0
+        task.fps = TARGET_FPS if params.status == TaskStatus.live else 0
     if params.frequency is not None:
         task.frequency = params.frequency
 
@@ -139,10 +139,10 @@ async def pause_task(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     task = tasks[task_id]
-    if task.owner != TaskOwner.SELF:
+    if task.owner != TaskOwner.self:
         raise HTTPException(status_code=403, detail="Cannot control external task")
 
-    task.status = TaskStatus.PAUSED
+    task.status = TaskStatus.paused
     task.fps = 0
     return task
 
@@ -154,13 +154,13 @@ async def resume_task(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     task = tasks[task_id]
-    if task.owner != TaskOwner.SELF:
+    if task.owner != TaskOwner.self:
         raise HTTPException(status_code=403, detail="Cannot control external task")
 
-    if task.type == TaskType.RX:
-        task.status = TaskStatus.LIVE
+    if task.type == TaskType.rx:
+        task.status = TaskStatus.live
     else:
-        task.status = TaskStatus.TRANSMITTING
+        task.status = TaskStatus.transmitting
     task.fps = TARGET_FPS
     return task
 
@@ -172,9 +172,9 @@ async def start_recording(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     task = tasks[task_id]
-    if task.type != TaskType.RX:
+    if task.type != TaskType.rx:
         raise HTTPException(status_code=400, detail="Can only record RX tasks")
-    if task.owner != TaskOwner.SELF:
+    if task.owner != TaskOwner.self:
         raise HTTPException(status_code=403, detail="Cannot control external task")
 
     from datetime import datetime

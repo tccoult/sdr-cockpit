@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { X, Upload, CheckCircle2, Loader2, Lock } from 'lucide-react'
 import { Button } from '../common/Button'
-import { UpdateStatus } from '../../types/health'
 import { getUpdateApi, LockStatus, UploadProgress, InstallProgress } from '../../api/update'
 import { getApiMode } from '../../api/config'
 
@@ -29,8 +28,8 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
   const [rebootCountdown, setRebootCountdown] = useState<number | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const api = getUpdateApi()
   const isOnline = getApiMode() === 'online'
+  const api = useMemo(() => getUpdateApi(), [])
 
   // Check lock status on open
   useEffect(() => {
@@ -70,9 +69,9 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
       try {
         const status: UploadProgress = await api.getUploadStatus(uploadId)
 
-        if (status.status === UpdateStatus.VALIDATING) {
+        if (status.status === "validating") {
           setUploadProgress(status.percentComplete)
-        } else if (status.status === UpdateStatus.IDLE && status.validationResults) {
+        } else if (status.status === "idle" && status.validationResults) {
           // Validation complete
           if (status.validationResults.checksumValid && status.validationResults.signatureValid) {
             setStep('confirm')
@@ -80,7 +79,7 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
             setError('Package validation failed')
           }
           return // Stop polling
-        } else if (status.status === UpdateStatus.ERROR) {
+        } else if (status.status === "error") {
           setError(status.error || 'Upload failed')
           return
         }
@@ -102,10 +101,10 @@ export function SystemUpdateWizard({ isOpen, onClose }: SystemUpdateWizardProps)
         const status: InstallProgress = await api.getInstallStatus(installId)
         setInstallProgress(status)
 
-        if (status.status === UpdateStatus.COMPLETE) {
+        if (status.status === "complete") {
           setStep('complete')
           return // Stop polling
-        } else if (status.status === UpdateStatus.ERROR) {
+        } else if (status.status === "error") {
           setError(status.error || 'Installation failed')
         }
       } catch (err) {

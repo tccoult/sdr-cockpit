@@ -7,7 +7,7 @@ import {
   BitSummary,
   BitTest,
   BitTreeNode,
-} from "../../types/health";
+} from "../../api/health";
 import { Button } from "../common/Button";
 import { TreeNodeData, TreeView } from "../common/TreeView";
 
@@ -34,35 +34,35 @@ interface RollupDisplayNode extends TreeNodeData {
 }
 
 const STATUS_PRIORITY: Record<BitStatus, number> = {
-  [BitStatus.FAIL]: 3,
-  [BitStatus.WARN]: 2,
-  [BitStatus.OK]: 1,
-  [BitStatus.UNKNOWN]: 0,
+  'fail': 3,
+  'warn': 2,
+  'ok': 1,
+  'unknown': 0,
 };
 
 const STATUS_TOKENS: Record<
   BitStatus,
   { dot: string; text: string; badge: string; tint: string }
 > = {
-  [BitStatus.FAIL]: {
+  'fail': {
     dot: "bg-status-error",
     text: "text-status-error",
     badge: "text-status-error",
     tint: "bg-status-error/10",
   },
-  [BitStatus.WARN]: {
+  'warn': {
     dot: "bg-status-warning",
     text: "text-status-warning",
     badge: "text-status-warning",
     tint: "bg-status-warning/10",
   },
-  [BitStatus.OK]: {
+  'ok': {
     dot: "bg-status-success",
     text: "text-status-success",
     badge: "text-status-success",
     tint: "bg-status-success/10",
   },
-  [BitStatus.UNKNOWN]: {
+  'unknown': {
     dot: "bg-muted-foreground/50",
     text: "text-muted-foreground",
     badge: "text-muted-foreground",
@@ -160,10 +160,10 @@ export function SystemHealthPanel({ bitResult }: SystemHealthPanelProps) {
     if (!test) return;
 
     const directFunctionNodes = bitResult
-      ? getTerminalNodeIds(test.functionNodes, bitResult.functionTree)
+      ? getTerminalNodeIds(test.functionNodes || [], bitResult.functionTree)
       : [];
     const directHardwareNodes = bitResult
-      ? getTerminalNodeIds(test.hardwareNodes, bitResult.hardwareTree)
+      ? getTerminalNodeIds(test.hardwareNodes || [], bitResult.hardwareTree)
       : [];
 
     const functionHighlight = bitResult
@@ -492,11 +492,11 @@ function TestsView({
                 .filter(Boolean)
                 .join(" · ");
               const directFunctionNodes = getTerminalNodeIds(
-                test.functionNodes,
+                test.functionNodes || [],
                 functionTree
               ).filter((nodeId) => functionLookup[nodeId]);
               const directHardwareNodes = getTerminalNodeIds(
-                test.hardwareNodes,
+                test.hardwareNodes || [],
                 hardwareTree
               ).filter((nodeId) => hardwareLookup[nodeId]);
               const detailPanelId = `test-${test.id}-details`;
@@ -617,7 +617,7 @@ function RollupTreeView({
     if (expandState !== "auto") return undefined;
     return (node: RollupDisplayNode) =>
       node.kind === "group" &&
-      (node.status === BitStatus.FAIL || node.status === BitStatus.WARN);
+      (node.status === "fail" || node.status === "warn");
   }, [expandState]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -709,7 +709,7 @@ function RollupTreeNode({
       <button
         type="button"
         onClick={() => onFocusTest(node.testId!)}
-        title={test?.description}
+        title={test?.description ?? undefined}
         data-tree-node-id={node.testId}
         className={cn(
           "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition",
@@ -827,9 +827,9 @@ function TagGroup({
 function SummaryBanner({ summary }: { summary: BitSummary }) {
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs">
-      <SummaryChip label="Fail" value={summary.fail} status={BitStatus.FAIL} />
-      <SummaryChip label="Warn" value={summary.warn} status={BitStatus.WARN} />
-      <SummaryChip label="Ok" value={summary.ok} status={BitStatus.OK} />
+      <SummaryChip label="Fail" value={summary.fail} status={"fail"} />
+      <SummaryChip label="Warn" value={summary.warn} status={"warn"} />
+      <SummaryChip label="Ok" value={summary.ok} status={"ok"} />
       <span className="text-[11px] text-muted-foreground">
         Total tests: {summary.total}
       </span>
@@ -876,11 +876,11 @@ function StatusBadge({ status }: { status: BitStatus }) {
 
 function statusLabel(status: BitStatus) {
   switch (status) {
-    case BitStatus.FAIL:
+    case "fail":
       return "Fail";
-    case BitStatus.WARN:
+    case "warn":
       return "Warn";
-    case BitStatus.OK:
+    case "ok":
       return "Ok";
     default:
       return "Unknown";
@@ -917,10 +917,10 @@ function createDisplayTree(
       kind: "test",
       name: test.name,
       status: test.status,
-      description: test.description,
+      description: test.description ?? undefined,
       testId: test.id,
-      lastRun: test.lastRun,
-      durationMs: test.durationMs,
+      lastRun: test.lastRun ?? undefined,
+      durationMs: test.durationMs ?? undefined,
     });
   });
 
@@ -929,8 +929,8 @@ function createDisplayTree(
     kind: "group",
     name: node.name,
     status: node.status,
-    description: node.description,
-    tests: node.tests,
+    description: node.description ?? undefined,
+    tests: node.tests ?? undefined,
     children: children.length > 0 ? children : undefined,
   };
 }

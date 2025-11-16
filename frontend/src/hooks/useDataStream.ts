@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { FFTDataBatch, VisualizationMode } from '../types/sdr';
+import { FFTDataBatch } from '../types/sdr';
+import { VisualizationMode } from '../api/client';
 import { createDataStream, DataStreamStatus } from '../api';
 import { dispatchFFTData } from '../utils/mockDataGenerator';
 

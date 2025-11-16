@@ -1,10 +1,20 @@
 /**
  * Health (BIT) API client
+ *
+ * Now using type-safe openapi-fetch client with auto-generated types.
  */
 
-import { BitResult } from '../types/health';
-import { getApiBaseUrl, getApiMode } from './config';
+import { apiClient, type components } from './client';
+import { getApiMode } from './config';
 import { getMockBitResult } from '../utils/mockHealth';
+
+// Re-export generated types from OpenAPI schema for convenience
+export type BitResult = components['schemas']['BitResult'];
+export type BitTest = components['schemas']['BitTest'];
+export type BitTreeNode = components['schemas']['BitTreeNode'];
+export type BitStatus = components['schemas']['BitStatus'];
+export type BitSummary = components['schemas']['BitSummary'];
+export type BitMetrics = components['schemas']['BitMetrics'];
 
 /**
  * Health API interface
@@ -14,21 +24,21 @@ export interface HealthApi {
 }
 
 /**
- * Online (server-backed) health API implementation
+ * Online (server-backed) health API implementation using type-safe client
  */
 class OnlineHealthApi implements HealthApi {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = `${getApiBaseUrl()}/api/health`;
-  }
-
   async getBitResults(): Promise<BitResult> {
-    const response = await fetch(`${this.baseUrl}/bit/results`);
-    if (!response.ok) {
-      throw new Error(`Failed to get BIT results: ${response.statusText}`);
+    const { data, error } = await apiClient.GET('/api/health/bit/results');
+
+    if (error) {
+      throw new Error(`Failed to get BIT results: ${error}`);
     }
-    return response.json();
+
+    if (!data) {
+      throw new Error('No data returned from BIT results endpoint');
+    }
+
+    return data;
   }
 }
 

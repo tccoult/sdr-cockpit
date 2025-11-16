@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../types/sdr';
+import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../api/client';
 import { getTaskApi } from '../api';
 import { updateRecording, updateTaskUptime, updateTxProgress } from '../utils/mockTaskGenerator';
 
