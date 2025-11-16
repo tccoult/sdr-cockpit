@@ -1,11 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createHeatmapLayer } from "../../layers/HeatmapLayer";
-import { getPlotTheme } from "../../../styles/theme";
+import { createHeatmapLayer } from "./HeatmapLayer";
+import { getPlotTheme } from "../../styles/theme";
 import type {
   LayerCreateContext,
   LayerRenderContext,
   Viewport,
-} from "../../types";
+} from "../types";
 
 const dimensions = {
   width: 200,

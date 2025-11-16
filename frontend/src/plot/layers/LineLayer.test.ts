@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLineLayer } from "../../layers/LineLayer";
-import { getPlotTheme } from "../../../styles/theme";
-import type { LayerCreateContext, LayerRenderContext, Viewport } from "../../types";
+import { createLineLayer } from "./LineLayer";
+import { getPlotTheme } from "../../styles/theme";
+import type { LayerCreateContext, LayerRenderContext, Viewport } from "../types";
 
 const dimensions = {
   width: 100,

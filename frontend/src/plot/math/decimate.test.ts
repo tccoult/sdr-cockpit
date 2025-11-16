@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createDecimationScratch,
   minMaxDecimateIndices,
-} from "../../math/decimate";
+} from "./decimate";
 
 const range = { min: 0, max: 10 };
 
