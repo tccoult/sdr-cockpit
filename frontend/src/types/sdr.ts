@@ -43,11 +43,3 @@ export interface DisplaySettings {
   fftHeight: number;        // Height of FFT display in pixels
   waterfallHeight: number;  // Height of waterfall display in pixels
 }
-
-/**
- * Visualization state (shared between FFT and waterfall)
- */
-export interface VisualizationState {
-  frequencyRange: FrequencyRange;
-  displaySettings: DisplaySettings;
-}

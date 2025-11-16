@@ -19,7 +19,6 @@ export const apiClient = createClient<paths>({
 /**
  * Re-export types for convenience
  */
-export type { paths } from '../types/generated/api';
 export type { components } from '../types/generated/api';
 
 /**
@@ -30,9 +29,6 @@ import type { components } from '../types/generated/api';
 export type Task = components['schemas']['Task'];
 export type CreateRxTaskParams = components['schemas']['CreateRxTaskParams'];
 export type CreateTxTaskParams = components['schemas']['CreateTxTaskParams'];
-export type UpdateTaskParams = components['schemas']['UpdateTaskParams'];
-export type RecordingInfo = components['schemas']['RecordingInfo'];
-export type PlaybackInfo = components['schemas']['PlaybackInfo'];
 
 /**
  * Enum types (exported as both type and const for runtime usage)

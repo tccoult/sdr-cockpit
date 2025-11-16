@@ -10,8 +10,8 @@ import { api } from '../../services/api';
 import { updateRecording, updateTaskUptime, updateTxProgress } from '../../mocks/mockTaskGenerator';
 import { useTaskParams } from '../useTaskParams';
 
-// Query keys
-export const taskKeys = {
+// Query keys (internal)
+const taskKeys = {
   all: ['tasks'] as const,
   lists: () => [...taskKeys.all, 'list'] as const,
   list: (filters?: unknown) => [...taskKeys.lists(), filters] as const,
@@ -20,10 +20,10 @@ export const taskKeys = {
 };
 
 /**
- * Hook to fetch all tasks with auto-refresh
+ * Hook to fetch all tasks with auto-refresh (internal)
  * Replaces: const [tasks, setTasks] = useState([])
  */
-export function useTasksQuery() {
+function useTasksQuery() {
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: taskKeys.lists(),
     queryFn: () => api.listTasks(),
@@ -73,20 +73,9 @@ export function useTasksQuery() {
 }
 
 /**
- * Hook to fetch a single task by ID
+ * Hook for creating RX tasks (internal)
  */
-export function useTaskQuery(taskId: string | null) {
-  return useQuery({
-    queryKey: taskKeys.detail(taskId!),
-    queryFn: () => api.getTask(taskId!),
-    enabled: !!taskId, // Only fetch if taskId exists
-  });
-}
-
-/**
- * Hook for creating RX tasks
- */
-export function useCreateRxTask() {
+function useCreateRxTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -99,9 +88,9 @@ export function useCreateRxTask() {
 }
 
 /**
- * Hook for creating TX tasks
+ * Hook for creating TX tasks (internal)
  */
-export function useCreateTxTask() {
+function useCreateTxTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -113,9 +102,9 @@ export function useCreateTxTask() {
 }
 
 /**
- * Hook for pausing/resuming tasks
+ * Hook for pausing/resuming tasks (internal)
  */
-export function usePauseTask() {
+function usePauseTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -131,9 +120,9 @@ export function usePauseTask() {
 }
 
 /**
- * Hook for deleting tasks
+ * Hook for deleting tasks (internal)
  */
-export function useDeleteTask() {
+function useDeleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -145,9 +134,9 @@ export function useDeleteTask() {
 }
 
 /**
- * Hook for starting recording
+ * Hook for starting recording (internal)
  */
-export function useStartRecording() {
+function useStartRecording() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -159,9 +148,9 @@ export function useStartRecording() {
 }
 
 /**
- * Hook for stopping recording
+ * Hook for stopping recording (internal)
  */
-export function useStopRecording() {
+function useStopRecording() {
   const queryClient = useQueryClient();
 
   return useMutation({
