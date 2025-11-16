@@ -4,17 +4,17 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { useDataStream } from '../useDataStream'
-import type { DataStreamCallbacks, DataStreamStatus } from '../../api/websocket'
-import { FFTDataBatch, VisualizationMode } from '../../types/sdr'
+import { useDataStream } from './useDataStream'
+import type { DataStreamCallbacks, DataStreamStatus } from '../api/websocket'
+import { FFTDataBatch, VisualizationMode } from '../types/sdr'
 
 // Mock the API module
-vi.mock('../../api', () => ({
+vi.mock('../api', () => ({
   createDataStream: vi.fn(),
 }))
 
 // Mock dispatchFFTData
-vi.mock('../../utils/mockDataGenerator', () => ({
+vi.mock('../utils/mockDataGenerator', () => ({
   dispatchFFTData: vi.fn(),
 }))
 
@@ -42,7 +42,7 @@ describe('useDataStream', () => {
     }
 
     // Mock createDataStream
-    const { createDataStream } = await import('../../api')
+    const { createDataStream } = await import('../api')
     vi.mocked(createDataStream).mockImplementation((_taskId, cb) => {
       callbacks = cb
       return mockStreamController
@@ -67,7 +67,7 @@ describe('useDataStream', () => {
     })
 
     it('should not connect without taskId', async () => {
-      const { createDataStream } = await import('../../api')
+      const { createDataStream } = await import('../api')
 
       renderHook(() =>
         useDataStream({
@@ -81,7 +81,7 @@ describe('useDataStream', () => {
     })
 
     it('should not connect when disabled', async () => {
-      const { createDataStream } = await import('../../api')
+      const { createDataStream } = await import('../api')
 
       renderHook(() =>
         useDataStream({
@@ -96,7 +96,7 @@ describe('useDataStream', () => {
     })
 
     it('should not connect without frequency/sample rate', async () => {
-      const { createDataStream } = await import('../../api')
+      const { createDataStream } = await import('../api')
 
       renderHook(() =>
         useDataStream({
@@ -108,7 +108,7 @@ describe('useDataStream', () => {
     })
 
     it('should connect when all required params provided', async () => {
-      const { createDataStream } = await import('../../api')
+      const { createDataStream } = await import('../api')
 
       renderHook(() =>
         useDataStream({
@@ -383,7 +383,7 @@ describe('useDataStream', () => {
     })
 
     it('should disconnect and reconnect when taskId changes', async () => {
-      const { createDataStream } = await import('../../api')
+      const { createDataStream } = await import('../api')
       const { rerender } = renderHook(
         ({ taskId }) =>
           useDataStream({
@@ -467,7 +467,7 @@ describe('useDataStream', () => {
 
   describe('Visualization Mode', () => {
     it('should pass visualization mode to createDataStream', async () => {
-      const { createDataStream } = await import('../../api')
+      const { createDataStream } = await import('../api')
 
       renderHook(() =>
         useDataStream({
@@ -490,7 +490,7 @@ describe('useDataStream', () => {
 
   describe('Data Dispatching', () => {
     it('should dispatch FFT data through event system', async () => {
-      const { dispatchFFTData } = await import('../../utils/mockDataGenerator')
+      const { dispatchFFTData } = await import('../utils/mockDataGenerator')
 
       renderHook(() =>
         useDataStream({

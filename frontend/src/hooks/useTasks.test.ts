@@ -4,17 +4,17 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { useTasks } from '../useTasks'
-import { Task, TaskType, TaskStatus, TaskOwner, CreateRxTaskParams, CreateTxTaskParams } from '../../types/sdr'
-import type { TaskApi } from '../../api/tasks'
+import { useTasks } from './useTasks'
+import { Task, TaskType, TaskStatus, TaskOwner, CreateRxTaskParams, CreateTxTaskParams } from '../types/sdr'
+import type { TaskApi } from '../api/tasks'
 
 // Mock the API module
-vi.mock('../../api', () => ({
+vi.mock('../api', () => ({
   getTaskApi: vi.fn(),
 }))
 
 // Mock task generator utilities
-vi.mock('../../utils/mockTaskGenerator', () => ({
+vi.mock('../utils/mockTaskGenerator', () => ({
   updateRecording: vi.fn((task, seconds) => {
     if (!task.recording) return task
     return {
@@ -82,7 +82,7 @@ describe('useTasks', () => {
     }
 
     // Mock getTaskApi to return our mock
-    const { getTaskApi } = await import('../../api')
+    const { getTaskApi } = await import('../api')
     vi.mocked(getTaskApi).mockReturnValue(mockTaskApi)
   })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createViewport, DEFAULT_PLOT_MARGINS } from "../../engine/Viewport";
+import { createViewport, DEFAULT_PLOT_MARGINS } from "./Viewport";
 
 describe("createViewport", () => {
   it("provides a non-zero span when min equals max", () => {

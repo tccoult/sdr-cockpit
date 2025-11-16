@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AxisModel } from "../../axes/AxisModel";
+import { AxisModel } from "./AxisModel";
 
 describe("AxisModel", () => {
   it("generates ticks within range", () => {
