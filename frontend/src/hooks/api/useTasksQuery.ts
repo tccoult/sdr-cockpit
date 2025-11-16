@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../../api/client';
 import { getTaskApi } from '../../api';
 import { updateRecording, updateTaskUptime, updateTxProgress } from '../../utils/mockTaskGenerator';
+import { useTaskParams } from '../useTaskParams';
 
 const taskApi = getTaskApi();
 
@@ -193,7 +194,7 @@ export interface UseTasksResult {
 
 export function useTasks(): UseTasksResult {
   const { tasks, isLoading: isDiscovering } = useTasksQuery();
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const { selectedTaskId, selectTask: selectTaskUrl } = useTaskParams();
 
   const createRxMutation = useCreateRxTask();
   const createTxMutation = useCreateTxTask();
@@ -202,35 +203,35 @@ export function useTasks(): UseTasksResult {
   const startRecordingMutation = useStartRecording();
   const stopRecordingMutation = useStopRecording();
 
-  // Auto-select first task on mount
+  // Auto-select first task on mount if no task is selected
   useEffect(() => {
     if (tasks.length > 0 && !selectedTaskId) {
-      setSelectedTaskId(tasks[0].id);
+      selectTaskUrl(tasks[0].id);
     }
-  }, [tasks, selectedTaskId]);
+  }, [tasks, selectedTaskId, selectTaskUrl]);
 
   // Get selected task
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   // Handlers that maintain the same interface
   const selectTask = useCallback((taskId: string) => {
-    setSelectedTaskId(taskId);
-  }, []);
+    selectTaskUrl(taskId);
+  }, [selectTaskUrl]);
 
   const createRxTask = useCallback(
     async (params: CreateRxTaskParams) => {
       const result = await createRxMutation.mutateAsync(params);
-      setSelectedTaskId(result.id);
+      selectTaskUrl(result.id);
     },
-    [createRxMutation]
+    [createRxMutation, selectTaskUrl]
   );
 
   const createTxTask = useCallback(
     async (params: CreateTxTaskParams) => {
       const result = await createTxMutation.mutateAsync(params);
-      setSelectedTaskId(result.id);
+      selectTaskUrl(result.id);
     },
-    [createTxMutation]
+    [createTxMutation, selectTaskUrl]
   );
 
   const pauseTask = useCallback(
@@ -249,10 +250,10 @@ export function useTasks(): UseTasksResult {
       // If this was the selected task, select another
       if (taskId === selectedTaskId) {
         const remainingTasks = tasks.filter((t) => t.id !== taskId);
-        setSelectedTaskId(remainingTasks.length > 0 ? remainingTasks[0].id : null);
+        selectTaskUrl(remainingTasks.length > 0 ? remainingTasks[0].id : null);
       }
     },
-    [deleteMutation, selectedTaskId, tasks]
+    [deleteMutation, selectedTaskId, tasks, selectTaskUrl]
   );
 
   const startRecording = useCallback(
