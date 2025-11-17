@@ -1,4 +1,4 @@
-import { ChevronDown, Hand, ZoomIn } from 'lucide-react';
+import { ChevronDown, Hand, ZoomIn, Play, Pause } from 'lucide-react';
 import { useDataSources } from '../../hooks/api/useDataSources';
 import { useActiveSource } from '../../hooks/useActiveSource';
 import { useState, useRef, useEffect } from 'react';
@@ -13,6 +13,8 @@ export interface VisualizationControlsProps {
   onToggleMaxHold: () => void;
   onClearMaxHold: () => void;
   maxHoldControlsDisabled?: boolean;
+  isPaused: boolean;
+  onTogglePause: () => void;
 }
 
 /**
@@ -27,6 +29,8 @@ export function VisualizationControls({
   onToggleMaxHold,
   onClearMaxHold,
   maxHoldControlsDisabled = false,
+  isPaused,
+  onTogglePause,
 }: VisualizationControlsProps) {
   const { sources, isLoading } = useDataSources();
   const { activeSource, selectSource } = useActiveSource();
@@ -57,10 +61,10 @@ export function VisualizationControls({
   };
 
   const dropdownButtonClasses = [
-    'inline-flex items-center gap-2 rounded-sm border px-2.5 py-1',
+    'inline-flex items-center gap-2 rounded-sm border px-3 py-1.5',
     'border-viz-border/50 bg-transparent text-viz-text transition',
     'hover:bg-viz-bg/70 hover:border-viz-border',
-    'text-xs font-medium',
+    'text-[11px] font-medium sm:text-xs',
   ].join(' ');
 
   const dropdownMenuClasses = [
@@ -201,6 +205,22 @@ export function VisualizationControls({
               </div>
             )}
           </div>
+
+          {/* Play/Pause Button */}
+          <button
+            type="button"
+            className={[
+              sharedButtonBase,
+              isPaused ? buttonDefaultClasses : buttonActiveClasses,
+              !activeSource ? "pointer-events-none opacity-50" : "",
+            ].join(" ")}
+            onClick={onTogglePause}
+            disabled={!activeSource}
+            title={isPaused ? "Resume streaming" : "Pause streaming"}
+          >
+            {isPaused ? <Play size={14} /> : <Pause size={14} />}
+            <span>{isPaused ? "Play" : "Pause"}</span>
+          </button>
         </div>
 
         {/* Right: Visualization Controls */}

@@ -23,9 +23,13 @@ export function VisualizationPanel({
   onDataFpsChange,
 }: VisualizationPanelProps) {
   const { activeSource } = useActiveSource();
+
+  // Pause state - managed here
+  const [isPaused, setIsPaused] = useState(false);
+
   const { fps, streamStatus, streamError } = useSourceStream({
     sourceId: activeSource?.id ?? null,
-    enabled: !!activeSource,
+    enabled: !!activeSource && !isPaused,
   });
 
   // Get parent task to access visualizationMode
@@ -51,6 +55,15 @@ export function VisualizationPanel({
     setMaxHoldClearKey(k => k + 1);
   }, []);
 
+  const handleTogglePause = useCallback(() => {
+    setIsPaused(prev => !prev);
+  }, []);
+
+  // Auto-unpause when switching sources
+  useEffect(() => {
+    setIsPaused(false);
+  }, [activeSource?.id]);
+
   // Propagate data FPS changes to parent
   useEffect(() => {
     onDataFpsChange(fps);
@@ -66,6 +79,8 @@ export function VisualizationPanel({
         onToggleMaxHold={handleToggleMaxHold}
         onClearMaxHold={handleClearMaxHold}
         maxHoldControlsDisabled={!activeSource}
+        isPaused={isPaused}
+        onTogglePause={handleTogglePause}
       />
 
       {!activeSource ? (
