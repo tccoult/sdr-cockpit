@@ -17,7 +17,7 @@ interface VisualizationViewProps {
   dataError?: string;
   isConnecting?: boolean;
   onRenderFpsChange?: (fps: number) => void;
-  // External control props (passed from SourceVisualizationPanel)
+  // External control props from SourceVisualizationPanel
   interactionMode?: InteractionMode;
   isMaxHoldEnabled?: boolean;
   autoRangeKey?: number;
@@ -273,7 +273,7 @@ export const VisualizationView = memo(function VisualizationView({
   return (
     <div className="viz-panel relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <div ref={containerRef} className={surfaceClasses}>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
           {showFFT && (
             <div ref={fftContainerRef} className={fftSectionClasses}>
               <FFTDisplay
@@ -337,7 +337,6 @@ export const VisualizationView = memo(function VisualizationView({
               />
             </div>
           )}
-          {/* Controls removed - now handled by SourceToolbar */}
         </div>
       </div>
       {/* Overlay layers */}

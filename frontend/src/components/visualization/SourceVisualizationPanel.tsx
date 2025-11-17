@@ -1,15 +1,14 @@
 /**
  * Source-based visualization panel
- * Combines source toolbar and visualization view using data sources
+ * Displays visualization for the active data source
  */
 
 import { useState, useCallback } from 'react';
 import { useActiveSource } from '../../hooks/useActiveSource';
 import { useSourceStream } from '../../hooks/useSourceStream';
-import { SourceToolbar } from './SourceToolbar';
 import { VisualizationView } from './VisualizationView';
+import { VisualizationControls, InteractionMode } from './VisualizationControls';
 import { ColorMap } from '../../utils/colorMaps';
-import { InteractionMode } from './VisualizationControls';
 import { useTasks } from '../../hooks';
 
 export interface SourceVisualizationPanelProps {
@@ -31,54 +30,38 @@ export function SourceVisualizationPanel({
   const { tasks } = useTasks();
   const parentTask = tasks.find(t => activeSource?.parentTaskId === t.id);
 
-  // Visualization controls state
+  // Visualization control state (managed here so controls work even without a source)
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('pan');
-  const [maxHoldEnabled, setMaxHoldEnabled] = useState(false);
+  const [isMaxHoldEnabled, setIsMaxHoldEnabled] = useState(false);
   const [autoRangeKey, setAutoRangeKey] = useState(0);
   const [maxHoldClearKey, setMaxHoldClearKey] = useState(0);
 
   const handleAutoRange = useCallback(() => {
-    setAutoRangeKey((k) => k + 1);
+    setAutoRangeKey(k => k + 1);
   }, []);
 
   const handleToggleMaxHold = useCallback(() => {
-    setMaxHoldEnabled((prev) => !prev);
+    setIsMaxHoldEnabled(prev => !prev);
+    setMaxHoldClearKey(k => k + 1);
   }, []);
 
   const handleClearMaxHold = useCallback(() => {
-    setMaxHoldClearKey((k) => k + 1);
+    setMaxHoldClearKey(k => k + 1);
   }, []);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
-      <SourceToolbar
+      <VisualizationControls
         interactionMode={interactionMode}
         onInteractionModeChange={setInteractionMode}
         onAutoRange={handleAutoRange}
-        maxHoldEnabled={maxHoldEnabled}
+        maxHoldEnabled={isMaxHoldEnabled}
         onToggleMaxHold={handleToggleMaxHold}
         onClearMaxHold={handleClearMaxHold}
         maxHoldControlsDisabled={!activeSource}
       />
 
-      {activeSource ? (
-        <div className="flex-1 overflow-hidden">
-          <VisualizationView
-            taskId={activeSource.id}
-            centerFreq={activeSource.centerFrequency}
-            sampleRate={activeSource.sampleRate}
-            colorMap={colorMap}
-            visualizationMode={parentTask?.visualizationMode ?? undefined}
-            dataError={streamError || undefined}
-            isConnecting={streamStatus === 'connecting'}
-            onRenderFpsChange={onRenderFpsChange}
-            interactionMode={interactionMode}
-            isMaxHoldEnabled={maxHoldEnabled}
-            autoRangeKey={autoRangeKey}
-            maxHoldClearKey={maxHoldClearKey}
-          />
-        </div>
-      ) : (
+      {!activeSource ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center text-viz-text/60">
           <div className="text-4xl">📊</div>
           <div>
@@ -88,6 +71,21 @@ export function SourceVisualizationPanel({
             </p>
           </div>
         </div>
+      ) : (
+        <VisualizationView
+          taskId={activeSource.id}
+          centerFreq={activeSource.centerFrequency}
+          sampleRate={activeSource.sampleRate}
+          colorMap={colorMap}
+          visualizationMode={parentTask?.visualizationMode ?? undefined}
+          dataError={streamError || undefined}
+          isConnecting={streamStatus === 'connecting'}
+          onRenderFpsChange={onRenderFpsChange}
+          interactionMode={interactionMode}
+          isMaxHoldEnabled={isMaxHoldEnabled}
+          autoRangeKey={autoRangeKey}
+          maxHoldClearKey={maxHoldClearKey}
+        />
       )}
     </div>
   );

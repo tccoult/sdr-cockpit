@@ -71,8 +71,8 @@ function App() {
     stopRecording,
   } = useTasks();
 
-  // Data sources (for SourceVisualizationPanel)
-  useDataSources(); // Fetch available sources
+  // Pre-fetch data sources for visualization controls dropdown
+  useDataSources();
 
   // Keyboard shortcuts (ESC)
   useKeyboardShortcuts({
