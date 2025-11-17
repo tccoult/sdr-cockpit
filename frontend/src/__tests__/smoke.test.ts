@@ -30,6 +30,7 @@ describe('Smoke Tests - Critical User Flows', () => {
       resumeTask: vi.fn(),
       startRecording: vi.fn(),
       stopRecording: vi.fn(),
+      listSources: vi.fn().mockResolvedValue([]),
       getBitResults: vi.fn(),
       getLockStatus: vi.fn(),
       acquireLock: vi.fn(),

@@ -2,7 +2,7 @@
  * API configuration and mode detection
  */
 
-export type ApiMode = 'offline' | 'online';
+export type ApiMode = "offline" | "online";
 
 /**
  * Get API mode from environment or auto-detect
@@ -10,20 +10,20 @@ export type ApiMode = 'offline' | 'online';
 export function getApiMode(): ApiMode {
   // Check environment variable first
   const envMode = import.meta.env.VITE_API_MODE;
-  if (envMode === 'offline' || envMode === 'online') {
+  if (envMode === "offline" || envMode === "online") {
     return envMode;
   }
 
-  // Default to offline mode
+  // Default to online mode
   // In production, you might want to auto-detect by pinging the backend
-  return 'offline';
+  return "online";
 }
 
 /**
  * Get API base URL
  */
 export function getApiBaseUrl(): string {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  return import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 }
 
 /**
@@ -32,5 +32,5 @@ export function getApiBaseUrl(): string {
 export function getWsBaseUrl(): string {
   const apiUrl = getApiBaseUrl();
   // Convert http(s) to ws(s)
-  return apiUrl.replace(/^http/, 'ws');
+  return apiUrl.replace(/^http/, "ws");
 }

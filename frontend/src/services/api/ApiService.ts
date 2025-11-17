@@ -16,6 +16,10 @@ import {
   startRecording as mockStartRecording,
   stopRecording as mockStopRecording,
 } from '../../mocks/mockTaskGenerator';
+import { generateMockSources } from '../../mocks/mockSourceGenerator';
+
+// Data source type
+export type DataSource = components['schemas']['DataSource'];
 
 // Re-export all API-related types for convenience
 export type BitResult = components['schemas']['BitResult'];
@@ -43,6 +47,9 @@ export interface IApiService {
   resumeTask(id: string): Promise<Task>;
   startRecording(id: string): Promise<Task>;
   stopRecording(id: string): Promise<Task>;
+
+  // Source Operations
+  listSources(): Promise<DataSource[]>;
 
   // Health Operations
   getBitResults(): Promise<BitResult>;
@@ -140,6 +147,14 @@ class OnlineApiService implements IApiService {
     });
     if (error) throw new Error(`Failed to stop recording: ${error}`);
     return data!;
+  }
+
+  // ==================== Source Operations ====================
+
+  async listSources(): Promise<DataSource[]> {
+    const { data, error } = await apiClient.GET('/api/sources/');
+    if (error) throw new Error(`Failed to list sources: ${error}`);
+    return data || [];
   }
 
   // ==================== Health Operations ====================
@@ -315,6 +330,13 @@ class OfflineApiService implements IApiService {
     const updatedTask = mockStopRecording(task);
     this.tasks.set(id, updatedTask);
     return updatedTask;
+  }
+
+  // ==================== Source Operations ====================
+
+  async listSources(): Promise<DataSource[]> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return generateMockSources();
   }
 
   // ==================== Health Operations ====================

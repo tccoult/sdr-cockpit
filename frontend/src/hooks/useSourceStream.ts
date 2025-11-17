@@ -10,7 +10,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FFTDataBatch } from '../types/sdr';
 import { DataStreamStatus } from '../api/websocket';
 import { createSourceDataStream } from '../api/sourceWebsocket';
-import { dispatchFFTData } from '../mocks/mockDataGenerator';
+import { dispatchFFTData } from '../utils/fftEventBus';
 
 export interface UseSourceStreamOptions {
   sourceId: string | null;

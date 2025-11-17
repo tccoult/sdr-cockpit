@@ -3,7 +3,10 @@
  * Generates realistic-looking RF spectrum with noise and signals
  */
 
-import { FFTData, FFTDataBatch } from "../types/sdr";
+import { FFTData } from "../types/sdr";
+
+// Re-export dispatch functions from their new home for backward compatibility
+export { dispatchFFTData, dispatchFFTBatch } from "../utils/fftEventBus";
 
 export class MockFFTGenerator {
   private centerFreq: number;
@@ -243,24 +246,3 @@ interface Signal {
   cwTimer: number; // Time until next CW state change
 }
 
-/**
- * Dispatch FFT data as a custom event (batch format)
- */
-export function dispatchFFTData(fftData: FFTData | FFTData[]) {
-  // Convert single frame to batch format for consistency
-  const batch: FFTDataBatch = Array.isArray(fftData)
-    ? { frames: fftData }
-    : { frames: [fftData] };
-
-  const event = new CustomEvent("fft-data", { detail: batch });
-  window.dispatchEvent(event);
-}
-
-/**
- * Dispatch a batch of FFT data
- */
-export function dispatchFFTBatch(frames: FFTData[]) {
-  const batch: FFTDataBatch = { frames };
-  const event = new CustomEvent("fft-data", { detail: batch });
-  window.dispatchEvent(event);
-}

@@ -9,6 +9,8 @@ import { decompressDataTimed } from '../utils/compression';
 import { bytesToDbBins, decodeDeltaBatch } from '../utils/spectralConversion';
 import { getApiMode, getWsBaseUrl } from './config';
 import { DataStreamCallbacks } from './websocket';
+import { MockFFTGenerator } from '../mocks/mockDataGenerator';
+import { generateMockSources } from '../mocks/mockSourceGenerator';
 
 /**
  * Online (WebSocket) data stream for sources
@@ -200,10 +202,36 @@ export function createSourceDataStream(
       disconnect: () => stream.disconnect(),
     };
   } else {
-    // Offline mode - no streaming for sources
-    callbacks.onStatusChange('disconnected');
+    // Offline mode - generate mock FFT data
+    const sources = generateMockSources();
+    const source = sources.find(s => s.id === sourceId);
+
+    if (!source) {
+      callbacks.onStatusChange('error');
+      callbacks.onError?.(`Source not found: ${sourceId}`);
+      return { disconnect: () => {} };
+    }
+
+    // Create mock FFT generator with source parameters
+    const generator = new MockFFTGenerator(
+      source.centerFrequency,
+      source.sampleRate,
+      2048 // Default FFT size
+    );
+
+    callbacks.onStatusChange('connected');
+
+    // Generate FFT data at ~60 FPS
+    const intervalId = window.setInterval(() => {
+      const frame = generator.generateFFT();
+      callbacks.onData({ frames: [frame] });
+    }, 16);
+
     return {
-      disconnect: () => {},
+      disconnect: () => {
+        window.clearInterval(intervalId);
+        callbacks.onStatusChange('disconnected');
+      },
     };
   }
 }
