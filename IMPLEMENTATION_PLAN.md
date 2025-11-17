@@ -105,6 +105,24 @@ WS /ws/sources/{source_id}/data
 Streams binary protobuf data to client
 ```
 
+### Test Data Migration
+
+**Migrate existing test data generation to use the new source model:**
+- Current: Mock data generator directly tied to task WebSocket endpoints
+- New: Test data sources that follow the same discovery → attachment flow
+
+**Implementation:**
+- When a task is created in the UI, automatically register a corresponding test data source
+- Source is registered (discoverable) but not attached (not producing data yet)
+- When first client subscribes via WebSocket, source attaches and starts generating test data
+- When last client disconnects, source detaches and stops generating
+- Full exercise of the discovery → attachment → multiplexing → detachment lifecycle
+
+**Benefits:**
+- Test the entire new architecture without real SDR hardware
+- Validate multiplexing efficiency (one generator, many clients)
+- Ensure backpressure and queue management work correctly
+
 ### Configuration
 
 - Move from env variables to `config.yaml`
@@ -186,10 +204,12 @@ interface DataSource {
 ### Phase 1: Backend Foundation
 1. Create `DataSource` base class with subscriber management
 2. Create `SourceManager` singleton
-3. Implement `TaskDataSource` (migrate existing task streaming logic)
-4. Update task creation/deletion to register/unregister sources
-5. Add `GET /api/sources` endpoint
-6. Update WebSocket endpoint: `/ws/sources/{source_id}/data`
+3. Implement `MockTaskDataSource` (migrate test data generator to source model)
+4. Update task creation to auto-register test data source (discovery)
+5. Update task deletion to unregister test data source
+6. Add `GET /api/sources` endpoint
+7. Update WebSocket endpoint: `/ws/sources/{source_id}/data`
+8. Verify attachment/detachment lifecycle with test sources
 
 ### Phase 2: Frontend Decoupling
 1. Create `useDataSources()` hook
