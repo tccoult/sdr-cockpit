@@ -8,7 +8,7 @@ from typing import Dict, Optional, Set
 logger = logging.getLogger(__name__)
 
 # Configuration
-CLIENT_QUEUE_SIZE = 5  # Number of frames to buffer per client
+CLIENT_QUEUE_SIZE = 15  # Number of frames to buffer per client
 
 
 class DataSource(ABC):

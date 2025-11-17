@@ -113,10 +113,12 @@ class MockTaskDataSource(DataSource):
                 if task.visualization_mode == VisualizationMode.spectrogram:
                     # Spectrogram: Generate batch of 256 frames
                     serialized = self._serialize_batch(batch_size=256)
+                    frame_interval = 1.0 / 20
                 else:
                     # FFT/Waterfall: Generate single frame
                     fft_data = self.generator.generate_fft()
                     serialized = self._serialize_single_frame(fft_data)
+                    frame_interval = self.frame_interval
 
                 # Fan out to all subscribers (non-blocking)
                 await self.publish(serialized)
@@ -131,7 +133,7 @@ class MockTaskDataSource(DataSource):
                 # Sleep to maintain target FPS
                 t2 = time.time()
                 elapsed = t2 - t1
-                sleep_time = max(0, self.frame_interval - elapsed)
+                sleep_time = max(0, frame_interval - elapsed)
                 await asyncio.sleep(sleep_time)
 
         except asyncio.CancelledError:
