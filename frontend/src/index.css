@@ -33,6 +33,15 @@ html {
   --accent-rgb: 148 132 255;
   --ring: 258 75% 65%;
 
+  /* --- Popover (for shadcn Command) --- */
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 47.4% 11.2%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --radius: 0.5rem;
+
   /* --- Status Colors (RGB for opacity variants) --- */
   --color-status-success: 0 183 122;
   --color-status-warning: 224 181 0;
@@ -116,6 +125,14 @@ html {
   --accent-foreground: 222.2 47.4% 11.2%;
   --accent-rgb: 156 138 255;
   --ring: 258 75% 70%;
+
+  /* --- Popover (for shadcn Command) --- */
+  --popover: 222 36% 10%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
 
   /* Status colors */
   --color-status-success: 76 228 179;
@@ -285,5 +302,11 @@ select {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
   }
 }
