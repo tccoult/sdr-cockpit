@@ -170,6 +170,13 @@ class SourceDataStream {
     }
 
     if (this.ws) {
+      // Remove event handlers to ensure clean disconnection
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+
+      // Close the WebSocket
       this.ws.close();
       this.ws = null;
     }

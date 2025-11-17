@@ -162,16 +162,16 @@ function App() {
           style={{ marginLeft: mainMarginLeft, marginRight: mainMarginRight }}
         >
           {/* Desktop View */}
-          <div className="hidden h-full lg:block">
+          {!isMobile && (
             <DesktopView
               colorMap={colorMap}
               onRenderFpsChange={setRenderFps}
               onDataFpsChange={setDataFps}
             />
-          </div>
+          )}
 
           {/* Mobile View */}
-          <div className="h-full lg:hidden">
+          {isMobile && (
             <MobileContentView
               mobileView={mobileView}
               selectedTask={selectedTask}
@@ -191,7 +191,7 @@ function App() {
               onStartRecording={startRecording}
               onStopRecording={stopRecording}
             />
-          </div>
+          )}
         </main>
       </div>
 
