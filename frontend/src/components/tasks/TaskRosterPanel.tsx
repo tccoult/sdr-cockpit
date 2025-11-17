@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Task, TaskType } from "../../api/client";
 import { Button } from "../common/Button";
 import { TaskCard } from "./TaskCard";
@@ -11,6 +11,10 @@ export interface TaskRosterPanelProps {
   isDiscovering: boolean;
   onCreateTask: () => void;
   onTaskInteraction?: () => void; // Optional callback when user interacts with a task
+  onPauseTask?: (taskId: string) => Promise<void>;
+  onStopTask?: (taskId: string) => Promise<void>;
+  onStartRecording?: (taskId: string) => Promise<void>;
+  onStopRecording?: (taskId: string) => Promise<void>;
 }
 
 const FILTER_OPTIONS: FilterType[] = ["all", TaskType.RX, TaskType.TX];
@@ -25,8 +29,18 @@ export function TaskRosterPanel({
   isDiscovering,
   onCreateTask,
   onTaskInteraction,
+  onPauseTask,
+  onStopTask,
+  onStartRecording,
+  onStopRecording,
 }: TaskRosterPanelProps) {
   const [filter, setFilter] = useState<FilterType>("all");
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+
+  const handleToggleTask = useCallback((taskId: string) => {
+    setExpandedTaskId((current) => (current === taskId ? null : taskId));
+    onTaskInteraction?.();
+  }, [onTaskInteraction]);
 
   const filteredTasks = useMemo(() => {
     if (filter === "all") {
@@ -113,7 +127,12 @@ export function TaskRosterPanel({
                 <TaskCard
                   key={task.id}
                   task={task}
-                  onInteraction={onTaskInteraction}
+                  isExpanded={expandedTaskId === task.id}
+                  onToggle={() => handleToggleTask(task.id)}
+                  onPauseTask={onPauseTask}
+                  onStopTask={onStopTask}
+                  onStartRecording={onStartRecording}
+                  onStopRecording={onStopRecording}
                 />
               ))}
             </div>

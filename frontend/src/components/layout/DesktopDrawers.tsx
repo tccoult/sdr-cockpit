@@ -45,10 +45,10 @@ export function DesktopDrawers({
   onToggleTaskDrawerPin,
   onTaskInteraction,
   onCreateTask,
-  onPauseTask: _onPauseTask,
-  onStopTask: _onStopTask,
-  onStartRecording: _onStartRecording,
-  onStopRecording: _onStopRecording,
+  onPauseTask,
+  onStopTask,
+  onStartRecording,
+  onStopRecording,
   isHealthPanelOpen,
   isHealthPanelPinned,
   bitResult,
@@ -73,6 +73,10 @@ export function DesktopDrawers({
           isDiscovering={isDiscovering}
           onCreateTask={onCreateTask}
           onTaskInteraction={onTaskInteraction}
+          onPauseTask={onPauseTask}
+          onStopTask={onStopTask}
+          onStartRecording={onStartRecording}
+          onStopRecording={onStopRecording}
         />
       </Drawer>
 

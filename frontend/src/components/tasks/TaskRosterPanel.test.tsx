@@ -6,17 +6,17 @@ import { TaskRosterPanel } from './TaskRosterPanel'
 
 type MockTaskCardProps = {
   task: Task
-  isSelected: boolean
-  onSelect: (taskId: string) => void
+  isExpanded: boolean
+  onToggle: () => void
 }
 
 vi.mock('./TaskCard', () => ({
-  TaskCard: ({ task, isSelected, onSelect }: MockTaskCardProps) => (
+  TaskCard: ({ task, isExpanded, onToggle }: MockTaskCardProps) => (
     <div
       data-testid="task-card"
       data-task-id={task.id}
-      data-selected={isSelected}
-      onClick={() => onSelect(task.id)}
+      data-expanded={isExpanded}
+      onClick={onToggle}
     >
       {task.name}
     </div>

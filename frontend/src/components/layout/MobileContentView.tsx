@@ -35,10 +35,10 @@ export function MobileContentView({
   onRenderFpsChange,
   onDataFpsChange,
   onCreateTask,
-  onPauseTask: _onPauseTask,
-  onStopTask: _onStopTask,
-  onStartRecording: _onStartRecording,
-  onStopRecording: _onStopRecording,
+  onPauseTask,
+  onStopTask,
+  onStartRecording,
+  onStopRecording,
 }: MobileContentViewProps) {
   if (mobileView === "visualization") {
     return (
@@ -59,6 +59,10 @@ export function MobileContentView({
           tasks={tasks}
           isDiscovering={isDiscovering}
           onCreateTask={onCreateTask}
+          onPauseTask={onPauseTask}
+          onStopTask={onStopTask}
+          onStartRecording={onStartRecording}
+          onStopRecording={onStopRecording}
         />
       </div>
     );

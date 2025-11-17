@@ -1,9 +1,16 @@
-import { Task } from "../../api/client";
+import { Pause, Play, Square, Circle } from "lucide-react";
+import { Task, TaskOwner, TaskStatus } from "../../api/client";
 import { formatDuration, formatFrequency } from "../../utils/formatters";
+import { Button } from "../common/Button";
 
 type TaskCardProps = {
   task: Task;
-  onInteraction?: () => void;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onPauseTask?: (taskId: string) => Promise<void>;
+  onStopTask?: (taskId: string) => Promise<void>;
+  onStartRecording?: (taskId: string) => Promise<void>;
+  onStopRecording?: (taskId: string) => Promise<void>;
 };
 
 const STATUS_STYLES: Record<
@@ -39,29 +46,38 @@ const STATUS_STYLES: Record<
 const RECORDING_BADGE =
   "border border-status-recording/30 bg-status-recording/12 text-status-recording dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording";
 
-export function TaskCard({ task, onInteraction }: TaskCardProps) {
+export function TaskCard({
+  task,
+  isExpanded,
+  onToggle,
+  onPauseTask,
+  onStopTask,
+  onStartRecording,
+  onStopRecording,
+}: TaskCardProps) {
   const statusStyles = STATUS_STYLES[task.status];
   const isRecording = task.recording?.isRecording ?? false;
-
-  const handleClick = () => {
-    onInteraction?.();
-  };
+  const canControl = task.owner === TaskOwner.SELF;
+  const detailPanelId = `task-${task.id}-details`;
 
   return (
     <article
       role="button"
       tabIndex={0}
-      onClick={handleClick}
+      onClick={onToggle}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          handleClick();
+          onToggle();
         }
       }}
-      className={[
-        "group relative rounded-md border border-transparent px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+      className={cn(
+        "group relative rounded-md border px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
         "bg-muted/40 text-foreground/90 hover:bg-muted/70 hover:border-accent/30",
-      ].join(" ")}
+        isExpanded && "border-accent/40 bg-accent/10"
+      )}
+      aria-expanded={isExpanded}
+      aria-controls={detailPanelId}
     >
       <div className="flex items-center gap-2.5">
         <span
@@ -91,32 +107,133 @@ export function TaskCard({ task, onInteraction }: TaskCardProps) {
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="font-medium text-foreground/80">
-            Owner
-          </span>
-          <span className="text-foreground">
-            {task.ownerName}
-          </span>
+          <span className="font-medium text-foreground/80">Owner</span>
+          <span className="text-foreground">{task.ownerName}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="font-medium text-foreground/80">
-            Uptime
-          </span>
-          <span className="text-foreground">
-            {formatDuration(task.uptime)}
-          </span>
+          <span className="font-medium text-foreground/80">Uptime</span>
+          <span className="text-foreground">{formatDuration(task.uptime)}</span>
         </span>
-        {task.recording && (
-          <span
-            className={[
-              "rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide",
-              RECORDING_BADGE,
-            ].join(" ")}
-          >
-            {task.recording.filename}
-          </span>
+      </div>
+
+      {/* Expanded content */}
+      <div
+        className={cn(
+          "overflow-hidden transition-[max-height,opacity]",
+          isExpanded
+            ? "max-h-48 opacity-100 duration-200 ease-out"
+            : "max-h-0 opacity-0 duration-150 ease-in"
         )}
+        id={detailPanelId}
+      >
+        <div className="border-t border-border/50 pt-3 mt-3">
+          {/* Recording info */}
+          {task.recording && (
+            <div className="mb-3">
+              <span
+                className={cn(
+                  "rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
+                  RECORDING_BADGE
+                )}
+              >
+                Recording: {task.recording.filename}
+              </span>
+            </div>
+          )}
+
+          {/* Task controls or view-only message */}
+          {canControl ? (
+            <div className="flex flex-wrap gap-2">
+              {/* Play/Pause button */}
+              {(task.status === TaskStatus.PAUSED || task.status === TaskStatus.STOPPED) && onPauseTask && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPauseTask(task.id);
+                  }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Play size={14} />
+                  <span className="text-xs">Resume</span>
+                </Button>
+              )}
+              {task.status === TaskStatus.LIVE && onPauseTask && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPauseTask(task.id);
+                  }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Pause size={14} />
+                  <span className="text-xs">Pause</span>
+                </Button>
+              )}
+
+              {/* Stop button */}
+              {task.status !== TaskStatus.STOPPED && onStopTask && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStopTask(task.id);
+                  }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Square size={14} />
+                  <span className="text-xs">Stop</span>
+                </Button>
+              )}
+
+              {/* Recording controls */}
+              {isRecording && onStopRecording && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStopRecording(task.id);
+                  }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Square size={14} />
+                  <span className="text-xs">Stop Recording</span>
+                </Button>
+              )}
+              {!isRecording && task.status === TaskStatus.LIVE && onStartRecording && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartRecording(task.id);
+                  }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Circle size={14} className="fill-current" />
+                  <span className="text-xs">Record</span>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground/70">View Only</p>
+              <p className="mt-1 text-[11px]">
+                This task is owned by {task.ownerName}. You can view it but cannot control it.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </article>
   );
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }
