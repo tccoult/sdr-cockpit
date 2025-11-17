@@ -13,15 +13,16 @@ import { DesktopDrawers } from './components/layout/DesktopDrawers';
 import { Modals } from './components/layout/Modals';
 import {
   useTasks,
-  useDataStream,
   useHealthData,
   useUIPreferences,
   useMobile,
   useKeyboardShortcuts,
 } from './hooks';
+import { useDataSources } from './hooks/api/useDataSources';
+import { useActiveSource } from './hooks/useActiveSource';
+import { useSourceStream } from './hooks/useSourceStream';
 import { SettingsMenuItem } from './components/settings/SettingsMenu';
 import { getHealthIndicator } from './styles/theme';
-import { TaskStatus } from './api/client';
 import { PLASMA } from './utils/colorMaps';
 import { getMockSystemInfo } from './mocks/mockHealth';
 
@@ -72,15 +73,14 @@ function App() {
     stopRecording,
   } = useTasks();
 
-  // Data streaming
-  const { fps, streamStatus, streamError } = useDataStream({
-    taskId: selectedTaskId,
-    centerFreq: selectedTask?.frequency,
-    sampleRate: selectedTask?.sampleRate,
-    fftSize: selectedTask?.fftSize ?? undefined,
-    enabled: !isTaskWizardOpen,
-    paused: selectedTask?.status === TaskStatus.PAUSED,
-    visualizationMode: selectedTask?.visualizationMode ?? undefined,
+  // Data sources
+  useDataSources(); // Fetch available sources (used by SourceSelector)
+  const { activeSource } = useActiveSource();
+
+  // Data streaming from active source
+  const { fps, streamStatus, streamError } = useSourceStream({
+    sourceId: activeSource?.id ?? null,
+    enabled: !isTaskWizardOpen && !!activeSource,
   });
 
   // Keyboard shortcuts (ESC)
@@ -99,12 +99,12 @@ function App() {
     isTaskDrawerPinned,
   });
 
-  // Reset render FPS when wizard opens or no task selected
+  // Reset render FPS when wizard opens or no source selected
   useEffect(() => {
-    if (isTaskWizardOpen || !selectedTaskId) {
+    if (isTaskWizardOpen || !activeSource) {
       setRenderFps(0);
     }
-  }, [isTaskWizardOpen, selectedTaskId]);
+  }, [isTaskWizardOpen, activeSource]);
 
   // Handlers
   const handleSelectTask = (taskId: string) => {
@@ -178,12 +178,8 @@ function App() {
           {/* Desktop View */}
           <div className="hidden h-full lg:block">
             <DesktopView
-              selectedTask={selectedTask}
               colorMap={colorMap}
-              streamError={streamError}
-              streamStatus={streamStatus}
               onRenderFpsChange={setRenderFps}
-              onCreateTask={() => setIsTaskWizardOpen(true)}
             />
           </div>
 

@@ -8,7 +8,18 @@ import { FFTData, FFTDataBatch } from '../types/sdr';
 import { decompressDataTimed } from '../utils/compression';
 import { bytesToDbBins, decodeDeltaBatch } from '../utils/spectralConversion';
 import { getApiMode, getWsBaseUrl } from './config';
-import { DataStreamStatus, DataStreamCallbacks } from './websocket';
+
+export type DataStreamStatus =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'error';
+
+export interface DataStreamCallbacks {
+  onData: (data: FFTDataBatch) => void;
+  onStatusChange: (status: DataStreamStatus) => void;
+  onError?: (error: string) => void;
+}
 
 /**
  * Online (WebSocket) data stream for sources
@@ -34,7 +45,7 @@ class SourceDataStream {
 
     try {
       this.ws = new WebSocket(wsUrl);
-      this.ws.binaryType = 'arraybuffer'; // Required for binary protobuf messages
+      this.ws.binaryType = 'arraybuffer';
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
@@ -43,102 +54,31 @@ class SourceDataStream {
 
       this.ws.onmessage = async (event) => {
         try {
-          // Handle JSON control messages (error, ping, etc.)
+          // Handle JSON control messages
           if (typeof event.data === 'string') {
             const message = JSON.parse(event.data);
 
             switch (message.type) {
               case 'ping':
-                // Respond to heartbeat ping
                 this.ws?.send(JSON.stringify({ type: 'pong' }));
                 break;
-
               case 'error':
-                // Server error message
                 this.callbacks.onStatusChange('error');
                 this.callbacks.onError?.(message.message || 'Unknown error');
                 break;
-
-              default:
-                console.warn('Unknown JSON message type:', message.type);
             }
           }
-
-          // Handle binary protobuf data messages
+          // Handle binary protobuf data
           else if (event.data instanceof ArrayBuffer) {
-            const arrayBuffer = event.data;
-            const uint8Array = new Uint8Array(arrayBuffer);
-
-            // Decode protobuf message
-            const spectralMessage = sdr_cockpit.SpectralMessage.decode(uint8Array);
-
-            let frames: FFTData[] = [];
-
-            // Handle different message types
-            if (spectralMessage.type === sdr_cockpit.SpectralMessage.Type.SINGLE_FRAME) {
-              // Single frame
-              const frame = spectralMessage.singleFrame;
-              if (frame) {
-                frames = [
-                  {
-                    timestamp: frame.timestamp,
-                    centerFreq: frame.centerFreq,
-                    sampleRate: frame.sampleRate,
-                    bins: bytesToDbBins(frame.bins),
-                  },
-                ];
-              }
-            } else if (spectralMessage.type === sdr_cockpit.SpectralMessage.Type.BATCH) {
-              // Uncompressed batch
-              const batch = spectralMessage.batch;
-              if (batch?.frames) {
-                // Decode delta-encoded frames if needed
-                frames = decodeDeltaBatch(
-                  batch.frames.map((f) => ({
-                    timestamp: f.timestamp,
-                    centerFreq: f.centerFreq,
-                    sampleRate: f.sampleRate,
-                    bins: f.bins,
-                    isDelta: f.isDelta,
-                  }))
-                );
-              }
-            } else if (spectralMessage.type === sdr_cockpit.SpectralMessage.Type.COMPRESSED_BATCH) {
-              // Compressed batch
-              const compressedData = spectralMessage.compressedData;
-              if (compressedData) {
-                const { decompressedData } = await decompressDataTimed(compressedData);
-                const batch = sdr_cockpit.FFTFrameBatch.decode(new Uint8Array(decompressedData));
-
-                if (batch?.frames) {
-                  frames = decodeDeltaBatch(
-                    batch.frames.map((f) => ({
-                      timestamp: f.timestamp,
-                      centerFreq: f.centerFreq,
-                      sampleRate: f.sampleRate,
-                      bins: f.bins,
-                      isDelta: f.isDelta,
-                    }))
-                  );
-                }
-              }
-            }
-
-            // Dispatch frames if we got any
-            if (frames.length > 0) {
-              this.callbacks.onData({ frames });
-            }
+            await this.handleBinaryMessage(event.data);
           }
-        } catch (err) {
-          console.error('Error processing WebSocket message:', err);
-          this.callbacks.onError?.('Failed to process message');
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error);
         }
       };
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      this.ws.onerror = () => {
         this.callbacks.onStatusChange('error');
-        this.callbacks.onError?.('WebSocket connection error');
       };
 
       this.ws.onclose = () => {
@@ -154,10 +94,77 @@ class SourceDataStream {
         }
       };
     } catch (err) {
-      console.error('Failed to create WebSocket:', err);
       this.callbacks.onStatusChange('error');
       this.callbacks.onError?.('Failed to create connection');
     }
+  }
+
+  private async handleBinaryMessage(arrayBuffer: ArrayBuffer): Promise<void> {
+    const bytes = new Uint8Array(arrayBuffer);
+    const message = sdr_cockpit.SpectralMessage.decode(bytes);
+    let batch: FFTDataBatch;
+
+    // Handle different message types
+    if (
+      message.type === sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME &&
+      message.singleFrame
+    ) {
+      // Single frame
+      const frame = message.singleFrame;
+      const fftData: FFTData = {
+        timestamp: Number(frame.timestamp || 0),
+        centerFreq: frame.centerFreq || 0,
+        sampleRate: frame.sampleRate || 0,
+        bins: bytesToDbBins(frame.bins || new Uint8Array()),
+      };
+      batch = { frames: [fftData] };
+    } else if (
+      message.type === sdr_cockpit.SpectralMessage.MessageType.BATCH &&
+      message.batch &&
+      message.batch.frames
+    ) {
+      // Uncompressed batch
+      const decodedBins = decodeDeltaBatch(
+        message.batch.frames.map((f) => ({
+          bins: f.bins || new Uint8Array(),
+          isDelta: f.isDelta || false,
+        }))
+      );
+
+      const frames: FFTData[] = message.batch.frames.map((frame, idx) => ({
+        timestamp: Number(frame.timestamp || 0),
+        centerFreq: frame.centerFreq || 0,
+        sampleRate: frame.sampleRate || 0,
+        bins: decodedBins[idx],
+      }));
+      batch = { frames };
+    } else if (
+      message.type === sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH &&
+      message.compressedData
+    ) {
+      // Compressed batch
+      const [decompressedBytes] = await decompressDataTimed(message.compressedData);
+      const decompressedBatch = sdr_cockpit.FFTFrameBatch.decode(decompressedBytes);
+
+      const decodedBins = decodeDeltaBatch(
+        decompressedBatch.frames.map((f) => ({
+          bins: f.bins || new Uint8Array(),
+          isDelta: f.isDelta || false,
+        }))
+      );
+
+      const frames: FFTData[] = decompressedBatch.frames.map((frame, idx) => ({
+        timestamp: Number(frame.timestamp || 0),
+        centerFreq: frame.centerFreq || 0,
+        sampleRate: frame.sampleRate || 0,
+        bins: decodedBins[idx],
+      }));
+      batch = { frames };
+    } else {
+      return;
+    }
+
+    this.callbacks.onData(batch);
   }
 
   disconnect(): void {
@@ -187,14 +194,12 @@ export function createSourceDataStream(
   const apiMode = getApiMode();
 
   if (apiMode === 'online') {
-    // Real WebSocket connection
     const stream = new SourceDataStream(sourceId, callbacks);
     return {
       disconnect: () => stream.disconnect(),
     };
   } else {
-    // Offline mode - no mock needed for sources yet
-    // In offline mode, sources don't exist, so just return a no-op
+    // Offline mode - no streaming for sources
     callbacks.onStatusChange('disconnected');
     return {
       disconnect: () => {},

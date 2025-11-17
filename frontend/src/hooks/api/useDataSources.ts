@@ -6,8 +6,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import type { components } from '@/types/generated/api';
-import { apiClient } from '@/api/client';
+import type { components } from '../../types/generated/api';
+import { apiClient } from '../../api/client';
 
 type DataSource = components['schemas']['DataSource'];
 
