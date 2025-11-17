@@ -16,6 +16,7 @@ from app.models.generated import (
     PlaybackInfo,
     RecordingInfo,
 )
+from app.sources import MockTaskDataSource, source_manager
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -86,6 +87,17 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
         )
 
     tasks[task_id] = task
+
+    # Register a data source for this task
+    source = MockTaskDataSource(
+        task_id=task_id,
+        task_name=task.name,
+        center_freq=task.frequency,
+        sample_rate=task.sample_rate,
+        fft_size=task.fft_size or 2048,
+    )
+    await source_manager.register(source)
+
     return task
 
 
@@ -127,6 +139,10 @@ async def delete_task(task_id: str):
     """Delete a task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Unregister the data source for this task
+    source_id = f"{task_id}-raw"
+    await source_manager.unregister(source_id)
 
     del tasks[task_id]
     return {"message": "Task deleted", "id": task_id}
