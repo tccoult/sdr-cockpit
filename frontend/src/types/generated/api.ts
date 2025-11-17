@@ -333,6 +333,221 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * Task
+         * @description SDR Task
+         */
+        Task: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["TaskType"];
+            /**
+             * Frequency
+             * @description Center frequency in Hz
+             */
+            frequency: number;
+            /**
+             * Samplerate
+             * @description Sample rate in Hz
+             */
+            sampleRate: number;
+            /**
+             * Bandwidth
+             * @description Bandwidth in Hz
+             */
+            bandwidth?: number | null;
+            /**
+             * Fftsize
+             * @description FFT size (bins)
+             */
+            fftSize?: number | null;
+            owner: components["schemas"]["TaskOwner"];
+            /**
+             * Ownername
+             * @description Owner display name
+             */
+            ownerName: string;
+            status: components["schemas"]["TaskStatus"];
+            /**
+             * Uptime
+             * @description Uptime in seconds
+             */
+            uptime: number;
+            recording?: components["schemas"]["RecordingInfo"] | null;
+            playback?: components["schemas"]["PlaybackInfo"] | null;
+            /**
+             * Createdat
+             * @description Unix timestamp in ms
+             */
+            createdAt: number;
+            /**
+             * Fps
+             * @description Current frame rate
+             */
+            fps?: number | null;
+            /** @description Visualization mode for task data */
+            visualizationMode?: components["schemas"]["VisualizationMode"] | null;
+        };
+        /**
+         * TaskOwner
+         * @description Task owner type
+         * @enum {string}
+         */
+        TaskOwner: "self" | "external";
+        /**
+         * TaskStatus
+         * @description Task status enum
+         * @enum {string}
+         */
+        TaskStatus: "live" | "paused" | "transmitting" | "stopped";
+        /**
+         * TaskType
+         * @description Task type enum
+         * @enum {string}
+         */
+        TaskType: "rx" | "tx";
+        /**
+         * CreateRxTaskParams
+         * @description Parameters for creating an RX task
+         */
+        CreateRxTaskParams: {
+            /** Name */
+            name: string;
+            /** Frequency */
+            frequency: number;
+            /** Samplerate */
+            sampleRate: number;
+            /** Bandwidth */
+            bandwidth: number;
+            /** Fftsize */
+            fftSize: number;
+        };
+        /**
+         * CreateTxTaskParams
+         * @description Parameters for creating a TX task
+         */
+        CreateTxTaskParams: {
+            /** Name */
+            name: string;
+            /** Filename */
+            filename: string;
+            /** Frequency */
+            frequency?: number | null;
+            /** Loop */
+            loop: boolean;
+        };
+        /**
+         * UpdateTaskParams
+         * @description Parameters for updating a task
+         */
+        UpdateTaskParams: {
+            /** Name */
+            name?: string | null;
+            status?: components["schemas"]["TaskStatus"] | null;
+            /** Frequency */
+            frequency?: number | null;
+        };
+        /**
+         * RecordingInfo
+         * @description Recording information
+         */
+        RecordingInfo: {
+            /** Filename */
+            filename: string;
+            /**
+             * Duration
+             * @description Recording duration in seconds
+             */
+            duration: number;
+            /**
+             * Filesize
+             * @description File size in bytes
+             */
+            fileSize: number;
+            /** Isrecording */
+            isRecording: boolean;
+        };
+        /**
+         * PlaybackInfo
+         * @description TX playback information
+         */
+        PlaybackInfo: {
+            /** Filename */
+            filename: string;
+            /**
+             * Progress
+             * @description Playback progress 0-1
+             */
+            progress: number;
+            /** Islooping */
+            isLooping: boolean;
+            /**
+             * Duration
+             * @description Total duration in seconds
+             */
+            duration: number;
+        };
+        /**
+         * VisualizationMode
+         * @description Visualization mode for task data
+         * @enum {string}
+         */
+        VisualizationMode: "fft-only" | "fft-waterfall" | "spectrogram";
+        /**
+         * DataSource
+         * @description Information about an available data source
+         */
+        DataSource: {
+            /**
+             * Id
+             * @description Unique source identifier
+             */
+            id: string;
+            /**
+             * Name
+             * @description Human-readable source name
+             */
+            name: string;
+            /**
+             * Type
+             * @description Source type (e.g., 'spectral')
+             */
+            type: string;
+            /**
+             * Typelabel
+             * @description Short label for UI
+             */
+            typeLabel: string;
+            /**
+             * Centerfrequency
+             * @description Center frequency in Hz
+             */
+            centerFrequency: number;
+            /**
+             * Samplerate
+             * @description Sample rate in Hz
+             */
+            sampleRate: number;
+            /**
+             * Status
+             * @description Current source status
+             * @enum {string}
+             */
+            status: "idle" | "active" | "error";
+            /**
+             * Parenttaskid
+             * @description Parent task ID if this is a task output
+             */
+            parentTaskId?: string | null;
+            /**
+             * Subscribercount
+             * @description Number of active subscribers
+             * @default 0
+             */
+            subscriberCount: number;
+        };
+        /**
          * BitMetrics
          * @description Metrics for a BIT test result
          */
@@ -436,101 +651,35 @@ export interface components {
              */
             tests?: string[] | null;
         };
-        /** Body_upload_package_api_system_update_upload_post */
-        Body_upload_package_api_system_update_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
-            file: string;
+        /**
+         * UpdateStatus
+         * @description System update status
+         * @enum {string}
+         */
+        UpdateStatus: "idle" | "uploading" | "validating" | "installing" | "complete" | "error";
+        /**
+         * LockAcquireResponse
+         * @description Lock acquire response
+         */
+        LockAcquireResponse: {
+            /** Lockid */
+            lockId: string;
+            /** Expiresat */
+            expiresAt: number;
         };
         /**
-         * CreateRxTaskParams
-         * @description Parameters for creating an RX task
+         * LockStatusResponse
+         * @description Lock status response
          */
-        CreateRxTaskParams: {
-            /** Name */
-            name: string;
-            /** Frequency */
-            frequency: number;
-            /** Samplerate */
-            sampleRate: number;
-            /** Bandwidth */
-            bandwidth: number;
-            /** Fftsize */
-            fftSize: number;
-        };
-        /**
-         * CreateTxTaskParams
-         * @description Parameters for creating a TX task
-         */
-        CreateTxTaskParams: {
-            /** Name */
-            name: string;
-            /** Filename */
-            filename: string;
-            /** Frequency */
-            frequency?: number | null;
-            /** Loop */
-            loop: boolean;
-        };
-        /**
-         * DataSource
-         * @description Information about an available data source
-         */
-        DataSource: {
-            /**
-             * Id
-             * @description Unique source identifier
-             */
-            id: string;
-            /**
-             * Name
-             * @description Human-readable source name
-             */
-            name: string;
-            /**
-             * Type
-             * @description Source type (e.g., 'spectral')
-             */
-            type: string;
-            /**
-             * Typelabel
-             * @description Short label for UI
-             */
-            typeLabel: string;
-            /**
-             * Centerfrequency
-             * @description Center frequency in Hz
-             */
-            centerFrequency: number;
-            /**
-             * Samplerate
-             * @description Sample rate in Hz
-             */
-            sampleRate: number;
-            /**
-             * Status
-             * @description Current source status
-             * @enum {string}
-             */
-            status: "idle" | "active" | "error";
-            /**
-             * Parenttaskid
-             * @description Parent task ID if this is a task output
-             */
-            parentTaskId?: string | null;
-            /**
-             * Subscribercount
-             * @description Number of active subscribers
-             * @default 0
-             */
-            subscriberCount: number;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
+        LockStatusResponse: {
+            /** Islocked */
+            isLocked: boolean;
+            /** Lockedby */
+            lockedBy?: string | null;
+            /** Lockedsince */
+            lockedSince?: number | null;
+            /** Expiresat */
+            expiresAt?: number | null;
         };
         /**
          * InstallStartRequest
@@ -566,162 +715,6 @@ export interface components {
             error?: string | null;
         };
         /**
-         * LockAcquireResponse
-         * @description Lock acquire response
-         */
-        LockAcquireResponse: {
-            /** Lockid */
-            lockId: string;
-            /** Expiresat */
-            expiresAt: number;
-        };
-        /**
-         * LockStatusResponse
-         * @description Lock status response
-         */
-        LockStatusResponse: {
-            /** Islocked */
-            isLocked: boolean;
-            /** Lockedby */
-            lockedBy?: string | null;
-            /** Lockedsince */
-            lockedSince?: number | null;
-            /** Expiresat */
-            expiresAt?: number | null;
-        };
-        /**
-         * PlaybackInfo
-         * @description TX playback information
-         */
-        PlaybackInfo: {
-            /** Filename */
-            filename: string;
-            /**
-             * Progress
-             * @description Playback progress 0-1
-             */
-            progress: number;
-            /** Islooping */
-            isLooping: boolean;
-            /**
-             * Duration
-             * @description Total duration in seconds
-             */
-            duration: number;
-        };
-        /**
-         * RecordingInfo
-         * @description Recording information
-         */
-        RecordingInfo: {
-            /** Filename */
-            filename: string;
-            /**
-             * Duration
-             * @description Recording duration in seconds
-             */
-            duration: number;
-            /**
-             * Filesize
-             * @description File size in bytes
-             */
-            fileSize: number;
-            /** Isrecording */
-            isRecording: boolean;
-        };
-        /**
-         * Task
-         * @description SDR Task
-         */
-        Task: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            type: components["schemas"]["TaskType"];
-            /**
-             * Frequency
-             * @description Center frequency in Hz
-             */
-            frequency: number;
-            /**
-             * Samplerate
-             * @description Sample rate in Hz
-             */
-            sampleRate: number;
-            /**
-             * Bandwidth
-             * @description Bandwidth in Hz
-             */
-            bandwidth?: number | null;
-            /**
-             * Fftsize
-             * @description FFT size (bins)
-             */
-            fftSize?: number | null;
-            owner: components["schemas"]["TaskOwner"];
-            /**
-             * Ownername
-             * @description Owner display name
-             */
-            ownerName: string;
-            status: components["schemas"]["TaskStatus"];
-            /**
-             * Uptime
-             * @description Uptime in seconds
-             */
-            uptime: number;
-            recording?: components["schemas"]["RecordingInfo"] | null;
-            playback?: components["schemas"]["PlaybackInfo"] | null;
-            /**
-             * Createdat
-             * @description Unix timestamp in ms
-             */
-            createdAt: number;
-            /**
-             * Fps
-             * @description Current frame rate
-             */
-            fps?: number | null;
-            /** @description Visualization mode for task data */
-            visualizationMode?: components["schemas"]["VisualizationMode"] | null;
-        };
-        /**
-         * TaskOwner
-         * @description Task owner type
-         * @enum {string}
-         */
-        TaskOwner: "self" | "external";
-        /**
-         * TaskStatus
-         * @description Task status enum
-         * @enum {string}
-         */
-        TaskStatus: "live" | "paused" | "transmitting" | "stopped";
-        /**
-         * TaskType
-         * @description Task type enum
-         * @enum {string}
-         */
-        TaskType: "rx" | "tx";
-        /**
-         * UpdateStatus
-         * @description System update status
-         * @enum {string}
-         */
-        UpdateStatus: "idle" | "uploading" | "validating" | "installing" | "complete" | "error";
-        /**
-         * UpdateTaskParams
-         * @description Parameters for updating a task
-         */
-        UpdateTaskParams: {
-            /** Name */
-            name?: string | null;
-            status?: components["schemas"]["TaskStatus"] | null;
-            /** Frequency */
-            frequency?: number | null;
-        };
-        /**
          * UploadStatusResponse
          * @description Upload status response
          */
@@ -742,6 +735,19 @@ export interface components {
             /** Error */
             error?: string | null;
         };
+        /** Body_upload_package_api_system_update_upload_post */
+        Body_upload_package_api_system_update_upload_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -751,12 +757,6 @@ export interface components {
             /** Error Type */
             type: string;
         };
-        /**
-         * VisualizationMode
-         * @description Visualization mode for task data
-         * @enum {string}
-         */
-        VisualizationMode: "fft-only" | "fft-waterfall" | "spectrogram";
     };
     responses: never;
     parameters: never;

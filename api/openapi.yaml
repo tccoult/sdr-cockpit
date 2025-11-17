@@ -472,636 +472,69 @@ paths:
               schema: {}
 
 # === Data Models ===
+# Schemas are organized into domain-specific files under ./schemas/
 components:
   schemas:
-    BitMetrics:
-      properties:
-        expected:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Expected
-        actual:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Actual
-        threshold:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Threshold
-        unit:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Unit
-      type: object
-      title: BitMetrics
-      description: Metrics for a BIT test result
-    BitResult:
-      properties:
-        timestamp:
-          type: integer
-          title: Timestamp
-          description: Unix timestamp in ms
-        summary:
-          $ref: '#/components/schemas/BitSummary'
-        tests:
-          items:
-            $ref: '#/components/schemas/BitTest'
-          type: array
-          title: Tests
-        functionTree:
-          $ref: '#/components/schemas/BitTreeNode'
-        hardwareTree:
-          $ref: '#/components/schemas/BitTreeNode'
-      type: object
-      required:
-      - timestamp
-      - summary
-      - tests
-      - functionTree
-      - hardwareTree
-      title: BitResult
-      description: BIT test suite result
-    BitStatus:
-      type: string
-      enum:
-      - ok
-      - warn
-      - fail
-      - unknown
-      title: BitStatus
-      description: Built-In Test (BIT) status values
-    BitSummary:
-      properties:
-        total:
-          type: integer
-          title: Total
-        ok:
-          type: integer
-          title: Ok
-        warn:
-          type: integer
-          title: Warn
-        fail:
-          type: integer
-          title: Fail
-      type: object
-      required:
-      - total
-      - ok
-      - warn
-      - fail
-      title: BitSummary
-      description: Summary counts for BIT test results
-    BitTest:
-      properties:
-        id:
-          type: string
-          title: Id
-        name:
-          type: string
-          title: Name
-        status:
-          $ref: '#/components/schemas/BitStatus'
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-        lastRun:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Lastrun
-          description: Unix timestamp in ms
-        durationMs:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Durationms
-          description: Duration in milliseconds
-        metrics:
-          anyOf:
-          - $ref: '#/components/schemas/BitMetrics'
-          - type: 'null'
-        functionNodes:
-          items:
-            type: string
-          type: array
-          title: Functionnodes
-          description: Function node IDs
-        hardwareNodes:
-          items:
-            type: string
-          type: array
-          title: Hardwarenodes
-          description: Hardware node IDs
-      type: object
-      required:
-      - id
-      - name
-      - status
-      title: BitTest
-      description: Atomic BIT test definition with rollup mappings
-    BitTreeNode:
-      properties:
-        id:
-          type: string
-          title: Id
-        name:
-          type: string
-          title: Name
-        status:
-          $ref: '#/components/schemas/BitStatus'
-        description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Description
-        children:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/BitTreeNode'
-            type: array
-          - type: 'null'
-          title: Children
-        tests:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Tests
-          description: IDs of tests mapped to this node
-      type: object
-      required:
-      - id
-      - name
-      - status
-      title: BitTreeNode
-      description: Rollup node used by functional and hardware hierarchies
-    Body_upload_package_api_system_update_upload_post:
-      properties:
-        file:
-          type: string
-          format: binary
-          title: File
-      type: object
-      required:
-      - file
-      title: Body_upload_package_api_system_update_upload_post
-    CreateRxTaskParams:
-      properties:
-        name:
-          type: string
-          title: Name
-        frequency:
-          type: number
-          title: Frequency
-        sampleRate:
-          type: number
-          title: Samplerate
-        bandwidth:
-          type: number
-          title: Bandwidth
-        fftSize:
-          type: integer
-          title: Fftsize
-      type: object
-      required:
-      - name
-      - frequency
-      - sampleRate
-      - bandwidth
-      - fftSize
-      title: CreateRxTaskParams
-      description: Parameters for creating an RX task
-    CreateTxTaskParams:
-      properties:
-        name:
-          type: string
-          title: Name
-        filename:
-          type: string
-          title: Filename
-        frequency:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Frequency
-        loop:
-          type: boolean
-          title: Loop
-      type: object
-      required:
-      - name
-      - filename
-      - loop
-      title: CreateTxTaskParams
-      description: Parameters for creating a TX task
-    DataSource:
-      properties:
-        id:
-          type: string
-          title: Id
-          description: Unique source identifier
-        name:
-          type: string
-          title: Name
-          description: Human-readable source name
-        type:
-          type: string
-          title: Type
-          description: Source type (e.g., 'spectral')
-        typeLabel:
-          type: string
-          title: Typelabel
-          description: Short label for UI
-        centerFrequency:
-          type: number
-          title: Centerfrequency
-          description: Center frequency in Hz
-        sampleRate:
-          type: number
-          title: Samplerate
-          description: Sample rate in Hz
-        status:
-          type: string
-          enum:
-          - idle
-          - active
-          - error
-          title: Status
-          description: Current source status
-        parentTaskId:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Parenttaskid
-          description: Parent task ID if this is a task output
-        subscriberCount:
-          type: integer
-          title: Subscribercount
-          description: Number of active subscribers
-          default: 0
-      type: object
-      required:
-      - id
-      - name
-      - type
-      - typeLabel
-      - centerFrequency
-      - sampleRate
-      - status
-      title: DataSource
-      description: Information about an available data source
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
-      type: object
-      title: HTTPValidationError
-    InstallStartRequest:
-      properties:
-        upload_id:
-          type: string
-          title: Upload Id
-      type: object
-      required:
-      - upload_id
-      title: InstallStartRequest
-      description: Request body for starting installation
-    InstallStartResponse:
-      properties:
-        installId:
-          type: string
-          title: Installid
-      type: object
-      required:
-      - installId
-      title: InstallStartResponse
-      description: Install start response
-    InstallStatusResponse:
-      properties:
-        installId:
-          type: string
-          title: Installid
-        status:
-          $ref: '#/components/schemas/UpdateStatus'
-        percentComplete:
-          type: integer
-          title: Percentcomplete
-        timeRemainingSeconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Timeremainingseconds
-        currentStep:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Currentstep
-        error:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Error
-      type: object
-      required:
-      - installId
-      - status
-      - percentComplete
-      title: InstallStatusResponse
-      description: Install status response
-    LockAcquireResponse:
-      properties:
-        lockId:
-          type: string
-          title: Lockid
-        expiresAt:
-          type: integer
-          title: Expiresat
-      type: object
-      required:
-      - lockId
-      - expiresAt
-      title: LockAcquireResponse
-      description: Lock acquire response
-    LockStatusResponse:
-      properties:
-        isLocked:
-          type: boolean
-          title: Islocked
-        lockedBy:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Lockedby
-        lockedSince:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Lockedsince
-        expiresAt:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Expiresat
-      type: object
-      required:
-      - isLocked
-      title: LockStatusResponse
-      description: Lock status response
-    PlaybackInfo:
-      properties:
-        filename:
-          type: string
-          title: Filename
-        progress:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Progress
-          description: Playback progress 0-1
-        isLooping:
-          type: boolean
-          title: Islooping
-        duration:
-          type: number
-          title: Duration
-          description: Total duration in seconds
-      type: object
-      required:
-      - filename
-      - progress
-      - isLooping
-      - duration
-      title: PlaybackInfo
-      description: TX playback information
-    RecordingInfo:
-      properties:
-        filename:
-          type: string
-          title: Filename
-        duration:
-          type: number
-          title: Duration
-          description: Recording duration in seconds
-        fileSize:
-          type: integer
-          title: Filesize
-          description: File size in bytes
-        isRecording:
-          type: boolean
-          title: Isrecording
-      type: object
-      required:
-      - filename
-      - duration
-      - fileSize
-      - isRecording
-      title: RecordingInfo
-      description: Recording information
+    # Task-related schemas
     Task:
-      properties:
-        id:
-          type: string
-          title: Id
-        name:
-          type: string
-          title: Name
-        type:
-          $ref: '#/components/schemas/TaskType'
-        frequency:
-          type: number
-          title: Frequency
-          description: Center frequency in Hz
-        sampleRate:
-          type: number
-          title: Samplerate
-          description: Sample rate in Hz
-        bandwidth:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Bandwidth
-          description: Bandwidth in Hz
-        fftSize:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Fftsize
-          description: FFT size (bins)
-        owner:
-          $ref: '#/components/schemas/TaskOwner'
-        ownerName:
-          type: string
-          title: Ownername
-          description: Owner display name
-        status:
-          $ref: '#/components/schemas/TaskStatus'
-        uptime:
-          type: number
-          title: Uptime
-          description: Uptime in seconds
-        recording:
-          anyOf:
-          - $ref: '#/components/schemas/RecordingInfo'
-          - type: 'null'
-        playback:
-          anyOf:
-          - $ref: '#/components/schemas/PlaybackInfo'
-          - type: 'null'
-        createdAt:
-          type: integer
-          title: Createdat
-          description: Unix timestamp in ms
-        fps:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Fps
-          description: Current frame rate
-        visualizationMode:
-          anyOf:
-          - $ref: '#/components/schemas/VisualizationMode'
-          - type: 'null'
-          description: Visualization mode for task data
-      type: object
-      required:
-      - id
-      - name
-      - type
-      - frequency
-      - sampleRate
-      - owner
-      - ownerName
-      - status
-      - uptime
-      - createdAt
-      title: Task
-      description: SDR Task
+      $ref: './schemas/tasks.yaml#/Task'
     TaskOwner:
-      type: string
-      enum:
-      - self
-      - external
-      title: TaskOwner
-      description: Task owner type
+      $ref: './schemas/tasks.yaml#/TaskOwner'
     TaskStatus:
-      type: string
-      enum:
-      - live
-      - paused
-      - transmitting
-      - stopped
-      title: TaskStatus
-      description: Task status enum
+      $ref: './schemas/tasks.yaml#/TaskStatus'
     TaskType:
-      type: string
-      enum:
-      - rx
-      - tx
-      title: TaskType
-      description: Task type enum
-    UpdateStatus:
-      type: string
-      enum:
-      - idle
-      - uploading
-      - validating
-      - installing
-      - complete
-      - error
-      title: UpdateStatus
-      description: System update status
+      $ref: './schemas/tasks.yaml#/TaskType'
+    CreateRxTaskParams:
+      $ref: './schemas/tasks.yaml#/CreateRxTaskParams'
+    CreateTxTaskParams:
+      $ref: './schemas/tasks.yaml#/CreateTxTaskParams'
     UpdateTaskParams:
-      properties:
-        name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Name
-        status:
-          anyOf:
-          - $ref: '#/components/schemas/TaskStatus'
-          - type: 'null'
-        frequency:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Frequency
-      type: object
-      title: UpdateTaskParams
-      description: Parameters for updating a task
-    UploadStatusResponse:
-      properties:
-        uploadId:
-          type: string
-          title: Uploadid
-        status:
-          $ref: '#/components/schemas/UpdateStatus'
-        bytesReceived:
-          type: integer
-          title: Bytesreceived
-        totalBytes:
-          type: integer
-          title: Totalbytes
-        percentComplete:
-          type: integer
-          title: Percentcomplete
-        validationResults:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Validationresults
-        error:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Error
-      type: object
-      required:
-      - uploadId
-      - status
-      - bytesReceived
-      - totalBytes
-      - percentComplete
-      title: UploadStatusResponse
-      description: Upload status response
-    ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          type: array
-          title: Location
-        msg:
-          type: string
-          title: Message
-        type:
-          type: string
-          title: Error Type
-      type: object
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
+      $ref: './schemas/tasks.yaml#/UpdateTaskParams'
+    RecordingInfo:
+      $ref: './schemas/tasks.yaml#/RecordingInfo'
+    PlaybackInfo:
+      $ref: './schemas/tasks.yaml#/PlaybackInfo'
     VisualizationMode:
-      type: string
-      enum:
-      - fft-only
-      - fft-waterfall
-      - spectrogram
-      title: VisualizationMode
-      description: Visualization mode for task data
+      $ref: './schemas/tasks.yaml#/VisualizationMode'
+
+    # Source-related schemas
+    DataSource:
+      $ref: './schemas/sources.yaml#/DataSource'
+
+    # Health/BIT-related schemas
+    BitMetrics:
+      $ref: './schemas/health.yaml#/BitMetrics'
+    BitResult:
+      $ref: './schemas/health.yaml#/BitResult'
+    BitStatus:
+      $ref: './schemas/health.yaml#/BitStatus'
+    BitSummary:
+      $ref: './schemas/health.yaml#/BitSummary'
+    BitTest:
+      $ref: './schemas/health.yaml#/BitTest'
+    BitTreeNode:
+      $ref: './schemas/health.yaml#/BitTreeNode'
+
+    # System update-related schemas
+    UpdateStatus:
+      $ref: './schemas/update.yaml#/UpdateStatus'
+    LockAcquireResponse:
+      $ref: './schemas/update.yaml#/LockAcquireResponse'
+    LockStatusResponse:
+      $ref: './schemas/update.yaml#/LockStatusResponse'
+    InstallStartRequest:
+      $ref: './schemas/update.yaml#/InstallStartRequest'
+    InstallStartResponse:
+      $ref: './schemas/update.yaml#/InstallStartResponse'
+    InstallStatusResponse:
+      $ref: './schemas/update.yaml#/InstallStatusResponse'
+    UploadStatusResponse:
+      $ref: './schemas/update.yaml#/UploadStatusResponse'
+    Body_upload_package_api_system_update_upload_post:
+      $ref: './schemas/update.yaml#/Body_upload_package_api_system_update_upload_post'
+
+    # Common schemas
+    HTTPValidationError:
+      $ref: './schemas/common.yaml#/HTTPValidationError'
+    ValidationError:
+      $ref: './schemas/common.yaml#/ValidationError'

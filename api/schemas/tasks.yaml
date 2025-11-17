@@ -1,0 +1,240 @@
+# Task-related schemas
+# Auto-generate TypeScript and Python types from this file
+
+Task:
+  properties:
+    id:
+      type: string
+      title: Id
+    name:
+      type: string
+      title: Name
+    type:
+      $ref: '#/TaskType'
+    frequency:
+      type: number
+      title: Frequency
+      description: Center frequency in Hz
+    sampleRate:
+      type: number
+      title: Samplerate
+      description: Sample rate in Hz
+    bandwidth:
+      anyOf:
+      - type: number
+      - type: 'null'
+      title: Bandwidth
+      description: Bandwidth in Hz
+    fftSize:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: Fftsize
+      description: FFT size (bins)
+    owner:
+      $ref: '#/TaskOwner'
+    ownerName:
+      type: string
+      title: Ownername
+      description: Owner display name
+    status:
+      $ref: '#/TaskStatus'
+    uptime:
+      type: number
+      title: Uptime
+      description: Uptime in seconds
+    recording:
+      anyOf:
+      - $ref: '#/RecordingInfo'
+      - type: 'null'
+    playback:
+      anyOf:
+      - $ref: '#/PlaybackInfo'
+      - type: 'null'
+    createdAt:
+      type: integer
+      title: Createdat
+      description: Unix timestamp in ms
+    fps:
+      anyOf:
+      - type: number
+      - type: 'null'
+      title: Fps
+      description: Current frame rate
+    visualizationMode:
+      anyOf:
+      - $ref: '#/VisualizationMode'
+      - type: 'null'
+      description: Visualization mode for task data
+  type: object
+  required:
+  - id
+  - name
+  - type
+  - frequency
+  - sampleRate
+  - owner
+  - ownerName
+  - status
+  - uptime
+  - createdAt
+  title: Task
+  description: SDR Task
+
+TaskOwner:
+  type: string
+  enum:
+  - self
+  - external
+  title: TaskOwner
+  description: Task owner type
+
+TaskStatus:
+  type: string
+  enum:
+  - live
+  - paused
+  - transmitting
+  - stopped
+  title: TaskStatus
+  description: Task status enum
+
+TaskType:
+  type: string
+  enum:
+  - rx
+  - tx
+  title: TaskType
+  description: Task type enum
+
+CreateRxTaskParams:
+  properties:
+    name:
+      type: string
+      title: Name
+    frequency:
+      type: number
+      title: Frequency
+    sampleRate:
+      type: number
+      title: Samplerate
+    bandwidth:
+      type: number
+      title: Bandwidth
+    fftSize:
+      type: integer
+      title: Fftsize
+  type: object
+  required:
+  - name
+  - frequency
+  - sampleRate
+  - bandwidth
+  - fftSize
+  title: CreateRxTaskParams
+  description: Parameters for creating an RX task
+
+CreateTxTaskParams:
+  properties:
+    name:
+      type: string
+      title: Name
+    filename:
+      type: string
+      title: Filename
+    frequency:
+      anyOf:
+      - type: number
+      - type: 'null'
+      title: Frequency
+    loop:
+      type: boolean
+      title: Loop
+  type: object
+  required:
+  - name
+  - filename
+  - loop
+  title: CreateTxTaskParams
+  description: Parameters for creating a TX task
+
+UpdateTaskParams:
+  properties:
+    name:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Name
+    status:
+      anyOf:
+      - $ref: '#/TaskStatus'
+      - type: 'null'
+    frequency:
+      anyOf:
+      - type: number
+      - type: 'null'
+      title: Frequency
+  type: object
+  title: UpdateTaskParams
+  description: Parameters for updating a task
+
+RecordingInfo:
+  properties:
+    filename:
+      type: string
+      title: Filename
+    duration:
+      type: number
+      title: Duration
+      description: Recording duration in seconds
+    fileSize:
+      type: integer
+      title: Filesize
+      description: File size in bytes
+    isRecording:
+      type: boolean
+      title: Isrecording
+  type: object
+  required:
+  - filename
+  - duration
+  - fileSize
+  - isRecording
+  title: RecordingInfo
+  description: Recording information
+
+PlaybackInfo:
+  properties:
+    filename:
+      type: string
+      title: Filename
+    progress:
+      type: number
+      maximum: 1.0
+      minimum: 0.0
+      title: Progress
+      description: Playback progress 0-1
+    isLooping:
+      type: boolean
+      title: Islooping
+    duration:
+      type: number
+      title: Duration
+      description: Total duration in seconds
+  type: object
+  required:
+  - filename
+  - progress
+  - isLooping
+  - duration
+  title: PlaybackInfo
+  description: TX playback information
+
+VisualizationMode:
+  type: string
+  enum:
+  - fft-only
+  - fft-waterfall
+  - spectrogram
+  title: VisualizationMode
+  description: Visualization mode for task data

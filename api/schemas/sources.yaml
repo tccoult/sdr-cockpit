@@ -1,0 +1,59 @@
+# Source-related schemas
+# Auto-generate TypeScript and Python types from this file
+
+DataSource:
+  properties:
+    id:
+      type: string
+      title: Id
+      description: Unique source identifier
+    name:
+      type: string
+      title: Name
+      description: Human-readable source name
+    type:
+      type: string
+      title: Type
+      description: Source type (e.g., 'spectral')
+    typeLabel:
+      type: string
+      title: Typelabel
+      description: Short label for UI
+    centerFrequency:
+      type: number
+      title: Centerfrequency
+      description: Center frequency in Hz
+    sampleRate:
+      type: number
+      title: Samplerate
+      description: Sample rate in Hz
+    status:
+      type: string
+      enum:
+      - idle
+      - active
+      - error
+      title: Status
+      description: Current source status
+    parentTaskId:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Parenttaskid
+      description: Parent task ID if this is a task output
+    subscriberCount:
+      type: integer
+      title: Subscribercount
+      description: Number of active subscribers
+      default: 0
+  type: object
+  required:
+  - id
+  - name
+  - type
+  - typeLabel
+  - centerFrequency
+  - sampleRate
+  - status
+  title: DataSource
+  description: Information about an available data source

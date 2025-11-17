@@ -57,6 +57,9 @@ logs/
 .cache/
 docs/api
 
+# Generated OpenAPI bundle
+api/openapi.bundled.yaml
+
 # IDEs
 .vscode/
 !.vscode/settings.json

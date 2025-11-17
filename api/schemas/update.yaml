@@ -1,0 +1,158 @@
+# System update-related schemas
+# Auto-generate TypeScript and Python types from this file
+
+UpdateStatus:
+  type: string
+  enum:
+  - idle
+  - uploading
+  - validating
+  - installing
+  - complete
+  - error
+  title: UpdateStatus
+  description: System update status
+
+LockAcquireResponse:
+  properties:
+    lockId:
+      type: string
+      title: Lockid
+    expiresAt:
+      type: integer
+      title: Expiresat
+  type: object
+  required:
+  - lockId
+  - expiresAt
+  title: LockAcquireResponse
+  description: Lock acquire response
+
+LockStatusResponse:
+  properties:
+    isLocked:
+      type: boolean
+      title: Islocked
+    lockedBy:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Lockedby
+    lockedSince:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: Lockedsince
+    expiresAt:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: Expiresat
+  type: object
+  required:
+  - isLocked
+  title: LockStatusResponse
+  description: Lock status response
+
+InstallStartRequest:
+  properties:
+    upload_id:
+      type: string
+      title: Upload Id
+  type: object
+  required:
+  - upload_id
+  title: InstallStartRequest
+  description: Request body for starting installation
+
+InstallStartResponse:
+  properties:
+    installId:
+      type: string
+      title: Installid
+  type: object
+  required:
+  - installId
+  title: InstallStartResponse
+  description: Install start response
+
+InstallStatusResponse:
+  properties:
+    installId:
+      type: string
+      title: Installid
+    status:
+      $ref: '#/UpdateStatus'
+    percentComplete:
+      type: integer
+      title: Percentcomplete
+    timeRemainingSeconds:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: Timeremainingseconds
+    currentStep:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Currentstep
+    error:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Error
+  type: object
+  required:
+  - installId
+  - status
+  - percentComplete
+  title: InstallStatusResponse
+  description: Install status response
+
+UploadStatusResponse:
+  properties:
+    uploadId:
+      type: string
+      title: Uploadid
+    status:
+      $ref: '#/UpdateStatus'
+    bytesReceived:
+      type: integer
+      title: Bytesreceived
+    totalBytes:
+      type: integer
+      title: Totalbytes
+    percentComplete:
+      type: integer
+      title: Percentcomplete
+    validationResults:
+      anyOf:
+      - additionalProperties: true
+        type: object
+      - type: 'null'
+      title: Validationresults
+    error:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Error
+  type: object
+  required:
+  - uploadId
+  - status
+  - bytesReceived
+  - totalBytes
+  - percentComplete
+  title: UploadStatusResponse
+  description: Upload status response
+
+Body_upload_package_api_system_update_upload_post:
+  properties:
+    file:
+      type: string
+      format: binary
+      title: File
+  type: object
+  required:
+  - file
+  title: Body_upload_package_api_system_update_upload_post
