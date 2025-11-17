@@ -72,9 +72,9 @@ export function TaskCard({
         }
       }}
       className={cn(
-        "group relative rounded-md border border-transparent px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
-        "bg-muted/40 text-foreground/90 hover:bg-muted/70",
-        isExpanded && "border-accent/40 bg-accent/10"
+        "group relative rounded-md border px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+        "text-foreground/90 hover:bg-muted/70",
+        isExpanded ? "border-accent/40 bg-accent/10" : "border-transparent bg-muted/40"
       )}
       aria-expanded={isExpanded}
       aria-controls={detailPanelId}
