@@ -120,6 +120,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sources
+         * @description List all available data sources
+         */
+        get: operations["list_sources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health/bit/results": {
         parameters: {
             query?: never;
@@ -453,6 +473,59 @@ export interface components {
             frequency?: number | null;
             /** Loop */
             loop: boolean;
+        };
+        /**
+         * DataSource
+         * @description Information about an available data source
+         */
+        DataSource: {
+            /**
+             * Id
+             * @description Unique source identifier
+             */
+            id: string;
+            /**
+             * Name
+             * @description Human-readable source name
+             */
+            name: string;
+            /**
+             * Type
+             * @description Source type (e.g., 'spectral')
+             */
+            type: string;
+            /**
+             * Typelabel
+             * @description Short label for UI
+             */
+            typeLabel: string;
+            /**
+             * Centerfrequency
+             * @description Center frequency in Hz
+             */
+            centerFrequency: number;
+            /**
+             * Samplerate
+             * @description Sample rate in Hz
+             */
+            sampleRate: number;
+            /**
+             * Status
+             * @description Current source status
+             * @enum {string}
+             */
+            status: "idle" | "active" | "error";
+            /**
+             * Parenttaskid
+             * @description Parent task ID if this is a task output
+             */
+            parentTaskId?: string | null;
+            /**
+             * Subscribercount
+             * @description Number of active subscribers
+             * @default 0
+             */
+            subscriberCount: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -963,6 +1036,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataSource"][];
                 };
             };
         };

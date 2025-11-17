@@ -5,9 +5,6 @@
 export { useTasks } from './api/useTasksQuery';
 export type { UseTasksResult } from './api/useTasksQuery';
 
-export { useDataStream } from './useDataStream';
-export type { UseDataStreamOptions, UseDataStreamResult } from './useDataStream';
-
 export { usePlotRenderFps } from './usePlotRenderFps';
 
 export { useHealthData } from './useHealthData';

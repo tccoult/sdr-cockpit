@@ -10,10 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.api.routes import tasks, health, update
+from app.api.routes import tasks, health, update, sources
 from app.api import websocket
 from app.models.generated import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
 from app.config.constants import TARGET_FPS
+from app.sources import MockTaskDataSource, source_manager
 
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -42,6 +43,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(tasks.router)
+app.include_router(sources.router)
 app.include_router(health.router)
 app.include_router(update.router)
 app.include_router(websocket.router)
@@ -106,6 +108,18 @@ async def startup_event():
 
     for task in test_tasks:
         tasks.tasks[task.id] = task
+
+        # Register a data source for each test task
+        source = MockTaskDataSource(
+            task_id=task.id,
+            task_name=task.name,
+            center_freq=task.frequency,
+            sample_rate=task.sample_rate,
+            fft_size=task.fft_size,
+        )
+        await source_manager.register(source)
+
+    logger.info(f"Registered {len(test_tasks)} test task sources")
 
 
 @app.get("/api/")

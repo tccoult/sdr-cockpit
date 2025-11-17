@@ -8,7 +8,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Task, CreateRxTaskParams, CreateTxTaskParams, TaskType, TaskStatus } from '../../api/client';
 import { api } from '../../services/api';
 import { updateRecording, updateTaskUptime, updateTxProgress } from '../../mocks/mockTaskGenerator';
-import { useTaskParams } from '../useTaskParams';
 
 // Query keys (internal)
 const taskKeys = {
@@ -162,17 +161,14 @@ function useStopRecording() {
 }
 
 /**
- * Combined hook that provides the same interface as the original useTasks
- * This maintains backward compatibility while using React Query
+ * Combined hook for task management
+ * No longer tracks "selected task" - that concept is removed in Phase 3
  */
 export interface UseTasksResult {
   tasks: Task[];
-  selectedTask: Task | null;
-  selectedTaskId: string | null;
   isDiscovering: boolean;
-  selectTask: (taskId: string) => void;
-  createRxTask: (params: CreateRxTaskParams) => Promise<void>;
-  createTxTask: (params: CreateTxTaskParams) => Promise<void>;
+  createRxTask: (params: CreateRxTaskParams) => Promise<Task>;
+  createTxTask: (params: CreateTxTaskParams) => Promise<Task>;
   pauseTask: (taskId: string) => Promise<void>;
   stopTask: (taskId: string) => Promise<void>;
   startRecording: (taskId: string) => Promise<void>;
@@ -181,7 +177,6 @@ export interface UseTasksResult {
 
 export function useTasks(): UseTasksResult {
   const { tasks, isLoading: isDiscovering } = useTasksQuery();
-  const { selectedTaskId, selectTask: selectTaskUrl } = useTaskParams();
 
   const createRxMutation = useCreateRxTask();
   const createTxMutation = useCreateTxTask();
@@ -190,35 +185,18 @@ export function useTasks(): UseTasksResult {
   const startRecordingMutation = useStartRecording();
   const stopRecordingMutation = useStopRecording();
 
-  // Auto-select first task on mount if no task is selected
-  useEffect(() => {
-    if (tasks.length > 0 && !selectedTaskId) {
-      selectTaskUrl(tasks[0].id);
-    }
-  }, [tasks, selectedTaskId, selectTaskUrl]);
-
-  // Get selected task
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
-
-  // Handlers that maintain the same interface
-  const selectTask = useCallback((taskId: string) => {
-    selectTaskUrl(taskId);
-  }, [selectTaskUrl]);
-
   const createRxTask = useCallback(
-    async (params: CreateRxTaskParams) => {
-      const result = await createRxMutation.mutateAsync(params);
-      selectTaskUrl(result.id);
+    async (params: CreateRxTaskParams): Promise<Task> => {
+      return await createRxMutation.mutateAsync(params);
     },
-    [createRxMutation, selectTaskUrl]
+    [createRxMutation]
   );
 
   const createTxTask = useCallback(
-    async (params: CreateTxTaskParams) => {
-      const result = await createTxMutation.mutateAsync(params);
-      selectTaskUrl(result.id);
+    async (params: CreateTxTaskParams): Promise<Task> => {
+      return await createTxMutation.mutateAsync(params);
     },
-    [createTxMutation, selectTaskUrl]
+    [createTxMutation]
   );
 
   const pauseTask = useCallback(
@@ -233,14 +211,8 @@ export function useTasks(): UseTasksResult {
   const stopTask = useCallback(
     async (taskId: string) => {
       await deleteMutation.mutateAsync(taskId);
-
-      // If this was the selected task, select another
-      if (taskId === selectedTaskId) {
-        const remainingTasks = tasks.filter((t) => t.id !== taskId);
-        selectTaskUrl(remainingTasks.length > 0 ? remainingTasks[0].id : null);
-      }
     },
-    [deleteMutation, selectedTaskId, tasks, selectTaskUrl]
+    [deleteMutation]
   );
 
   const startRecording = useCallback(
@@ -259,10 +231,7 @@ export function useTasks(): UseTasksResult {
 
   return {
     tasks,
-    selectedTask,
-    selectedTaskId,
     isDiscovering,
-    selectTask,
     createRxTask,
     createTxTask,
     pauseTask,

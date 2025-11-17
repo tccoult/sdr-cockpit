@@ -1,15 +1,11 @@
 import { Menu, ChevronDown } from 'lucide-react'
 import { ThemeToggle } from '../app/ThemeToggle'
 import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
-import { Task } from '../../api/client'
-import { formatFrequency, formatSampleRate } from '../../utils/formatters'
-import { getTaskStatusLabel } from '../tasks/ActiveTaskPanel/taskStatus'
 import { getHealthIndicator } from '../../styles/theme'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 
 export interface CompactHeaderProps {
-  selectedTask: Task | null
   dataFps: number
   renderFps: number
   totalTasks: number
@@ -23,10 +19,9 @@ export interface CompactHeaderProps {
 
 /**
  * Compact single-line header for display-first cockpit layout.
- * Shows critical info: task, FPS, health status.
+ * Shows critical info: FPS, health status, task count.
  */
 export function CompactHeader({
-  selectedTask,
   dataFps,
   renderFps,
   totalTasks,
@@ -37,8 +32,6 @@ export function CompactHeader({
   onToggleHealthPanel,
   onOpenSettings,
 }: CompactHeaderProps) {
-  const taskStatusLabel = getTaskStatusLabel(selectedTask)
-
   const healthIndicator = getHealthIndicator(healthStatus)
 
   return (
@@ -59,27 +52,6 @@ export function CompactHeader({
           <h1 className="whitespace-nowrap text-sm font-semibold text-foreground">
             SDR Cockpit
           </h1>
-
-          {selectedTask && (
-            <>
-              <span className="text-muted-foreground/70">|</span>
-              <div className="flex items-center gap-2 overflow-hidden text-xs">
-                <span className="truncate font-medium text-foreground/90">
-                  {selectedTask.name}
-                </span>
-                <span className="text-muted-foreground/70">•</span>
-                <span className="whitespace-nowrap text-muted-foreground">
-                  {formatFrequency(selectedTask.frequency)} @ {formatSampleRate(selectedTask.sampleRate)}
-                </span>
-                <span className="text-muted-foreground/70">•</span>
-                <span
-                  className={`whitespace-nowrap font-medium ${getStatusColor(selectedTask.status)}`}
-                >
-                  {taskStatusLabel}
-                </span>
-              </div>
-            </>
-          )}
         </div>
       </div>
 
@@ -162,17 +134,3 @@ export function CompactHeader({
   )
 }
 
-function getStatusColor(status: Task['status']): string {
-  switch (status) {
-    case 'live':
-      return 'text-status-success dark:text-status-success'
-    case 'transmitting':
-      return 'text-status-transmit dark:text-status-transmit'
-    case 'paused':
-      return 'text-status-warning dark:text-status-warning'
-    case 'stopped':
-      return 'text-status-stopped dark:text-status-stopped'
-    default:
-      return 'text-muted-foreground'
-  }
-}

@@ -1,4 +1,7 @@
-import { Hand, ZoomIn } from "lucide-react";
+import { Hand, ZoomIn, Play, Pause } from 'lucide-react';
+import { useDataSources } from '../../hooks/api/useDataSources';
+import { useActiveSource } from '../../hooks/useActiveSource';
+import { SourceSelector } from './SourceSelector';
 
 export type InteractionMode = "pan" | "zoom";
 
@@ -10,11 +13,13 @@ export interface VisualizationControlsProps {
   onToggleMaxHold: () => void;
   onClearMaxHold: () => void;
   maxHoldControlsDisabled?: boolean;
+  isPaused: boolean;
+  onTogglePause: () => void;
 }
 
 /**
- * Bottom control bar for spectrum visualization.
- * Includes pan/zoom toggle, auto range, and max-hold controls.
+ * Top toolbar for spectrum visualization.
+ * Includes source selector, pan/zoom toggle, auto range, and max-hold controls.
  */
 export function VisualizationControls({
   interactionMode,
@@ -24,21 +29,20 @@ export function VisualizationControls({
   onToggleMaxHold,
   onClearMaxHold,
   maxHoldControlsDisabled = false,
+  isPaused,
+  onTogglePause,
 }: VisualizationControlsProps) {
-  const dockClasses = [
-    "flex w-full flex-col items-center justify-center gap-3 border-t px-4 py-2 text-[11px] text-viz-text/80 sm:text-xs",
+  const { sources, isLoading } = useDataSources();
+  const { activeSource, selectSource } = useActiveSource();
+
+  const toolbarClasses = [
+    "flex w-full flex-col items-center justify-center gap-3 border-b px-4 py-2 text-[11px] text-viz-text/80 sm:text-xs",
     "bg-viz-bg",
   ].join(" ");
 
-  const dockStyle = {
-    borderTopColor: "var(--viz-divider)",
+  const toolbarStyle = {
+    borderBottomColor: "var(--viz-divider)",
   };
-
-  const actionGroupClasses =
-    "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
-
-  const extraGroupClasses =
-    "flex flex-wrap items-center justify-center gap-3 text-[11px] sm:text-xs";
 
   const sharedButtonBase =
     "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[11px] font-medium transition sm:text-xs";
@@ -72,9 +76,37 @@ export function VisualizationControls({
   ].join(" ");
 
   return (
-    <div className={dockClasses} style={dockStyle}>
-      <div className="flex flex-wrap items-center justify-center gap-4 text-center sm:gap-5">
-        <div className={actionGroupClasses}>
+    <div className={toolbarClasses} style={toolbarStyle}>
+      <div className="flex w-full flex-wrap items-center justify-between gap-4">
+        {/* Left: Source Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-viz-text/50">Source</span>
+          <SourceSelector
+            sources={sources}
+            activeSource={activeSource}
+            isLoading={isLoading}
+            onSelect={selectSource}
+          />
+        </div>
+
+        {/* Right: All Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Playback Control */}
+          <button
+            type="button"
+            className={[
+              sharedButtonBase,
+              isPaused ? buttonDefaultClasses : buttonActiveClasses,
+              !activeSource ? "pointer-events-none opacity-50" : "",
+            ].join(" ")}
+            onClick={onTogglePause}
+            disabled={!activeSource}
+            title={isPaused ? "Resume streaming" : "Pause streaming"}
+          >
+            {isPaused ? <Play size={14} /> : <Pause size={14} />}
+            <span>{isPaused ? "Play" : "Pause"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => onInteractionModeChange("pan")}
@@ -102,9 +134,7 @@ export function VisualizationControls({
           >
             Auto Range
           </button>
-        </div>
 
-        <div className={extraGroupClasses}>
           <button
             type="button"
             className={maxHoldToggleClasses}

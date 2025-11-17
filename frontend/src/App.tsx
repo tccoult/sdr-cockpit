@@ -13,15 +13,14 @@ import { DesktopDrawers } from './components/layout/DesktopDrawers';
 import { Modals } from './components/layout/Modals';
 import {
   useTasks,
-  useDataStream,
   useHealthData,
   useUIPreferences,
   useMobile,
   useKeyboardShortcuts,
 } from './hooks';
+import { useDataSources } from './hooks/api/useDataSources';
 import { SettingsMenuItem } from './components/settings/SettingsMenu';
 import { getHealthIndicator } from './styles/theme';
-import { TaskStatus } from './api/client';
 import { PLASMA } from './utils/colorMaps';
 import { getMockSystemInfo } from './mocks/mockHealth';
 
@@ -39,6 +38,7 @@ function App() {
 
   // UI state
   const [renderFps, setRenderFps] = useState(0);
+  const [dataFps, setDataFps] = useState(0);
   const [mobileView, setMobileView] = useState<MobileView>('visualization');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isTaskWizardOpen, setIsTaskWizardOpen] = useState(false);
@@ -57,13 +57,10 @@ function App() {
     setIsHealthPanelPinned,
   } = useUIPreferences();
 
-  // Task management
+  // Task management (no "selected task" - removed in Phase 3)
   const {
     tasks,
-    selectedTask,
-    selectedTaskId,
     isDiscovering,
-    selectTask,
     createRxTask,
     createTxTask,
     pauseTask,
@@ -72,16 +69,8 @@ function App() {
     stopRecording,
   } = useTasks();
 
-  // Data streaming
-  const { fps, streamStatus, streamError } = useDataStream({
-    taskId: selectedTaskId,
-    centerFreq: selectedTask?.frequency,
-    sampleRate: selectedTask?.sampleRate,
-    fftSize: selectedTask?.fftSize ?? undefined,
-    enabled: !isTaskWizardOpen,
-    paused: selectedTask?.status === TaskStatus.PAUSED,
-    visualizationMode: selectedTask?.visualizationMode ?? undefined,
-  });
+  // Pre-fetch data sources for visualization controls dropdown
+  useDataSources();
 
   // Keyboard shortcuts (ESC)
   useKeyboardShortcuts({
@@ -99,16 +88,16 @@ function App() {
     isTaskDrawerPinned,
   });
 
-  // Reset render FPS when wizard opens or no task selected
+  // Reset render FPS when wizard opens
   useEffect(() => {
-    if (isTaskWizardOpen || !selectedTaskId) {
+    if (isTaskWizardOpen) {
       setRenderFps(0);
     }
-  }, [isTaskWizardOpen, selectedTaskId]);
+  }, [isTaskWizardOpen]);
 
   // Handlers
-  const handleSelectTask = (taskId: string) => {
-    selectTask(taskId);
+  const handleTaskDrawerAutoClose = () => {
+    // Auto-close task drawer if not pinned (called when user interacts with a task)
     if (!isTaskDrawerPinned) {
       setIsTaskDrawerOpen(false);
     }
@@ -142,14 +131,8 @@ function App() {
     ? `${SYSTEM_HEALTH_PANEL_WIDTH}px`
     : '0';
 
-  // Health status
-  const healthStatus: HealthStatus = streamError
-    ? 'error'
-    : streamStatus === 'connecting'
-    ? 'warning'
-    : streamStatus === 'connected'
-    ? 'healthy'
-    : 'unknown';
+  // Health status (simplified - no longer tracking stream status here)
+  const healthStatus: HealthStatus = 'healthy';
 
   const healthIndicator = getHealthIndicator(healthStatus);
 
@@ -158,8 +141,7 @@ function App() {
       <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
         {/* Header */}
         <CompactHeader
-          selectedTask={selectedTask}
-          dataFps={fps}
+          dataFps={dataFps}
           renderFps={renderFps}
           totalTasks={tasks.length}
           healthStatus={healthStatus}
@@ -176,38 +158,31 @@ function App() {
           style={{ marginLeft: mainMarginLeft, marginRight: mainMarginRight }}
         >
           {/* Desktop View */}
-          <div className="hidden h-full lg:block">
+          {!isMobile && (
             <DesktopView
-              selectedTask={selectedTask}
               colorMap={colorMap}
-              streamError={streamError}
-              streamStatus={streamStatus}
               onRenderFpsChange={setRenderFps}
-              onCreateTask={() => setIsTaskWizardOpen(true)}
+              onDataFpsChange={setDataFps}
             />
-          </div>
+          )}
 
           {/* Mobile View */}
-          <div className="h-full lg:hidden">
+          {isMobile && (
             <MobileContentView
               mobileView={mobileView}
-              selectedTask={selectedTask}
-              selectedTaskId={selectedTaskId}
               tasks={tasks}
               isDiscovering={isDiscovering}
               bitResult={bitResult}
               colorMap={colorMap}
-              streamError={streamError}
-              streamStatus={streamStatus}
               onRenderFpsChange={setRenderFps}
-              onSelectTask={selectTask}
+              onDataFpsChange={setDataFps}
               onCreateTask={() => setIsTaskWizardOpen(true)}
               onPauseTask={pauseTask}
               onStopTask={stopTask}
               onStartRecording={startRecording}
               onStopRecording={stopRecording}
             />
-          </div>
+          )}
         </main>
       </div>
 
@@ -215,13 +190,11 @@ function App() {
       <DesktopDrawers
         isTaskDrawerOpen={isTaskDrawerOpen}
         isTaskDrawerPinned={isTaskDrawerPinned}
-        selectedTask={selectedTask}
-        selectedTaskId={selectedTaskId}
         tasks={tasks}
         isDiscovering={isDiscovering}
         onCloseTaskDrawer={() => setIsTaskDrawerOpen(false)}
         onToggleTaskDrawerPin={() => setIsTaskDrawerPinned((prev) => !prev)}
-        onSelectTask={handleSelectTask}
+        onTaskInteraction={handleTaskDrawerAutoClose}
         onCreateTask={() => setIsTaskWizardOpen(true)}
         onPauseTask={pauseTask}
         onStopTask={stopTask}
