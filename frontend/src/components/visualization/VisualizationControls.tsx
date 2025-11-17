@@ -205,8 +205,11 @@ export function VisualizationControls({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Play/Pause Button */}
+        {/* Right: All Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Playback Control */}
           <button
             type="button"
             className={[
@@ -221,10 +224,7 @@ export function VisualizationControls({
             {isPaused ? <Play size={14} /> : <Pause size={14} />}
             <span>{isPaused ? "Play" : "Pause"}</span>
           </button>
-        </div>
 
-        {/* Right: Visualization Controls */}
-        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => onInteractionModeChange("pan")}
