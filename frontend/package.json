@@ -11,8 +11,7 @@
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "generate:types": "openapi-typescript ../api/openapi.bundled.yaml -o src/types/generated/api.ts",
-    "bundle:openapi": "redocly bundle ../api/openapi.yaml -o ../api/openapi.bundled.yaml"
+    "generate:types": "openapi-typescript ../api/openapi.yaml -o src/types/generated/api.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -49,7 +48,6 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^23.0.1",
-    "@redocly/cli": "^1.34.0",
     "openapi-typescript": "^7.10.1",
     "postcss": "^8.4.35",
     "protobufjs-cli": "^1.1.3",

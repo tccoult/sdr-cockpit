@@ -7,7 +7,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 OPENAPI_FILE="$PROJECT_ROOT/api/openapi.yaml"
-OPENAPI_BUNDLED="$PROJECT_ROOT/api/openapi.bundled.yaml"
 PROTOBUF_FILE="$PROJECT_ROOT/api/spectral_data.proto"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -26,15 +25,9 @@ if [ ! -f "$PROTOBUF_FILE" ]; then
     exit 1
 fi
 
-# Bundle the OpenAPI spec (resolves all $refs)
-echo "→ Bundling OpenAPI specification..."
-cd "$PROJECT_ROOT/frontend"
-npm run bundle:openapi
-echo "✅ OpenAPI spec bundled"
-echo ""
-
 # Generate TypeScript types
 echo "→ Generating TypeScript types..."
+cd "$PROJECT_ROOT/frontend"
 npm run generate:types
 echo "✅ TypeScript types generated"
 echo ""
@@ -43,7 +36,7 @@ echo ""
 echo "→ Generating Python models from OpenAPI..."
 cd "$PROJECT_ROOT/backend"
 uv run datamodel-codegen \
-    --input ../api/openapi.bundled.yaml \
+    --input ../api/openapi.yaml \
     --output app/models/generated.py \
     --snake-case-field \
     --use-standard-collections \

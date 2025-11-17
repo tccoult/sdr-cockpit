@@ -1,0 +1,1096 @@
+openapi: 3.1.0
+info:
+  title: SDR Cockpit API
+  description: Software Defined Radio Web Application API
+  version: 0.1.0
+paths:
+  /api/tasks/:
+    get:
+      tags:
+        - tasks
+      summary: List Tasks
+      description: List all tasks
+      operationId: list_tasks_tasks
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Task'
+                type: array
+    post:
+      tags:
+        - tasks
+      summary: Create Task
+      description: Create a new task
+      operationId: create_task_tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+                - $ref: '#/components/schemas/CreateRxTaskParams'
+                - $ref: '#/components/schemas/CreateTxTaskParams'
+              title: Params
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/tasks/{task_id}:
+    get:
+      tags:
+        - tasks
+      summary: Get Task
+      description: Get a single task by ID
+      operationId: get_task_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+        - tasks
+      summary: Update Task
+      description: Update a task
+      operationId: update_task_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskParams'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+        - tasks
+      summary: Delete Task
+      description: Delete a task
+      operationId: delete_task_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/tasks/{task_id}/pause:
+    post:
+      tags:
+        - tasks
+      summary: Pause Task
+      description: Pause a task
+      operationId: pause_task_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/tasks/{task_id}/resume:
+    post:
+      tags:
+        - tasks
+      summary: Resume Task
+      description: Resume a paused task
+      operationId: resume_task_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/tasks/{task_id}/record:
+    post:
+      tags:
+        - tasks
+      summary: Start Recording
+      description: Start recording on an RX task
+      operationId: start_recording_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+        - tasks
+      summary: Stop Recording
+      description: Stop recording on a task
+      operationId: stop_recording_tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/sources/:
+    get:
+      tags:
+        - sources
+      summary: List Sources
+      description: List all available data sources
+      operationId: list_sources
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/DataSource'
+                type: array
+  /api/health/bit/results:
+    get:
+      tags:
+        - health
+      summary: Get Bit Results
+      description: Get latest BIT test results with function and hardware trees
+      operationId: get_bit_results
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BitResult'
+  /api/system/update/lock:
+    post:
+      tags:
+        - system-update
+      summary: Acquire Lock
+      description: Acquire exclusive lock for system update
+      operationId: acquire_lock_system
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LockAcquireResponse'
+    get:
+      tags:
+        - system-update
+      summary: Get Lock Status
+      description: Get current lock status
+      operationId: get_lock_status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LockStatusResponse'
+    delete:
+      tags:
+        - system-update
+      summary: Release Lock
+      description: Release the system update lock
+      operationId: release_lock_system
+      parameters:
+        - name: client_id
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Client Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/system/update/upload:
+    post:
+      tags:
+        - system-update
+      summary: Upload Package
+      description: Upload system update package with streaming
+      operationId: upload_package_system
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_upload_package_api_system_update_upload_post'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/system/update/upload-status/{upload_id}:
+    get:
+      tags:
+        - system-update
+      summary: Get Upload Status
+      description: Get upload and validation status
+      operationId: get_upload_status
+      parameters:
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Upload Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadStatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/system/update/install:
+    post:
+      tags:
+        - system-update
+      summary: Start Installation
+      description: Start installation process
+      operationId: start_installation_system
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallStartRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallStartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/system/update/install-status/{install_id}:
+    get:
+      tags:
+        - system-update
+      summary: Get Install Status
+      description: Get installation progress
+      operationId: get_install_status
+      parameters:
+        - name: install_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Install Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallStatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /ws/active:
+    get:
+      summary: Get Active Connections
+      description: Debug endpoint to see active WebSocket connections
+      operationId: get_active_connections
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/:
+    get:
+      summary: Root
+      description: Root API endpoint
+      operationId: root
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/healthcheck:
+    get:
+      summary: Healthcheck
+      description: Health check endpoint
+      operationId: healthcheck_healthcheck
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    Task:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        type:
+          $ref: '#/components/schemas/TaskType'
+        frequency:
+          type: number
+          title: Frequency
+          description: Center frequency in Hz
+        sampleRate:
+          type: number
+          title: Samplerate
+          description: Sample rate in Hz
+        bandwidth:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Bandwidth
+          description: Bandwidth in Hz
+        fftSize:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Fftsize
+          description: FFT size (bins)
+        owner:
+          $ref: '#/components/schemas/TaskOwner'
+        ownerName:
+          type: string
+          title: Ownername
+          description: Owner display name
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        uptime:
+          type: number
+          title: Uptime
+          description: Uptime in seconds
+        recording:
+          anyOf:
+            - $ref: '#/components/schemas/RecordingInfo'
+            - type: 'null'
+        playback:
+          anyOf:
+            - $ref: '#/components/schemas/PlaybackInfo'
+            - type: 'null'
+        createdAt:
+          type: integer
+          title: Createdat
+          description: Unix timestamp in ms
+        fps:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Fps
+          description: Current frame rate
+        visualizationMode:
+          anyOf:
+            - $ref: '#/components/schemas/VisualizationMode'
+            - type: 'null'
+          description: Visualization mode for task data
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - frequency
+        - sampleRate
+        - owner
+        - ownerName
+        - status
+        - uptime
+        - createdAt
+      title: Task
+      description: SDR Task
+    TaskOwner:
+      type: string
+      enum:
+        - self
+        - external
+      title: TaskOwner
+      description: Task owner type
+    TaskStatus:
+      type: string
+      enum:
+        - live
+        - paused
+        - transmitting
+        - stopped
+      title: TaskStatus
+      description: Task status enum
+    TaskType:
+      type: string
+      enum:
+        - rx
+        - tx
+      title: TaskType
+      description: Task type enum
+    CreateRxTaskParams:
+      properties:
+        name:
+          type: string
+          title: Name
+        frequency:
+          type: number
+          title: Frequency
+        sampleRate:
+          type: number
+          title: Samplerate
+        bandwidth:
+          type: number
+          title: Bandwidth
+        fftSize:
+          type: integer
+          title: Fftsize
+      type: object
+      required:
+        - name
+        - frequency
+        - sampleRate
+        - bandwidth
+        - fftSize
+      title: CreateRxTaskParams
+      description: Parameters for creating an RX task
+    CreateTxTaskParams:
+      properties:
+        name:
+          type: string
+          title: Name
+        filename:
+          type: string
+          title: Filename
+        frequency:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Frequency
+        loop:
+          type: boolean
+          title: Loop
+      type: object
+      required:
+        - name
+        - filename
+        - loop
+      title: CreateTxTaskParams
+      description: Parameters for creating a TX task
+    UpdateTaskParams:
+      properties:
+        name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Name
+        status:
+          anyOf:
+            - $ref: '#/components/schemas/TaskStatus'
+            - type: 'null'
+        frequency:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Frequency
+      type: object
+      title: UpdateTaskParams
+      description: Parameters for updating a task
+    RecordingInfo:
+      properties:
+        filename:
+          type: string
+          title: Filename
+        duration:
+          type: number
+          title: Duration
+          description: Recording duration in seconds
+        fileSize:
+          type: integer
+          title: Filesize
+          description: File size in bytes
+        isRecording:
+          type: boolean
+          title: Isrecording
+      type: object
+      required:
+        - filename
+        - duration
+        - fileSize
+        - isRecording
+      title: RecordingInfo
+      description: Recording information
+    PlaybackInfo:
+      properties:
+        filename:
+          type: string
+          title: Filename
+        progress:
+          type: number
+          maximum: 1
+          minimum: 0
+          title: Progress
+          description: Playback progress 0-1
+        isLooping:
+          type: boolean
+          title: Islooping
+        duration:
+          type: number
+          title: Duration
+          description: Total duration in seconds
+      type: object
+      required:
+        - filename
+        - progress
+        - isLooping
+        - duration
+      title: PlaybackInfo
+      description: TX playback information
+    VisualizationMode:
+      type: string
+      enum:
+        - fft-only
+        - fft-waterfall
+        - spectrogram
+      title: VisualizationMode
+      description: Visualization mode for task data
+    DataSource:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Unique source identifier
+        name:
+          type: string
+          title: Name
+          description: Human-readable source name
+        type:
+          type: string
+          title: Type
+          description: Source type (e.g., 'spectral')
+        typeLabel:
+          type: string
+          title: Typelabel
+          description: Short label for UI
+        centerFrequency:
+          type: number
+          title: Centerfrequency
+          description: Center frequency in Hz
+        sampleRate:
+          type: number
+          title: Samplerate
+          description: Sample rate in Hz
+        status:
+          type: string
+          enum:
+            - idle
+            - active
+            - error
+          title: Status
+          description: Current source status
+        parentTaskId:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Parenttaskid
+          description: Parent task ID if this is a task output
+        subscriberCount:
+          type: integer
+          title: Subscribercount
+          description: Number of active subscribers
+          default: 0
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - typeLabel
+        - centerFrequency
+        - sampleRate
+        - status
+      title: DataSource
+      description: Information about an available data source
+    BitMetrics:
+      properties:
+        expected:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Expected
+        actual:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Actual
+        threshold:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Threshold
+        unit:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Unit
+      type: object
+      title: BitMetrics
+      description: Metrics for a BIT test result
+    BitResult:
+      properties:
+        timestamp:
+          type: integer
+          title: Timestamp
+          description: Unix timestamp in ms
+        summary:
+          $ref: '#/components/schemas/BitSummary'
+        tests:
+          items:
+            $ref: '#/components/schemas/BitTest'
+          type: array
+          title: Tests
+        functionTree:
+          $ref: '#/components/schemas/BitTreeNode'
+        hardwareTree:
+          $ref: '#/components/schemas/BitTreeNode'
+      type: object
+      required:
+        - timestamp
+        - summary
+        - tests
+        - functionTree
+        - hardwareTree
+      title: BitResult
+      description: BIT test suite result
+    BitStatus:
+      type: string
+      enum:
+        - ok
+        - warn
+        - fail
+        - unknown
+      title: BitStatus
+      description: Built-In Test (BIT) status values
+    BitSummary:
+      properties:
+        total:
+          type: integer
+          title: Total
+        ok:
+          type: integer
+          title: Ok
+        warn:
+          type: integer
+          title: Warn
+        fail:
+          type: integer
+          title: Fail
+      type: object
+      required:
+        - total
+        - ok
+        - warn
+        - fail
+      title: BitSummary
+      description: Summary counts for BIT test results
+    BitTest:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        status:
+          $ref: '#/components/schemas/BitStatus'
+        description:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Description
+        lastRun:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Lastrun
+          description: Unix timestamp in ms
+        durationMs:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Durationms
+          description: Duration in milliseconds
+        metrics:
+          anyOf:
+            - $ref: '#/components/schemas/BitMetrics'
+            - type: 'null'
+        functionNodes:
+          items:
+            type: string
+          type: array
+          title: Functionnodes
+          description: Function node IDs
+        hardwareNodes:
+          items:
+            type: string
+          type: array
+          title: Hardwarenodes
+          description: Hardware node IDs
+      type: object
+      required:
+        - id
+        - name
+        - status
+      title: BitTest
+      description: Atomic BIT test definition with rollup mappings
+    BitTreeNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        status:
+          $ref: '#/components/schemas/BitStatus'
+        description:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Description
+        children:
+          anyOf:
+            - items:
+                $ref: '#/components/schemas/BitTreeNode'
+              type: array
+            - type: 'null'
+          title: Children
+        tests:
+          anyOf:
+            - items:
+                type: string
+              type: array
+            - type: 'null'
+          title: Tests
+          description: IDs of tests mapped to this node
+      type: object
+      required:
+        - id
+        - name
+        - status
+      title: BitTreeNode
+      description: Rollup node used by functional and hardware hierarchies
+    UpdateStatus:
+      type: string
+      enum:
+        - idle
+        - uploading
+        - validating
+        - installing
+        - complete
+        - error
+      title: UpdateStatus
+      description: System update status
+    LockAcquireResponse:
+      properties:
+        lockId:
+          type: string
+          title: Lockid
+        expiresAt:
+          type: integer
+          title: Expiresat
+      type: object
+      required:
+        - lockId
+        - expiresAt
+      title: LockAcquireResponse
+      description: Lock acquire response
+    LockStatusResponse:
+      properties:
+        isLocked:
+          type: boolean
+          title: Islocked
+        lockedBy:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Lockedby
+        lockedSince:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Lockedsince
+        expiresAt:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Expiresat
+      type: object
+      required:
+        - isLocked
+      title: LockStatusResponse
+      description: Lock status response
+    InstallStartRequest:
+      properties:
+        upload_id:
+          type: string
+          title: Upload Id
+      type: object
+      required:
+        - upload_id
+      title: InstallStartRequest
+      description: Request body for starting installation
+    InstallStartResponse:
+      properties:
+        installId:
+          type: string
+          title: Installid
+      type: object
+      required:
+        - installId
+      title: InstallStartResponse
+      description: Install start response
+    InstallStatusResponse:
+      properties:
+        installId:
+          type: string
+          title: Installid
+        status:
+          $ref: '#/components/schemas/UpdateStatus'
+        percentComplete:
+          type: integer
+          title: Percentcomplete
+        timeRemainingSeconds:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Timeremainingseconds
+        currentStep:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Currentstep
+        error:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Error
+      type: object
+      required:
+        - installId
+        - status
+        - percentComplete
+      title: InstallStatusResponse
+      description: Install status response
+    UploadStatusResponse:
+      properties:
+        uploadId:
+          type: string
+          title: Uploadid
+        status:
+          $ref: '#/components/schemas/UpdateStatus'
+        bytesReceived:
+          type: integer
+          title: Bytesreceived
+        totalBytes:
+          type: integer
+          title: Totalbytes
+        percentComplete:
+          type: integer
+          title: Percentcomplete
+        validationResults:
+          anyOf:
+            - additionalProperties: true
+              type: object
+            - type: 'null'
+          title: Validationresults
+        error:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Error
+      type: object
+      required:
+        - uploadId
+        - status
+        - bytesReceived
+        - totalBytes
+        - percentComplete
+      title: UploadStatusResponse
+      description: Upload status response
+    Body_upload_package_api_system_update_upload_post:
+      properties:
+        file:
+          type: string
+          format: binary
+          title: File
+      type: object
+      required:
+        - file
+      title: Body_upload_package_api_system_update_upload_post
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      title: ValidationError
