@@ -10,15 +10,15 @@ import { SystemSettings } from '../settings/SystemSettings';
 import { VersionInfo } from '../settings/VersionInfo';
 import { SystemUpdateWizard } from '../settings/SystemUpdateWizard';
 import { TaskWizard } from '../tasks/TaskWizard';
-import { CreateRxTaskParams, CreateTxTaskParams } from '../../api/client';
+import { CreateRxTaskParams, CreateTxTaskParams, Task } from '../../api/client';
 import { SystemInfo } from '../../types/health';
 
 export interface ModalsProps {
   // Task Wizard
   isTaskWizardOpen: boolean;
   onCloseTaskWizard: () => void;
-  onCreateRxTask: (params: CreateRxTaskParams) => Promise<void>;
-  onCreateTxTask: (params: CreateTxTaskParams) => Promise<void>;
+  onCreateRxTask: (params: CreateRxTaskParams) => Promise<Task>;
+  onCreateTxTask: (params: CreateTxTaskParams) => Promise<Task>;
 
   // Settings Modal
   activeSettingsPanel: SettingsMenuItem | null;

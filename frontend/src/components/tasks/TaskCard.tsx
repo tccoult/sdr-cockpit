@@ -3,8 +3,7 @@ import { formatDuration, formatFrequency } from "../../utils/formatters";
 
 type TaskCardProps = {
   task: Task;
-  isSelected: boolean;
-  onSelect: (taskId: string) => void;
+  onInteraction?: () => void;
 };
 
 const STATUS_STYLES: Record<
@@ -40,31 +39,28 @@ const STATUS_STYLES: Record<
 const RECORDING_BADGE =
   "border border-status-recording/30 bg-status-recording/12 text-status-recording dark:border-status-recording/50 dark:bg-status-recording/15 dark:text-status-recording";
 
-export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
+export function TaskCard({ task, onInteraction }: TaskCardProps) {
   const statusStyles = STATUS_STYLES[task.status];
   const isRecording = task.recording?.isRecording ?? false;
 
-  const handleSelect = () => {
-    onSelect(task.id);
+  const handleClick = () => {
+    onInteraction?.();
   };
 
   return (
     <article
       role="button"
       tabIndex={0}
-      onClick={handleSelect}
+      onClick={handleClick}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          handleSelect();
+          handleClick();
         }
       }}
       className={[
-        "group relative rounded-md border px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
-        "bg-muted/40 text-foreground/90 hover:bg-muted/70",
-        isSelected
-          ? "border-accent/50 bg-accent/10 shadow-inner"
-          : "border-transparent",
+        "group relative rounded-md border border-transparent px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+        "bg-muted/40 text-foreground/90 hover:bg-muted/70 hover:border-accent/30",
       ].join(" ")}
     >
       <div className="flex items-center gap-2.5">

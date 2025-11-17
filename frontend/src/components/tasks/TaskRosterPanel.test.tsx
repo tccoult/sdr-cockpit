@@ -53,10 +53,9 @@ describe('TaskRosterPanel', () => {
     render(
       <TaskRosterPanel
         tasks={tasks}
-        selectedTaskId="b"
         isDiscovering={false}
-        onSelectTask={onSelectTask}
         onCreateTask={vi.fn()}
+        onTaskInteraction={onSelectTask}
       />
     )
 
@@ -66,11 +65,6 @@ describe('TaskRosterPanel', () => {
       'c',
       'a',
     ])
-
-    expect(renderedTasks[0].getAttribute('data-selected')).toBe('true')
-
-    fireEvent.click(renderedTasks[1])
-    expect(onSelectTask).toHaveBeenCalledWith('c')
   })
 
   it('filters tasks by type and shows empty state messaging', () => {
@@ -81,9 +75,7 @@ describe('TaskRosterPanel', () => {
     render(
       <TaskRosterPanel
         tasks={tasks}
-        selectedTaskId={null}
         isDiscovering={false}
-        onSelectTask={vi.fn()}
         onCreateTask={vi.fn()}
       />
     )
@@ -100,9 +92,7 @@ describe('TaskRosterPanel', () => {
     render(
       <TaskRosterPanel
         tasks={[]}
-        selectedTaskId={null}
         isDiscovering={false}
-        onSelectTask={vi.fn()}
         onCreateTask={onCreateTask}
       />
     )
@@ -117,9 +107,7 @@ describe('TaskRosterPanel', () => {
     render(
       <TaskRosterPanel
         tasks={[]}
-        selectedTaskId={null}
         isDiscovering
-        onSelectTask={vi.fn()}
         onCreateTask={vi.fn()}
       />
     )

@@ -1,13 +1,11 @@
 import { Menu, ChevronDown } from 'lucide-react'
 import { ThemeToggle } from '../app/ThemeToggle'
 import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
-import { Task } from '../../api/client'
 import { getHealthIndicator } from '../../styles/theme'
 
 export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
 
 export interface CompactHeaderProps {
-  selectedTask: Task | null
   dataFps: number
   renderFps: number
   totalTasks: number
@@ -21,10 +19,9 @@ export interface CompactHeaderProps {
 
 /**
  * Compact single-line header for display-first cockpit layout.
- * Shows critical info: task, FPS, health status.
+ * Shows critical info: FPS, health status, task count.
  */
 export function CompactHeader({
-  selectedTask: _selectedTask,
   dataFps,
   renderFps,
   totalTasks,

@@ -8,10 +8,9 @@ type FilterType = "all" | TaskType;
 
 export interface TaskRosterPanelProps {
   tasks: Task[];
-  selectedTaskId: string | null;
   isDiscovering: boolean;
-  onSelectTask: (taskId: string) => void;
   onCreateTask: () => void;
+  onTaskInteraction?: () => void; // Optional callback when user interacts with a task
 }
 
 const FILTER_OPTIONS: FilterType[] = ["all", TaskType.RX, TaskType.TX];
@@ -23,10 +22,9 @@ const FILTER_LABELS: Record<FilterType, string> = {
 
 export function TaskRosterPanel({
   tasks,
-  selectedTaskId,
   isDiscovering,
-  onSelectTask,
   onCreateTask,
+  onTaskInteraction,
 }: TaskRosterPanelProps) {
   const [filter, setFilter] = useState<FilterType>("all");
 
@@ -115,8 +113,7 @@ export function TaskRosterPanel({
                 <TaskCard
                   key={task.id}
                   task={task}
-                  isSelected={task.id === selectedTaskId}
-                  onSelect={onSelectTask}
+                  onInteraction={onTaskInteraction}
                 />
               ))}
             </div>

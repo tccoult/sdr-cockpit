@@ -57,13 +57,10 @@ function App() {
     setIsHealthPanelPinned,
   } = useUIPreferences();
 
-  // Task management
+  // Task management (no "selected task" - removed in Phase 3)
   const {
     tasks,
-    selectedTask,
-    selectedTaskId,
     isDiscovering,
-    selectTask,
     createRxTask,
     createTxTask,
     pauseTask,
@@ -99,8 +96,8 @@ function App() {
   }, [isTaskWizardOpen]);
 
   // Handlers
-  const handleSelectTask = (taskId: string) => {
-    selectTask(taskId);
+  const handleTaskDrawerAutoClose = () => {
+    // Auto-close task drawer if not pinned (called when user interacts with a task)
     if (!isTaskDrawerPinned) {
       setIsTaskDrawerOpen(false);
     }
@@ -144,7 +141,6 @@ function App() {
       <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
         {/* Header */}
         <CompactHeader
-          selectedTask={selectedTask}
           dataFps={dataFps}
           renderFps={renderFps}
           totalTasks={tasks.length}
@@ -174,17 +170,12 @@ function App() {
           {isMobile && (
             <MobileContentView
               mobileView={mobileView}
-              selectedTask={selectedTask}
-              selectedTaskId={selectedTaskId}
               tasks={tasks}
               isDiscovering={isDiscovering}
               bitResult={bitResult}
               colorMap={colorMap}
-              streamError={null}
-              streamStatus="disconnected"
               onRenderFpsChange={setRenderFps}
               onDataFpsChange={setDataFps}
-              onSelectTask={selectTask}
               onCreateTask={() => setIsTaskWizardOpen(true)}
               onPauseTask={pauseTask}
               onStopTask={stopTask}
@@ -199,13 +190,11 @@ function App() {
       <DesktopDrawers
         isTaskDrawerOpen={isTaskDrawerOpen}
         isTaskDrawerPinned={isTaskDrawerPinned}
-        selectedTask={selectedTask}
-        selectedTaskId={selectedTaskId}
         tasks={tasks}
         isDiscovering={isDiscovering}
         onCloseTaskDrawer={() => setIsTaskDrawerOpen(false)}
         onToggleTaskDrawerPin={() => setIsTaskDrawerPinned((prev) => !prev)}
-        onSelectTask={handleSelectTask}
+        onTaskInteraction={handleTaskDrawerAutoClose}
         onCreateTask={() => setIsTaskWizardOpen(true)}
         onPauseTask={pauseTask}
         onStopTask={stopTask}

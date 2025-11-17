@@ -4,7 +4,6 @@
  */
 
 import { Drawer } from '../common/Drawer';
-import { ActiveTaskPanel } from '../tasks/ActiveTaskPanel/ActiveTaskPanel';
 import { TaskRosterPanel } from '../tasks/TaskRosterPanel';
 import { SystemHealthPanel } from '../system-health/SystemHealthPanel';
 import { Task } from '../../api/client';
@@ -18,13 +17,11 @@ export interface DesktopDrawersProps {
   // Task Drawer
   isTaskDrawerOpen: boolean;
   isTaskDrawerPinned: boolean;
-  selectedTask: Task | null;
-  selectedTaskId: string | null;
   tasks: Task[];
   isDiscovering: boolean;
   onCloseTaskDrawer: () => void;
   onToggleTaskDrawerPin: () => void;
-  onSelectTask: (taskId: string) => void;
+  onTaskInteraction: () => void;
   onCreateTask: () => void;
   onPauseTask: (taskId: string) => Promise<void>;
   onStopTask: (taskId: string) => Promise<void>;
@@ -42,18 +39,16 @@ export interface DesktopDrawersProps {
 export function DesktopDrawers({
   isTaskDrawerOpen,
   isTaskDrawerPinned,
-  selectedTask,
-  selectedTaskId,
   tasks,
   isDiscovering,
   onCloseTaskDrawer,
   onToggleTaskDrawerPin,
-  onSelectTask,
+  onTaskInteraction,
   onCreateTask,
-  onPauseTask,
-  onStopTask,
-  onStartRecording,
-  onStopRecording,
+  onPauseTask: _onPauseTask,
+  onStopTask: _onStopTask,
+  onStartRecording: _onStartRecording,
+  onStopRecording: _onStopRecording,
   isHealthPanelOpen,
   isHealthPanelPinned,
   bitResult,
@@ -73,25 +68,12 @@ export function DesktopDrawers({
         width={`${TASK_DRAWER_WIDTH}px`}
         offsetTop={HEADER_HEIGHT}
       >
-        <div className="p-3">
-          <ActiveTaskPanel
-            task={selectedTask}
-            onPauseTask={onPauseTask}
-            onStopTask={onStopTask}
-            onRecordTask={onStartRecording}
-            onStopRecording={onStopRecording}
-          />
-        </div>
-
-        <div className="border-t border-border/60">
-          <TaskRosterPanel
-            tasks={tasks}
-            selectedTaskId={selectedTaskId}
-            isDiscovering={isDiscovering}
-            onSelectTask={onSelectTask}
-            onCreateTask={onCreateTask}
-          />
-        </div>
+        <TaskRosterPanel
+          tasks={tasks}
+          isDiscovering={isDiscovering}
+          onCreateTask={onCreateTask}
+          onTaskInteraction={onTaskInteraction}
+        />
       </Drawer>
 
       {/* System Health Drawer */}
