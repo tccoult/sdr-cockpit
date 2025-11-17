@@ -5,14 +5,15 @@ from typing import List
 
 from fastapi import APIRouter
 
-from app.sources import DataSourceInfo, source_manager
+from app.models.generated import DataSource
+from app.sources import source_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
 
 
-@router.get("/", response_model=List[DataSourceInfo])
+@router.get("/", response_model=List[DataSource])
 async def list_sources():
     """
     List all available data sources.

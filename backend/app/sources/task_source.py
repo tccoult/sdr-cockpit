@@ -8,7 +8,6 @@ from typing import Dict, cast
 from app.config.constants import TARGET_FPS
 from app.proto import FFTFrame, SpectralMessage
 from app.sources.base import DataSource
-from app.sources.types import SourceType
 from app.utils.fft_generator import MockFFTGenerator
 from app.utils.spectral_conversion import db_bins_to_bytes
 
@@ -40,11 +39,11 @@ class MockTaskDataSource(DataSource):
             sample_rate: Sample rate in Hz
             fft_size: FFT size (number of bins)
         """
-        source_id = f"{task_id}-raw"
+        source_id = f"{task_id}-spectral"
 
         metadata: Dict = {
-            "type": SourceType.RAW,
-            "type_label": "Raw",
+            "type": "spectral",
+            "type_label": "Spectral",
             "centerFrequency": center_freq,
             "sampleRate": sample_rate,
             "fftSize": fft_size,
@@ -53,7 +52,7 @@ class MockTaskDataSource(DataSource):
 
         super().__init__(
             source_id=source_id,
-            name=f"{task_name} - Raw IQ",
+            name=f"{task_name} - Spectral",
             metadata=metadata,
         )
 

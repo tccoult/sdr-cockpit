@@ -141,7 +141,7 @@ async def delete_task(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Unregister the data source for this task
-    source_id = f"{task_id}-raw"
+    source_id = f"{task_id}-spectral"
     await source_manager.unregister(source_id)
 
     del tasks[task_id]

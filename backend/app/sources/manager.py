@@ -4,8 +4,9 @@ import asyncio
 import logging
 from typing import Dict, List, Optional
 
+from app.models.generated import DataSource as DataSourceModel
+from app.models.generated import Status
 from app.sources.base import DataSource
-from app.sources.types import DataSourceInfo, SourceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -69,25 +70,25 @@ class SourceManager:
         async with self._lock:
             return self._sources.get(source_id)
 
-    async def list_all(self) -> List[DataSourceInfo]:
+    async def list_all(self) -> List[DataSourceModel]:
         """
         List all available sources.
 
         Returns:
-            List of source information dicts
+            List of source information models
         """
         async with self._lock:
             return [
-                DataSourceInfo(
+                DataSourceModel(
                     id=source.id,
                     name=source.name,
-                    type=source.metadata.get("type", "raw"),
-                    type_label=source.metadata.get("type_label", "Raw"),
-                    center_frequency=source.metadata.get("centerFrequency", 0),
-                    sample_rate=source.metadata.get("sampleRate", 0),
-                    status=(SourceStatus.ACTIVE if source.is_attached else SourceStatus.IDLE),
-                    parent_task_id=source.metadata.get("parentTaskId"),
-                    subscriber_count=source.subscriber_count,
+                    type=source.metadata.get("type", "spectral"),
+                    typeLabel=source.metadata.get("type_label", "Spectral"),
+                    centerFrequency=source.metadata.get("centerFrequency", 0),
+                    sampleRate=source.metadata.get("sampleRate", 0),
+                    status=(Status.active if source.is_attached else Status.idle),
+                    parentTaskId=source.metadata.get("parentTaskId"),
+                    subscriberCount=source.subscriber_count,
                 )
                 for source in self._sources.values()
             ]
