@@ -5,10 +5,7 @@ import { ColorMap } from "../../utils/colorMaps";
 import { useTheme } from "../app/useTheme";
 import { FFTDisplay, type FFTRangeMetrics } from "./FFTDisplay";
 import { SpectrogramDisplay } from "./SpectrogramDisplay";
-import {
-  InteractionMode,
-  VisualizationControls,
-} from "./VisualizationControls";
+import { InteractionMode } from "./VisualizationControls";
 import { WaterfallDisplay } from "./WaterfallDisplay";
 
 interface VisualizationViewProps {
@@ -20,6 +17,11 @@ interface VisualizationViewProps {
   dataError?: string;
   isConnecting?: boolean;
   onRenderFpsChange?: (fps: number) => void;
+  // External control props (passed from SourceVisualizationPanel)
+  interactionMode?: InteractionMode;
+  isMaxHoldEnabled?: boolean;
+  autoRangeKey?: number;
+  maxHoldClearKey?: number;
 }
 
 export const VisualizationView = memo(function VisualizationView({
@@ -31,6 +33,10 @@ export const VisualizationView = memo(function VisualizationView({
   dataError,
   isConnecting,
   onRenderFpsChange,
+  interactionMode: externalInteractionMode,
+  isMaxHoldEnabled: externalIsMaxHoldEnabled,
+  autoRangeKey: externalAutoRangeKey,
+  maxHoldClearKey: externalMaxHoldClearKey,
 }: VisualizationViewProps) {
   const { theme } = useTheme();
 
@@ -51,23 +57,32 @@ export const VisualizationView = memo(function VisualizationView({
   const [fftRenderFps, setFftRenderFps] = useState(0);
   const [waterfallRenderFps, setWaterfallRenderFps] = useState(0);
   const [spectrogramRenderFps, setSpectrogramRenderFps] = useState(0);
-  const [interactionMode, setInteractionMode] =
+  const [internalInteractionMode, _setInternalInteractionMode] =
     useState<InteractionMode>("pan");
-  const [rangeRequestKey, setRangeRequestKey] = useState(0);
+  const [internalRangeRequestKey, setInternalRangeRequestKey] = useState(0);
+
+  // Use external props if provided, otherwise use internal state
+  const interactionMode = externalInteractionMode ?? internalInteractionMode;
+  const rangeRequestKey = externalAutoRangeKey ?? internalRangeRequestKey;
 
   const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>({
     startFreq: centerFreq - sampleRate / 2,
     endFreq: centerFreq + sampleRate / 2,
   });
 
-  const [isMaxHoldEnabled, setIsMaxHoldEnabled] = useState(false);
-  const [maxHoldClearKey, setMaxHoldClearKey] = useState(0);
+  const [internalIsMaxHoldEnabled, _setInternalIsMaxHoldEnabled] = useState(false);
+  const [internalMaxHoldClearKey, _setInternalMaxHoldClearKey] = useState(0);
+
+  // Use external props if provided, otherwise use internal state
+  const isMaxHoldEnabled = externalIsMaxHoldEnabled ?? internalIsMaxHoldEnabled;
+  const maxHoldClearKey = externalMaxHoldClearKey ?? internalMaxHoldClearKey;
+
   const autoRange = useCallback(() => {
     setFrequencyRange({
       startFreq: centerFreq - sampleRate / 2,
       endFreq: centerFreq + sampleRate / 2,
     });
-    setRangeRequestKey((value) => value + 1);
+    setInternalRangeRequestKey((value) => value + 1);
     setWaterfallResetKey((value) => value + 1);
   }, [centerFreq, sampleRate]);
 
@@ -142,18 +157,6 @@ export const VisualizationView = memo(function VisualizationView({
       onRenderFpsChange?.(0);
     };
   }, [onRenderFpsChange]);
-
-  const resetMaxHold = useCallback(() => {
-    setMaxHoldClearKey((value) => value + 1);
-  }, []);
-
-  const handleToggleMaxHold = useCallback(() => {
-    setIsMaxHoldEnabled((enabled) => {
-      const next = !enabled;
-      resetMaxHold();
-      return next;
-    });
-  }, [resetMaxHold]);
 
   useEffect(() => {
     const measureElement = (element: HTMLElement) => {
@@ -253,7 +256,6 @@ export const VisualizationView = memo(function VisualizationView({
     visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showWaterfall = visualizationMode === VisualizationMode.FFT_WATERFALL;
   const showSpectrogram = visualizationMode === VisualizationMode.SPECTROGRAM;
-  const maxHoldControlsDisabled = !showFFT;
   const fftSectionClasses = [
     sectionBaseClasses,
     visualizationMode === VisualizationMode.FFT_ONLY ? "flex-1" : "flex-[35]",
@@ -335,15 +337,7 @@ export const VisualizationView = memo(function VisualizationView({
               />
             </div>
           )}
-          <VisualizationControls
-            interactionMode={interactionMode}
-            onInteractionModeChange={setInteractionMode}
-            onAutoRange={autoRange}
-            maxHoldEnabled={isMaxHoldEnabled}
-            onToggleMaxHold={handleToggleMaxHold}
-            onClearMaxHold={resetMaxHold}
-            maxHoldControlsDisabled={maxHoldControlsDisabled}
-          />
+          {/* Controls removed - now handled by SourceToolbar */}
         </div>
       </div>
       {/* Overlay layers */}

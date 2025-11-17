@@ -16,7 +16,7 @@ export function DesktopView({
   onRenderFpsChange,
 }: DesktopViewProps) {
   return (
-    <div className="flex h-full w-full flex-col p-2">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <SourceVisualizationPanel
         colorMap={colorMap}
         onRenderFpsChange={onRenderFpsChange}

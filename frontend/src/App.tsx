@@ -19,8 +19,6 @@ import {
   useKeyboardShortcuts,
 } from './hooks';
 import { useDataSources } from './hooks/api/useDataSources';
-import { useActiveSource } from './hooks/useActiveSource';
-import { useSourceStream } from './hooks/useSourceStream';
 import { SettingsMenuItem } from './components/settings/SettingsMenu';
 import { getHealthIndicator } from './styles/theme';
 import { PLASMA } from './utils/colorMaps';
@@ -73,15 +71,8 @@ function App() {
     stopRecording,
   } = useTasks();
 
-  // Data sources
-  useDataSources(); // Fetch available sources (used by SourceSelector)
-  const { activeSource } = useActiveSource();
-
-  // Data streaming from active source
-  const { fps, streamStatus, streamError } = useSourceStream({
-    sourceId: activeSource?.id ?? null,
-    enabled: !isTaskWizardOpen && !!activeSource,
-  });
+  // Data sources (for SourceVisualizationPanel)
+  useDataSources(); // Fetch available sources
 
   // Keyboard shortcuts (ESC)
   useKeyboardShortcuts({
@@ -99,12 +90,12 @@ function App() {
     isTaskDrawerPinned,
   });
 
-  // Reset render FPS when wizard opens or no source selected
+  // Reset render FPS when wizard opens
   useEffect(() => {
-    if (isTaskWizardOpen || !activeSource) {
+    if (isTaskWizardOpen) {
       setRenderFps(0);
     }
-  }, [isTaskWizardOpen, activeSource]);
+  }, [isTaskWizardOpen]);
 
   // Handlers
   const handleSelectTask = (taskId: string) => {
@@ -142,14 +133,8 @@ function App() {
     ? `${SYSTEM_HEALTH_PANEL_WIDTH}px`
     : '0';
 
-  // Health status
-  const healthStatus: HealthStatus = streamError
-    ? 'error'
-    : streamStatus === 'connecting'
-    ? 'warning'
-    : streamStatus === 'connected'
-    ? 'healthy'
-    : 'unknown';
+  // Health status (simplified - no longer tracking stream status here)
+  const healthStatus: HealthStatus = 'healthy';
 
   const healthIndicator = getHealthIndicator(healthStatus);
 
@@ -159,7 +144,7 @@ function App() {
         {/* Header */}
         <CompactHeader
           selectedTask={selectedTask}
-          dataFps={fps}
+          dataFps={0}
           renderFps={renderFps}
           totalTasks={tasks.length}
           healthStatus={healthStatus}
@@ -193,8 +178,8 @@ function App() {
               isDiscovering={isDiscovering}
               bitResult={bitResult}
               colorMap={colorMap}
-              streamError={streamError}
-              streamStatus={streamStatus}
+              streamError={null}
+              streamStatus="disconnected"
               onRenderFpsChange={setRenderFps}
               onSelectTask={selectTask}
               onCreateTask={() => setIsTaskWizardOpen(true)}

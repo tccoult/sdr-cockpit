@@ -4,22 +4,11 @@
  */
 
 import { sdr_cockpit } from '../proto/spectral_data.js';
-import { FFTData, FFTDataBatch } from '../types/sdr';
+import { FFTData } from '../types/sdr';
 import { decompressDataTimed } from '../utils/compression';
 import { bytesToDbBins, decodeDeltaBatch } from '../utils/spectralConversion';
 import { getApiMode, getWsBaseUrl } from './config';
-
-export type DataStreamStatus =
-  | 'connecting'
-  | 'connected'
-  | 'disconnected'
-  | 'error';
-
-export interface DataStreamCallbacks {
-  onData: (data: FFTDataBatch) => void;
-  onStatusChange: (status: DataStreamStatus) => void;
-  onError?: (error: string) => void;
-}
+import { DataStreamCallbacks } from './websocket';
 
 /**
  * Online (WebSocket) data stream for sources
@@ -70,7 +59,80 @@ class SourceDataStream {
           }
           // Handle binary protobuf data
           else if (event.data instanceof ArrayBuffer) {
-            await this.handleBinaryMessage(event.data);
+            const arrayBuffer = event.data;
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            // Decode protobuf message
+            const spectralMessage = sdr_cockpit.SpectralMessage.decode(uint8Array);
+
+            let frames: FFTData[] = [];
+
+            // Handle different message types
+            if (spectralMessage.type === sdr_cockpit.SpectralMessage.MessageType.SINGLE_FRAME) {
+              // Single frame
+              const frame = spectralMessage.singleFrame;
+              if (frame && frame.bins) {
+                frames = [
+                  {
+                    timestamp: Number(frame.timestamp || 0),
+                    centerFreq: frame.centerFreq || 0,
+                    sampleRate: frame.sampleRate || 0,
+                    bins: bytesToDbBins(frame.bins),
+                  },
+                ];
+              }
+            } else if (spectralMessage.type === sdr_cockpit.SpectralMessage.MessageType.BATCH) {
+              // Uncompressed batch
+              const batch = spectralMessage.batch;
+              if (batch?.frames) {
+                // Decode delta-encoded frames if needed
+                const deltaFrames = batch.frames
+                  .filter((f) => f.bins) // Filter out frames without bins
+                  .map((f) => ({
+                    bins: f.bins!,
+                    isDelta: f.isDelta || false,
+                  }));
+                const decodedBins = decodeDeltaBatch(deltaFrames);
+                frames = batch.frames
+                  .filter((f) => f.bins)
+                  .map((f, i) => ({
+                    timestamp: Number(f.timestamp || 0),
+                    centerFreq: f.centerFreq || 0,
+                    sampleRate: f.sampleRate || 0,
+                    bins: decodedBins[i],
+                  }));
+              }
+            } else if (spectralMessage.type === sdr_cockpit.SpectralMessage.MessageType.COMPRESSED_BATCH) {
+              // Compressed batch
+              const compressedData = spectralMessage.compressedData;
+              if (compressedData) {
+                const decompressed = await decompressDataTimed(compressedData);
+                const batch = sdr_cockpit.FFTFrameBatch.decode(new Uint8Array(decompressed[0]));
+
+                if (batch?.frames) {
+                  const deltaFrames = batch.frames
+                    .filter((f) => f.bins)
+                    .map((f) => ({
+                      bins: f.bins!,
+                      isDelta: f.isDelta || false,
+                    }));
+                  const decodedBins = decodeDeltaBatch(deltaFrames);
+                  frames = batch.frames
+                    .filter((f) => f.bins)
+                    .map((f, i) => ({
+                      timestamp: Number(f.timestamp || 0),
+                      centerFreq: f.centerFreq || 0,
+                      sampleRate: f.sampleRate || 0,
+                      bins: decodedBins[i],
+                    }));
+                }
+              }
+            }
+
+            // Dispatch frames if we got any
+            if (frames.length > 0) {
+              this.callbacks.onData({ frames });
+            }
           }
         } catch (error) {
           console.error('Error processing WebSocket message:', error);
