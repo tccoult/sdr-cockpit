@@ -18,6 +18,8 @@
 
 3. Only commit if all checks pass
 
+4. Give a final review of any dead code that may have been left around during your updates. Remove dead code.
+
 ## Workflow
 
 When making changes:

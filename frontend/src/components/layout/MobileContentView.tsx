@@ -8,7 +8,7 @@ import { DataStreamStatus } from '../../api';
 import { BitResult } from '../../services/api';
 import { ColorMap } from '../../utils/colorMaps';
 import { MobileView } from './MobileNav';
-import { VisualizationView } from '../visualization/VisualizationView';
+import { SourceVisualizationPanel } from '../visualization/SourceVisualizationPanel';
 import { ActiveTaskPanel } from '../tasks/ActiveTaskPanel/ActiveTaskPanel';
 import { TaskRosterPanel } from '../tasks/TaskRosterPanel';
 import { SystemHealthPanel } from '../system-health/SystemHealthPanel';
@@ -40,8 +40,8 @@ export function MobileContentView({
   isDiscovering,
   bitResult,
   colorMap,
-  streamError,
-  streamStatus,
+  streamError: _streamError,
+  streamStatus: _streamStatus,
   onRenderFpsChange,
   onSelectTask,
   onCreateTask,
@@ -51,32 +51,12 @@ export function MobileContentView({
   onStopRecording,
 }: MobileContentViewProps) {
   if (mobileView === 'visualization') {
-    if (selectedTask) {
-      return (
-        <div className="flex h-full w-full flex-col p-2">
-          <VisualizationView
-            taskId={selectedTask.id}
-            centerFreq={selectedTask.frequency}
-            sampleRate={selectedTask.sampleRate}
-            colorMap={colorMap}
-            visualizationMode={selectedTask.visualizationMode ?? undefined}
-            dataError={streamError || undefined}
-            isConnecting={streamStatus === 'connecting'}
-            onRenderFpsChange={onRenderFpsChange}
-          />
-        </div>
-      );
-    }
-
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-muted-foreground">
-        <div className="text-6xl">📡</div>
-        <div>
-          <p className="text-xl font-semibold text-foreground">No Task Selected</p>
-          <p className="mt-2 text-sm text-muted-foreground/90">
-            Select a task from the Tasks view.
-          </p>
-        </div>
+      <div className="flex h-full w-full flex-col p-2">
+        <SourceVisualizationPanel
+          colorMap={colorMap}
+          onRenderFpsChange={onRenderFpsChange}
+        />
       </div>
     );
   }

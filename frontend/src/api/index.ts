@@ -2,7 +2,6 @@
  * Main API client entry point
  */
 
-export { createDataStream } from './websocket';
 export type { DataStreamStatus, DataStreamCallbacks } from './websocket';
 
 export { getApiMode, getApiBaseUrl, getWsBaseUrl } from './config';
