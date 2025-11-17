@@ -57,8 +57,8 @@ export function useSourceStream(options: UseSourceStreamOptions): UseSourceStrea
         // Dispatch FFT data batch through custom event system
         dispatchFFTData(batch.frames);
 
-        // Update FPS counter (count frames in batch)
-        frameCountRef.current += batch.frames.length;
+        // Update FPS counter (count batches, not individual frames)
+        frameCountRef.current += 1;
         const now = Date.now();
         if (now - lastFpsUpdateRef.current >= 1000) {
           setFps(frameCountRef.current);

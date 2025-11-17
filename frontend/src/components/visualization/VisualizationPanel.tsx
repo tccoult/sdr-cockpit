@@ -1,9 +1,9 @@
 /**
- * Source-based visualization panel
+ * Visualization panel
  * Displays visualization for the active data source
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useActiveSource } from '../../hooks/useActiveSource';
 import { useSourceStream } from '../../hooks/useSourceStream';
 import { VisualizationView } from './VisualizationView';
@@ -11,17 +11,19 @@ import { VisualizationControls, InteractionMode } from './VisualizationControls'
 import { ColorMap } from '../../utils/colorMaps';
 import { useTasks } from '../../hooks';
 
-export interface SourceVisualizationPanelProps {
+export interface VisualizationPanelProps {
   colorMap: ColorMap;
   onRenderFpsChange: (fps: number) => void;
+  onDataFpsChange: (fps: number) => void;
 }
 
-export function SourceVisualizationPanel({
+export function VisualizationPanel({
   colorMap,
   onRenderFpsChange,
-}: SourceVisualizationPanelProps) {
+  onDataFpsChange,
+}: VisualizationPanelProps) {
   const { activeSource } = useActiveSource();
-  const { streamStatus, streamError } = useSourceStream({
+  const { fps, streamStatus, streamError } = useSourceStream({
     sourceId: activeSource?.id ?? null,
     enabled: !!activeSource,
   });
@@ -48,6 +50,11 @@ export function SourceVisualizationPanel({
   const handleClearMaxHold = useCallback(() => {
     setMaxHoldClearKey(k => k + 1);
   }, []);
+
+  // Propagate data FPS changes to parent
+  useEffect(() => {
+    onDataFpsChange(fps);
+  }, [fps, onDataFpsChange]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">

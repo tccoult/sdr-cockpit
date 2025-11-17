@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { FrequencyRange } from "../../types/sdr";
 import { VisualizationMode } from "../../api/client";
+import { FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
 import { useTheme } from "../app/useTheme";
 import { FFTDisplay, type FFTRangeMetrics } from "./FFTDisplay";
@@ -17,7 +17,7 @@ interface VisualizationViewProps {
   dataError?: string;
   isConnecting?: boolean;
   onRenderFpsChange?: (fps: number) => void;
-  // External control props from SourceVisualizationPanel
+  // External control props from VisualizationPanel
   interactionMode?: InteractionMode;
   isMaxHoldEnabled?: boolean;
   autoRangeKey?: number;
@@ -70,7 +70,8 @@ export const VisualizationView = memo(function VisualizationView({
     endFreq: centerFreq + sampleRate / 2,
   });
 
-  const [internalIsMaxHoldEnabled, _setInternalIsMaxHoldEnabled] = useState(false);
+  const [internalIsMaxHoldEnabled, _setInternalIsMaxHoldEnabled] =
+    useState(false);
   const [internalMaxHoldClearKey, _setInternalMaxHoldClearKey] = useState(0);
 
   // Use external props if provided, otherwise use internal state

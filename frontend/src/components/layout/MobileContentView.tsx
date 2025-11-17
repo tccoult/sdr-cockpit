@@ -3,15 +3,15 @@
  * Shows visualization, tasks, or health based on active view
  */
 
-import { Task } from '../../api/client';
-import { DataStreamStatus } from '../../api';
-import { BitResult } from '../../services/api';
-import { ColorMap } from '../../utils/colorMaps';
-import { MobileView } from './MobileNav';
-import { SourceVisualizationPanel } from '../visualization/SourceVisualizationPanel';
-import { ActiveTaskPanel } from '../tasks/ActiveTaskPanel/ActiveTaskPanel';
-import { TaskRosterPanel } from '../tasks/TaskRosterPanel';
-import { SystemHealthPanel } from '../system-health/SystemHealthPanel';
+import { DataStreamStatus } from "../../api";
+import { Task } from "../../api/client";
+import { BitResult } from "../../services/api";
+import { ColorMap } from "../../utils/colorMaps";
+import { SystemHealthPanel } from "../system-health/SystemHealthPanel";
+import { ActiveTaskPanel } from "../tasks/ActiveTaskPanel/ActiveTaskPanel";
+import { TaskRosterPanel } from "../tasks/TaskRosterPanel";
+import { VisualizationPanel } from "../visualization/VisualizationPanel";
+import { MobileView } from "./MobileNav";
 
 export interface MobileContentViewProps {
   mobileView: MobileView;
@@ -24,6 +24,7 @@ export interface MobileContentViewProps {
   streamError: string | null;
   streamStatus: DataStreamStatus;
   onRenderFpsChange: (fps: number) => void;
+  onDataFpsChange: (fps: number) => void;
   onSelectTask: (taskId: string) => void;
   onCreateTask: () => void;
   onPauseTask: (taskId: string) => Promise<void>;
@@ -43,6 +44,7 @@ export function MobileContentView({
   streamError: _streamError,
   streamStatus: _streamStatus,
   onRenderFpsChange,
+  onDataFpsChange,
   onSelectTask,
   onCreateTask,
   onPauseTask,
@@ -50,18 +52,19 @@ export function MobileContentView({
   onStartRecording,
   onStopRecording,
 }: MobileContentViewProps) {
-  if (mobileView === 'visualization') {
+  if (mobileView === "visualization") {
     return (
       <div className="flex h-full w-full flex-col p-2">
-        <SourceVisualizationPanel
+        <VisualizationPanel
           colorMap={colorMap}
           onRenderFpsChange={onRenderFpsChange}
+          onDataFpsChange={onDataFpsChange}
         />
       </div>
     );
   }
 
-  if (mobileView === 'tasks') {
+  if (mobileView === "tasks") {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
         <div className="border-b border-border/60 bg-card/80 p-3">

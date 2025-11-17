@@ -38,6 +38,7 @@ function App() {
 
   // UI state
   const [renderFps, setRenderFps] = useState(0);
+  const [dataFps, setDataFps] = useState(0);
   const [mobileView, setMobileView] = useState<MobileView>('visualization');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isTaskWizardOpen, setIsTaskWizardOpen] = useState(false);
@@ -144,7 +145,7 @@ function App() {
         {/* Header */}
         <CompactHeader
           selectedTask={selectedTask}
-          dataFps={0}
+          dataFps={dataFps}
           renderFps={renderFps}
           totalTasks={tasks.length}
           healthStatus={healthStatus}
@@ -165,6 +166,7 @@ function App() {
             <DesktopView
               colorMap={colorMap}
               onRenderFpsChange={setRenderFps}
+              onDataFpsChange={setDataFps}
             />
           </div>
 
@@ -181,6 +183,7 @@ function App() {
               streamError={null}
               streamStatus="disconnected"
               onRenderFpsChange={setRenderFps}
+              onDataFpsChange={setDataFps}
               onSelectTask={selectTask}
               onCreateTask={() => setIsTaskWizardOpen(true)}
               onPauseTask={pauseTask}
