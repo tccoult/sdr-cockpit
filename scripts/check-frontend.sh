@@ -12,8 +12,8 @@ cd "$PROJECT_ROOT/frontend"
 echo "Running frontend checks..."
 echo ""
 
-echo "→ Linting (warnings only)..."
-npm run lint || true
+echo "→ Linting..."
+npm run lint
 
 echo ""
 echo "→ Type checking..."

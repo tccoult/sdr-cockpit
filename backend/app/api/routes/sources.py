@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/sources", tags=["sources"])
 
 
 @router.get("/", response_model=List[DataSource])
-async def list_sources():
+async def list_sources() -> List[DataSource]:
     """
     List all available data sources.
 

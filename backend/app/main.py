@@ -3,6 +3,7 @@
 import logging
 import time
 from pathlib import Path
+from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,7 +50,7 @@ app.include_router(websocket.router)
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Initialize test tasks on startup"""
     if not get_settings().seed_mock_tasks:
         logger.info("Skipping mock task seeding (SDR_SEED_MOCK_TASKS disabled)")
@@ -119,7 +120,7 @@ async def startup_event():
             task_name=task.name,
             center_freq=task.frequency,
             sample_rate=task.sample_rate,
-            fft_size=task.fft_size,
+            fft_size=task.fft_size or 2048,
         )
         await source_manager.register(source)
 
@@ -127,13 +128,13 @@ async def startup_event():
 
 
 @app.get("/api/")
-async def root():
+async def root() -> Dict[str, Any]:
     """Root API endpoint"""
     return {"message": "SDR Cockpit API", "version": "0.1.0", "status": "running"}
 
 
 @app.get("/api/healthcheck")
-async def healthcheck():
+async def healthcheck() -> Dict[str, Any]:
     """Health check endpoint"""
     return {"status": "healthy", "service": "backend"}
 
@@ -146,7 +147,7 @@ if static_dir.exists():
 
     # Catch-all route to serve index.html for client-side routing
     @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
+    async def serve_frontend(full_path: str) -> FileResponse:
         """Serve frontend application"""
         # If path starts with /api, it's an API route - let FastAPI handle it
         if full_path.startswith("api/"):

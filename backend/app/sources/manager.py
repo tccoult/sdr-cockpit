@@ -18,7 +18,7 @@ class SourceManager:
     Manages source lifecycle and client subscriptions.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._sources: Dict[str, DataSource] = {}
         self._lock = asyncio.Lock()
 

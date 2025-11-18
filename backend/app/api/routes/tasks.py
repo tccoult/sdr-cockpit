@@ -2,7 +2,7 @@
 
 import time
 import uuid
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from fastapi import APIRouter, HTTPException
 
 from app.config.constants import TARGET_FPS
@@ -32,13 +32,13 @@ def generate_task_id() -> str:
 
 
 @router.get("/", response_model=List[Task])
-async def list_tasks():
+async def list_tasks() -> List[Task]:
     """List all tasks"""
     return list(tasks.values())
 
 
 @router.post("/", response_model=Task)
-async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
+async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]) -> Task:
     """Create a new task"""
     task_id = generate_task_id()
     now = int(time.time() * 1000)
@@ -101,7 +101,7 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
 
 
 @router.get("/{task_id}", response_model=Task)
-async def get_task(task_id: str):
+async def get_task(task_id: str) -> Task:
     """Get a single task by ID"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -109,7 +109,7 @@ async def get_task(task_id: str):
 
 
 @router.put("/{task_id}", response_model=Task)
-async def update_task(task_id: str, params: UpdateTaskParams):
+async def update_task(task_id: str, params: UpdateTaskParams) -> Task:
     """Update a task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -134,7 +134,7 @@ async def update_task(task_id: str, params: UpdateTaskParams):
 
 
 @router.delete("/{task_id}")
-async def delete_task(task_id: str):
+async def delete_task(task_id: str) -> Dict[str, Any]:
     """Delete a task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -148,7 +148,7 @@ async def delete_task(task_id: str):
 
 
 @router.post("/{task_id}/pause", response_model=Task)
-async def pause_task(task_id: str):
+async def pause_task(task_id: str) -> Task:
     """Pause a task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -163,7 +163,7 @@ async def pause_task(task_id: str):
 
 
 @router.post("/{task_id}/resume", response_model=Task)
-async def resume_task(task_id: str):
+async def resume_task(task_id: str) -> Task:
     """Resume a paused task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -181,7 +181,7 @@ async def resume_task(task_id: str):
 
 
 @router.post("/{task_id}/record", response_model=Task)
-async def start_recording(task_id: str):
+async def start_recording(task_id: str) -> Task:
     """Start recording on an RX task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -204,7 +204,7 @@ async def start_recording(task_id: str):
 
 
 @router.delete("/{task_id}/record", response_model=Task)
-async def stop_recording(task_id: str):
+async def stop_recording(task_id: str) -> Task:
     """Stop recording on a task"""
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")

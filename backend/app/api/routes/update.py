@@ -4,7 +4,7 @@ import asyncio
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Optional, TypedDict
+from typing import Any, Dict, Optional, TypedDict
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
@@ -102,7 +102,7 @@ def get_lock_owner(client_id: str) -> bool:
 
 
 @router.post("/lock", response_model=LockAcquireResponse)
-async def acquire_lock():
+async def acquire_lock() -> LockAcquireResponse:
     """Acquire exclusive lock for system update"""
     global system_lock
 
@@ -130,7 +130,7 @@ async def acquire_lock():
 
 
 @router.get("/lock", response_model=LockStatusResponse)
-async def get_lock_status():
+async def get_lock_status() -> LockStatusResponse:
     """Get current lock status"""
     check_lock_expired()  # Clean up expired lock
 
@@ -146,7 +146,7 @@ async def get_lock_status():
 
 
 @router.delete("/lock")
-async def release_lock(client_id: Optional[str] = None):
+async def release_lock(client_id: Optional[str] = None) -> Dict[str, Any]:
     """Release the system update lock"""
     global system_lock
 
@@ -166,7 +166,7 @@ async def release_lock(client_id: Optional[str] = None):
 async def upload_package(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-):
+) -> Dict[str, Any]:
     """Upload system update package with streaming"""
     # Check lock
     if system_lock is None:
@@ -212,7 +212,7 @@ async def upload_package(
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
-async def validate_package(upload_id: str):
+async def validate_package(upload_id: str) -> None:
     """Background task to validate uploaded package"""
     await asyncio.sleep(1.5)  # Simulate validation time
 
@@ -233,7 +233,7 @@ async def validate_package(upload_id: str):
 
 
 @router.get("/upload-status/{upload_id}", response_model=UploadStatusResponse)
-async def get_upload_status(upload_id: str):
+async def get_upload_status(upload_id: str) -> UploadStatusResponse:
     """Get upload and validation status"""
     if upload_id not in uploads:
         raise HTTPException(status_code=404, detail="Upload not found")
@@ -259,7 +259,7 @@ async def get_upload_status(upload_id: str):
 async def start_installation(
     request: InstallStartRequest,
     background_tasks: BackgroundTasks,
-):
+) -> InstallStartResponse:
     """Start installation process"""
     # Check lock
     if system_lock is None:
@@ -334,7 +334,7 @@ async def simulate_installation(install_id: str) -> None:
 
 
 @router.get("/install-status/{install_id}", response_model=InstallStatusResponse)
-async def get_install_status(install_id: str):
+async def get_install_status(install_id: str) -> InstallStatusResponse:
     """Get installation progress"""
     if install_id not in installations:
         raise HTTPException(status_code=404, detail="Installation not found")
