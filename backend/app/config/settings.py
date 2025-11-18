@@ -71,4 +71,8 @@ def get_settings() -> Settings:
     )
 
 
-settings = get_settings()
+def reload_settings() -> Settings:
+    """Clear cached settings and rebuild from environment."""
+
+    get_settings.cache_clear()
+    return get_settings()
