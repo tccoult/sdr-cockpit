@@ -31,23 +31,23 @@ The system follows a **source-based streaming model** where tasks create data so
 ### Data Flow Overview
 
 ```mermaid
-flowchart LR
-    subgraph Frontend
-        UI[Task UI]
-        Viz[Visualization]
-    end
-
+flowchart TB
     subgraph Backend
         API[REST API]
         Sources[Data Sources]
         WS[WebSocket]
     end
 
+    subgraph Frontend
+        UI[Task UI]
+        Viz[Visualization]
+    end
+
     UI -->|"Create Task"| API
     API -->|"Register"| Sources
-    Viz -->|"List Sources"| API
-    Viz <-->|"Stream Data"| WS
+    API -->|"List Sources"| Viz
     Sources -->|"Publish"| WS
+    WS -->|"Stream Data"| Viz
 ```
 
 ### Flow Description
