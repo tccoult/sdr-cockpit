@@ -31,48 +31,23 @@ The system follows a **source-based streaming model** where tasks create data so
 ### Data Flow Overview
 
 ```mermaid
-flowchart TB
-    subgraph Frontend["Frontend (React)"]
-        UI[Task Wizard UI]
-        SourceSelect[Source Selector]
-        Viz[Visualization Panel]
+flowchart LR
+    subgraph Frontend
+        UI[Task UI]
+        Viz[Visualization]
     end
 
-    subgraph Backend["Backend (FastAPI)"]
-        TaskAPI[Task API]
-        SourceMgr[Source Manager]
-        WS[WebSocket Handler]
-
-        subgraph Sources["Data Sources"]
-            Source1[Source 1]
-            Source2[Source 2]
-            SourceN[Source N]
-        end
+    subgraph Backend
+        API[REST API]
+        Sources[Data Sources]
+        WS[WebSocket]
     end
 
-    subgraph Clients["Connected Clients"]
-        Client1[Client 1]
-        Client2[Client 2]
-        ClientN[Client N]
-    end
-
-    %% Task Creation Flow
-    UI -->|"POST /api/tasks"| TaskAPI
-    TaskAPI -->|"Create & Register"| SourceMgr
-    SourceMgr -->|"Add Source"| Sources
-
-    %% Source Discovery Flow
-    SourceSelect -->|"GET /api/sources"| SourceMgr
-    SourceMgr -->|"List Available"| SourceSelect
-
-    %% WebSocket Subscription Flow
-    Viz -->|"WS Connect"| WS
-    WS -->|"Subscribe"| Sources
-
-    %% Data Publication Flow
-    Sources -->|"Publish Data"| WS
-    WS -->|"Stream FFT Data"| Clients
-    Clients -->|"Render"| Viz
+    UI -->|"Create Task"| API
+    API -->|"Register"| Sources
+    Viz -->|"Subscribe"| WS
+    Sources -->|"Publish"| WS
+    WS -->|"Stream Data"| Viz
 ```
 
 ### Flow Description
