@@ -178,19 +178,6 @@ export function TestsView({
                             </p>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          className={cn(
-                            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border px-2 text-xs font-medium transition",
-                            "bg-muted/70 text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
-                          )}
-                          aria-label={isOpen ? "Collapse test" : "Expand test"}
-                          aria-expanded={isOpen}
-                        >
-                          <span className="text-lg leading-none">
-                            {isOpen ? "−" : "+"}
-                          </span>
-                        </button>
                       </div>
                     </div>
                   </div>
