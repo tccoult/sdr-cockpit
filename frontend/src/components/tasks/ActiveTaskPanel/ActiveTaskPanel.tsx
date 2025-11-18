@@ -1,7 +1,7 @@
 import { CircleDot, Pause, Play, Square } from "lucide-react";
 import { Task, TaskStatus, TaskType } from "../../../api/client";
 import { formatFrequency } from "../../../utils/formatters";
-import { Button } from "../../common/Button";
+import { Button } from "@/components/ui/button";
 import { getTaskStatusLabel } from "./taskStatus";
 
 interface ActiveTaskPanelProps {

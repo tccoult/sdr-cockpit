@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle2, Loader2, Lock } from 'lucide-react'
-import { Button } from '../common/Button'
+import { Button } from '@/components/ui/button'
 import { api, LockStatus, UploadProgress, InstallProgress } from '../../services/api'
 import { getApiMode } from '../../api/config'
 
