@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          uv sync
+          uv sync --frozen
 
       - name: Run backend checks
         run: ./scripts/check-backend.sh
@@ -85,7 +85,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd simulator
-          uv sync
+          uv sync --frozen
 
       - name: Run simulator checks
         run: ./scripts/check-simulator.sh
