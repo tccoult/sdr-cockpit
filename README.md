@@ -43,12 +43,11 @@ flowchart TB
         Viz[Visualization]
     end
 
-    UI -->|"Create Task"| API
-    API -->|"Register"| Sources
-    Viz:l -->|"Get Sources"| API
-    Viz:t -->|"Connect"| WS
-    Sources -->|"Publish"| WS
-    WS -->|"Stream Data"| Viz:r
+    UI -->|"1: Create Task"| API
+    API -->|"2: Register"| Sources
+    Viz -->|"3: Get Sources"| API
+    Sources -->|"4: Publish"| WS
+    WS -->|"5: Stream Data"| Viz
 ```
 
 ### Flow Description
