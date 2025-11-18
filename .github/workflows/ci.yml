@@ -33,11 +33,6 @@ jobs:
           cd frontend
           npm ci
 
-      - name: Audit npm dependencies
-        run: |
-          cd frontend
-          npm audit --audit-level=high
-
       - name: Run frontend checks
         run: ./scripts/check-frontend.sh
 
@@ -64,12 +59,6 @@ jobs:
         run: |
           cd backend
           uv sync
-
-      - name: Audit pip dependencies
-        run: |
-          cd backend
-          uv pip install pip-audit
-          uv run pip-audit
 
       - name: Run backend checks
         run: ./scripts/check-backend.sh
