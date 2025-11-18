@@ -45,7 +45,8 @@ flowchart TB
 
     UI -->|"Create Task"| API
     API -->|"Register"| Sources
-    API -->|"List Sources"| Viz
+    Viz -->|"Get Sources"| API
+    Viz -->|"Connect"| WS
     Sources -->|"Publish"| WS
     WS -->|"Stream Data"| Viz
 ```
