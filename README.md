@@ -24,6 +24,71 @@ SDR Cockpit provides an intuitive interface for tasking SDR hardware, visualizin
 - **WebSocket Streaming**: Real-time data streaming with Zstandard compression
 - **Modern UI**: Clean, responsive interface with dark/light themes using shadcn/ui components
 
+## Architecture
+
+The system follows a **source-based streaming model** where tasks create data sources that web clients can subscribe to via WebSocket connections.
+
+### Data Flow Overview
+
+```mermaid
+flowchart TB
+    subgraph Frontend["Frontend (React)"]
+        UI[Task Wizard UI]
+        SourceSelect[Source Selector]
+        Viz[Visualization Panel]
+    end
+
+    subgraph Backend["Backend (FastAPI)"]
+        TaskAPI[Task API]
+        SourceMgr[Source Manager]
+        WS[WebSocket Handler]
+
+        subgraph Sources["Data Sources"]
+            Source1[Source 1]
+            Source2[Source 2]
+            SourceN[Source N]
+        end
+    end
+
+    subgraph Clients["Connected Clients"]
+        Client1[Client 1]
+        Client2[Client 2]
+        ClientN[Client N]
+    end
+
+    %% Task Creation Flow
+    UI -->|"POST /api/tasks"| TaskAPI
+    TaskAPI -->|"Create & Register"| SourceMgr
+    SourceMgr -->|"Add Source"| Sources
+
+    %% Source Discovery Flow
+    SourceSelect -->|"GET /api/sources"| SourceMgr
+    SourceMgr -->|"List Available"| SourceSelect
+
+    %% WebSocket Subscription Flow
+    Viz -->|"WS Connect"| WS
+    WS -->|"Subscribe"| Sources
+
+    %% Data Publication Flow
+    Sources -->|"Publish Data"| WS
+    WS -->|"Stream FFT Data"| Clients
+    Clients -->|"Render"| Viz
+```
+
+### Flow Description
+
+1. **Task Creation**: User creates an RX/TX task → Backend registers a new data source
+2. **Source Discovery**: Frontend polls for available sources → Displayed in source selector
+3. **Client Attachment**: User selects source → WebSocket connection established → Client subscribed to source
+4. **Data Streaming**: Source generates FFT data → Published to all subscribed clients via WebSocket
+5. **Visualization**: Clients receive protobuf-encoded frames → Decoded and rendered in real-time
+
+### Key Design Patterns
+
+- **Lazy Activation**: Sources only generate data when subscribers are attached
+- **Backpressure Handling**: Queue overflow drops oldest frames to maintain real-time performance
+- **Multi-user Support**: Multiple clients can subscribe to the same source simultaneously
+
 ## Prerequisites
 
 ### For Development (Dev Container - Recommended)
