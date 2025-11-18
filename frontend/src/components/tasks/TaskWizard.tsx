@@ -1,6 +1,6 @@
 import { ChangeEvent, KeyboardEvent, useRef, useState } from 'react'
-import { Button } from '../common/Button'
-import { Input } from '../common/Input'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { CreateRxTaskParams, CreateTxTaskParams } from '../../api/client'
 
 type TaskMode = 'select' | 'rx' | 'tx'
@@ -157,7 +157,7 @@ export function TaskWizard({
               </button>
             </div>
 
-            <Button variant="subtle" fullWidth onClick={handleClose}>
+            <Button variant="outline" fullWidth onClick={handleClose}>
               Cancel
             </Button>
           </div>
@@ -258,7 +258,7 @@ export function TaskWizard({
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <Button variant="subtle" onClick={() => setMode('select')}>
+                <Button variant="outline" onClick={() => setMode('select')}>
                   Back
                 </Button>
                 <Button variant="primary" onClick={handleCreateRx}>
@@ -362,7 +362,7 @@ export function TaskWizard({
               </label>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <Button variant="subtle" onClick={() => setMode('select')}>
+                <Button variant="outline" onClick={() => setMode('select')}>
                   Back
                 </Button>
                 <Button

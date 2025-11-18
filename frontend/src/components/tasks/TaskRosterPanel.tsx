@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Task, TaskType } from "../../api/client";
-import { Button } from "../common/Button";
+import { Button } from "@/components/ui/button";
 import { TaskCard } from "./TaskCard";
 
 type FilterType = "all" | TaskType;

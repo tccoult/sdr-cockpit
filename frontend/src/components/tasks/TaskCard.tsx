@@ -1,7 +1,7 @@
 import { Pause, Play, Square, Circle } from "lucide-react";
 import { Task, TaskOwner, TaskStatus } from "../../api/client";
 import { formatDuration, formatFrequency } from "../../utils/formatters";
-import { Button } from "../common/Button";
+import { Button } from "@/components/ui/button";
 
 type TaskCardProps = {
   task: Task;

@@ -8,7 +8,7 @@ import {
   BitTest,
   BitTreeNode,
 } from "../../services/api";
-import { Button } from "../common/Button";
+import { Button } from "@/components/ui/button";
 import { TreeNodeData, TreeView } from "../common/TreeView";
 
 export interface SystemHealthPanelProps {
