@@ -45,10 +45,10 @@ flowchart TB
 
     UI -->|"Create Task"| API
     API -->|"Register"| Sources
-    Viz -->|"Get Sources"| API
-    Viz -->|"Connect"| WS
+    Viz:l -->|"Get Sources"| API
+    Viz:t -->|"Connect"| WS
     Sources -->|"Publish"| WS
-    WS -->|"Stream Data"| Viz
+    WS -->|"Stream Data"| Viz:r
 ```
 
 ### Flow Description
