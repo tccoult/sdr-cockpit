@@ -12,16 +12,12 @@ Compression level can be configured via ZSTD_COMPRESSION_LEVEL env var:
 - 22: Maximum compression, very slow (not recommended for real-time)
 """
 
-import os
 import time
 from typing import Optional, Tuple
 
 import zstandard as zstd
 
-# Zstd compression level (1-22, configurable via env var)
-# Higher = better compression but slower
-# Level 3 is a good balance for real-time streaming with good compression
-COMPRESSION_LEVEL = int(os.getenv("ZSTD_COMPRESSION_LEVEL", "3"))
+from app.config.settings import settings
 
 # Minimum batch size to compress (frames)
 # Below this threshold, compression overhead isn't worth it
@@ -29,6 +25,7 @@ MIN_BATCH_SIZE_FOR_COMPRESSION = 10
 
 # Compressor instance (reusable for better performance)
 _compressor: Optional[zstd.ZstdCompressor] = None
+_compressor_level: Optional[int] = None
 
 
 def get_compressor() -> zstd.ZstdCompressor:
@@ -38,15 +35,19 @@ def get_compressor() -> zstd.ZstdCompressor:
     Reusing the compressor improves performance by avoiding
     repeated initialization.
     """
-    global _compressor
-    if _compressor is None:
-        _compressor = zstd.ZstdCompressor(level=COMPRESSION_LEVEL)
+    global _compressor, _compressor_level
+
+    target_level = settings.compression_level
+    if _compressor is None or _compressor_level != target_level:
+        _compressor = zstd.ZstdCompressor(level=target_level)
+        _compressor_level = target_level
+
     return _compressor
 
 
 def get_compression_level() -> int:
     """Get the current compression level."""
-    return COMPRESSION_LEVEL
+    return settings.compression_level
 
 
 def compress_data(data: bytes) -> bytes:
@@ -123,7 +124,7 @@ def should_compress_batch(batch_size: int) -> bool:
         bool: True if batch should be compressed
     """
     # Level 0 = disable compression
-    if COMPRESSION_LEVEL == 0:
+    if settings.compression_level == 0:
         return False
 
     return batch_size >= MIN_BATCH_SIZE_FOR_COMPRESSION
