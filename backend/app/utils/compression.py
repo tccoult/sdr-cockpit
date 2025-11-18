@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 
 import zstandard as zstd
 
-from app.config.settings import settings
+from app.config.settings import get_settings
 
 # Minimum batch size to compress (frames)
 # Below this threshold, compression overhead isn't worth it
@@ -37,7 +37,7 @@ def get_compressor() -> zstd.ZstdCompressor:
     """
     global _compressor, _compressor_level
 
-    target_level = settings.compression_level
+    target_level = get_settings().compression_level
     if _compressor is None or _compressor_level != target_level:
         _compressor = zstd.ZstdCompressor(level=target_level)
         _compressor_level = target_level
@@ -47,7 +47,7 @@ def get_compressor() -> zstd.ZstdCompressor:
 
 def get_compression_level() -> int:
     """Get the current compression level."""
-    return settings.compression_level
+    return get_settings().compression_level
 
 
 def compress_data(data: bytes) -> bytes:
@@ -124,7 +124,7 @@ def should_compress_batch(batch_size: int) -> bool:
         bool: True if batch should be compressed
     """
     # Level 0 = disable compression
-    if settings.compression_level == 0:
+    if get_settings().compression_level == 0:
         return False
 
     return batch_size >= MIN_BATCH_SIZE_FOR_COMPRESSION
