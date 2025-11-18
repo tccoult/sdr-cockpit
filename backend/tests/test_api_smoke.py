@@ -75,6 +75,36 @@ async def test_can_create_and_delete_rx_task(client):
 
 
 @pytest.mark.asyncio
+async def test_deleting_task_removes_source(client):
+    """Ensure deleting a task unregisters its data source"""
+    create_response = await client.post(
+        "/api/tasks/",
+        json={
+            "name": "Source Cleanup",
+            "frequency": 915e6,
+            "sampleRate": 2.4e6,
+            "bandwidth": 2.4e6,
+            "fftSize": 2048,
+        },
+    )
+    assert create_response.status_code == 200
+    task_id = create_response.json()["id"]
+
+    sources_before = await client.get("/api/sources/")
+    assert sources_before.status_code == 200
+    source_ids = {source["id"] for source in sources_before.json()}
+    assert f"{task_id}-spectral" in source_ids
+
+    delete_response = await client.delete(f"/api/tasks/{task_id}")
+    assert delete_response.status_code == 200
+
+    sources_after = await client.get("/api/sources/")
+    assert sources_after.status_code == 200
+    remaining_source_ids = {source["id"] for source in sources_after.json()}
+    assert f"{task_id}-spectral" not in remaining_source_ids
+
+
+@pytest.mark.asyncio
 async def test_can_pause_and_resume_task(client):
     """Verify task control endpoints work"""
     # Create task

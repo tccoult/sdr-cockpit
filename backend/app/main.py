@@ -14,6 +14,7 @@ from app.api.routes import tasks, health, update, sources
 from app.api import websocket
 from app.models.generated import Task, TaskType, TaskStatus, TaskOwner, VisualizationMode
 from app.config.constants import TARGET_FPS
+from app.config.settings import settings
 from app.sources import MockTaskDataSource, source_manager
 
 # Configure logging
@@ -35,7 +36,7 @@ app = FastAPI(
 # Configure CORS (for dev when frontend runs on separate port)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,6 +53,10 @@ app.include_router(websocket.router)
 @app.on_event("startup")
 async def startup_event():
     """Initialize test tasks on startup"""
+    if not settings.seed_mock_tasks:
+        logger.info("Skipping mock task seeding (SDR_SEED_MOCK_TASKS disabled)")
+        return
+
     now = int(time.time() * 1000)
 
     # Create test tasks with different visualization modes
@@ -108,6 +113,7 @@ async def startup_event():
 
     for task in test_tasks:
         tasks.tasks[task.id] = task
+        tasks.task_sources[task.id] = f"{task.id}-spectral"
 
         # Register a data source for each test task
         source = MockTaskDataSource(
