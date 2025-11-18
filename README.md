@@ -88,11 +88,8 @@ For air-gapped deployments, use `./scripts/build-rpm.sh` to create a bundled RPM
 
 ## API Documentation
 
-Interactive API documentation is available:
-
+- **API Reference**: https://tccoult.github.io/sdr-cockpit/api/
 - **Live Swagger UI**: http://localhost:8000/docs (when backend is running)
-- **ReDoc**: http://localhost:8000/redoc (alternative viewer)
-- **Static docs**: Run `./scripts/generate-docs.sh` to generate `docs/api/index.html`
 
 ### OpenAPI-First Development
 
