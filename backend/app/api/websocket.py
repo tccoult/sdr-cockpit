@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.websocket("/ws/sources/{source_id}/data")
-async def websocket_source_stream(websocket: WebSocket, source_id: str):
+async def websocket_source_stream(websocket: WebSocket, source_id: str) -> None:
     """
     Stream data from a data source to a client.
 

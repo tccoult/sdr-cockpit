@@ -420,7 +420,7 @@ def create_hardware_tree() -> BitTreeNode:
 
 
 @router.get("/bit/results", response_model=BitResult)
-async def get_bit_results():
+async def get_bit_results() -> BitResult:
     """Get latest BIT test results with function and hardware trees"""
     now = int(time.time() * 1000)
 

@@ -12,12 +12,12 @@ cd "$PROJECT_ROOT/backend"
 echo "Running backend checks..."
 echo ""
 
-echo "→ Linting with ruff (warnings only)..."
-uv run ruff check . || true
+echo "→ Linting with ruff..."
+uv run ruff check .
 
 echo ""
-echo "→ Format checking with black (warnings only)..."
-uv run black --check . || true
+echo "→ Format checking with black..."
+uv run black --check .
 
 echo ""
 echo "→ Type checking with mypy..."
