@@ -1,0 +1,177 @@
+# Health/BIT-related schemas
+# Auto-generate TypeScript and Python types from this file
+
+BitMetrics:
+  properties:
+    expected:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Expected
+    actual:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Actual
+    threshold:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Threshold
+    unit:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Unit
+  type: object
+  title: BitMetrics
+  description: Metrics for a BIT test result
+
+BitResult:
+  properties:
+    timestamp:
+      type: integer
+      title: Timestamp
+      description: Unix timestamp in ms
+    summary:
+      $ref: '#/BitSummary'
+    tests:
+      items:
+        $ref: '#/BitTest'
+      type: array
+      title: Tests
+    functionTree:
+      $ref: '#/BitTreeNode'
+    hardwareTree:
+      $ref: '#/BitTreeNode'
+  type: object
+  required:
+  - timestamp
+  - summary
+  - tests
+  - functionTree
+  - hardwareTree
+  title: BitResult
+  description: BIT test suite result
+
+BitStatus:
+  type: string
+  enum:
+  - ok
+  - warn
+  - fail
+  - unknown
+  title: BitStatus
+  description: Built-In Test (BIT) status values
+
+BitSummary:
+  properties:
+    total:
+      type: integer
+      title: Total
+    ok:
+      type: integer
+      title: Ok
+    warn:
+      type: integer
+      title: Warn
+    fail:
+      type: integer
+      title: Fail
+  type: object
+  required:
+  - total
+  - ok
+  - warn
+  - fail
+  title: BitSummary
+  description: Summary counts for BIT test results
+
+BitTest:
+  properties:
+    id:
+      type: string
+      title: Id
+    name:
+      type: string
+      title: Name
+    status:
+      $ref: '#/BitStatus'
+    description:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Description
+    lastRun:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: Lastrun
+      description: Unix timestamp in ms
+    durationMs:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: Durationms
+      description: Duration in milliseconds
+    metrics:
+      anyOf:
+      - $ref: '#/BitMetrics'
+      - type: 'null'
+    functionNodes:
+      items:
+        type: string
+      type: array
+      title: Functionnodes
+      description: Function node IDs
+    hardwareNodes:
+      items:
+        type: string
+      type: array
+      title: Hardwarenodes
+      description: Hardware node IDs
+  type: object
+  required:
+  - id
+  - name
+  - status
+  title: BitTest
+  description: Atomic BIT test definition with rollup mappings
+
+BitTreeNode:
+  properties:
+    id:
+      type: string
+      title: Id
+    name:
+      type: string
+      title: Name
+    status:
+      $ref: '#/BitStatus'
+    description:
+      anyOf:
+      - type: string
+      - type: 'null'
+      title: Description
+    children:
+      anyOf:
+      - items:
+          $ref: '#/BitTreeNode'
+        type: array
+      - type: 'null'
+      title: Children
+    tests:
+      anyOf:
+      - items:
+          type: string
+        type: array
+      - type: 'null'
+      title: Tests
+      description: IDs of tests mapped to this node
+  type: object
+  required:
+  - id
+  - name
+  - status
+  title: BitTreeNode
+  description: Rollup node used by functional and hardware hierarchies
