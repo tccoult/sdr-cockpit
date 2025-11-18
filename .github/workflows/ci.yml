@@ -107,12 +107,54 @@ jobs:
       - name: Generate OpenAPI HTML documentation
         run: ./scripts/generate-docs.sh
 
-      - name: Upload API documentation
+      - name: Upload API documentation artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-documentation
           path: docs/api/index.html
           retention-days: 90
+
+  deploy-docs:
+    name: Deploy API Docs to GitHub Pages
+    needs: [generate-api-docs]
+    if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate OpenAPI HTML documentation
+        run: ./scripts/generate-docs.sh
+
+      - name: Prepare Pages directory
+        run: |
+          mkdir -p _site/api
+          cp docs/api/index.html _site/api/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   integration-tests:
     name: Integration Tests
