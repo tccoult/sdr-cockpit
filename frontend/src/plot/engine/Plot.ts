@@ -1,6 +1,6 @@
 import { AxisModel } from "../axes/AxisModel";
 import { createAxisLayer } from "../axes/AxisLayer";
-import type { AxisOptions, AxisTheme } from "../axes/axisTypes";
+import type { AxisOptions } from "../axes/axisTypes";
 import {
   beginPan,
   cancelBoxInteraction,
@@ -25,8 +25,6 @@ import {
   type AnnotationLayerOptions,
   type AxisRange,
   type CursorState,
-  type CursorStyle,
-  type BoxZoomMode,
   type BoxZoomModifierSetting,
   type HeatmapLayerHandle,
   type HeatmapLayerOptions,
@@ -38,17 +36,22 @@ import {
   type LineLayerHandle,
   type LineLayerOptions,
   type PlotRenderStats,
-  type PlotAxisOptions,
   type PlotAxesConfig,
   type PlotCreationOptions,
   type PlotDimensions,
   type PlotHandle,
-  type PlotInteractionsOptions,
   type PlotTheme,
   type CursorReadoutFormatter,
   type Scheduler,
   type Viewport,
 } from "../types";
+import {
+  FALLBACK_THEME,
+  ResolvedInteractions,
+  resolveInteractions,
+  toAxisTheme,
+} from "./interactionOptions";
+import { buildAxisOptions, createAxisFormatter } from "./axisConfig";
 import { createViewport } from "./Viewport";
 import { RafScheduler } from "./Scheduler";
 import { createDomRect } from "./domRect";
@@ -57,32 +60,7 @@ import {
   type SurfaceHandle,
   type SurfaceManager,
 } from "./SurfaceManager";
-
-const FALLBACK_THEME: PlotTheme = {
-  background: "rgba(10, 10, 15, 0.85)",
-  gridColor: "rgba(255, 255, 255, 0.1)",
-  axisColor: "rgba(255, 255, 255, 0.4)",
-  fontFamily: "Inter, system-ui, sans-serif",
-  fontSize: 12,
-  textColor: "#ffffff",
-  axisLineWidth: 1,
-  axisLabelPadding: 18,
-  axisTickLabelPadding: 6,
-  cursorLineColor: "rgba(255, 255, 255, 0.7)",
-  cursorHighlightColor: "#ffff7a",
-};
-
-function toAxisTheme(theme: PlotTheme): AxisTheme {
-  return {
-    axisColor: theme.axisColor,
-    gridColor: theme.gridColor,
-    textColor: theme.textColor,
-    font: `${theme.fontSize}px ${theme.fontFamily}`,
-    lineWidth: theme.axisLineWidth,
-    labelPaddingPx: theme.axisLabelPadding,
-    tickLabelPaddingPx: theme.axisTickLabelPadding,
-  };
-}
+import { isDarkColor } from "./colorUtils";
 
 export type PlotInternalOptions = PlotCreationOptions;
 
@@ -119,120 +97,10 @@ function resolveSurfaceForLayer(layer: Layer, phase: LayerPhase): PlotSurface {
 const FALLBACK_CANVAS_WIDTH = 640;
 const FALLBACK_CANVAS_HEIGHT = 360;
 const MIN_SPAN = 1e-12;
-const DEFAULT_ZOOM_FACTOR = 0.2;
 const RANGE_EPSILON = 1e-9;
-
-type ResolvedInteractions = {
-  panX: boolean;
-  panY: boolean;
-  zoomX: boolean;
-  zoomY: boolean;
-  zoomFactor: number;
-  cursor: boolean;
-  cursorStyle: CursorStyle;
-  boxZoom: {
-    enabled: boolean;
-    mode: BoxZoomMode;
-    modifier: BoxZoomModifierSetting;
-  };
-};
 
 const now = () =>
   typeof performance !== "undefined" ? performance.now() : Date.now();
-
-function resolveInteractions(
-  options: PlotInteractionsOptions | undefined
-): ResolvedInteractions {
-  const panOption = options?.pan;
-  let panX: boolean;
-  let panY: boolean;
-  if (typeof panOption === "boolean") {
-    panX = panOption;
-    panY = panOption;
-  } else if (panOption) {
-    panX = panOption.x !== false;
-    panY = panOption.y !== false;
-  } else {
-    panX = true;
-    panY = true;
-  }
-
-  const zoomOption = options?.zoom;
-  let zoomX: boolean;
-  let zoomY: boolean;
-  let zoomFactor = DEFAULT_ZOOM_FACTOR;
-  if (typeof zoomOption === "boolean") {
-    zoomX = zoomOption;
-    zoomY = zoomOption;
-  } else if (zoomOption) {
-    zoomX = zoomOption.x !== false;
-    zoomY = zoomOption.y !== false;
-    if (zoomOption.factor !== undefined && zoomOption.factor > 0) {
-      zoomFactor = zoomOption.factor;
-    }
-  } else {
-    zoomX = true;
-    zoomY = true;
-  }
-
-  const cursorOption = options?.cursor;
-  let cursorEnabled: boolean;
-  let cursorStyle: CursorStyle = "crosshair";
-  if (typeof cursorOption === "boolean") {
-    cursorEnabled = cursorOption;
-  } else if (cursorOption) {
-    cursorEnabled = cursorOption.enabled !== false;
-    if (cursorOption.style) {
-      cursorStyle = cursorOption.style;
-    }
-  } else {
-    cursorEnabled = true;
-  }
-  if (!cursorEnabled) {
-    cursorStyle = "none";
-  }
-
-  const boxZoomOption = options?.boxZoom;
-  let boxZoomEnabled = false;
-  let boxZoomMode: BoxZoomMode = "auto";
-  let boxZoomModifier: BoxZoomModifierSetting = "shift";
-  if (typeof boxZoomOption === "boolean") {
-    boxZoomEnabled = boxZoomOption;
-  } else if (boxZoomOption) {
-    boxZoomEnabled = true;
-    if (
-      boxZoomOption.mode === "x" ||
-      boxZoomOption.mode === "xy" ||
-      boxZoomOption.mode === "auto"
-    ) {
-      boxZoomMode = boxZoomOption.mode;
-    }
-    if (
-      boxZoomOption.modifier === "shift" ||
-      boxZoomOption.modifier === "ctrl" ||
-      boxZoomOption.modifier === "alt" ||
-      boxZoomOption.modifier === "meta" ||
-      boxZoomOption.modifier === "none"
-    ) {
-      boxZoomModifier = boxZoomOption.modifier;
-    }
-  }
-
-  return {
-    panX,
-    panY,
-    zoomX,
-    zoomY,
-    zoomFactor,
-    cursor: cursorEnabled,
-    cursorStyle,
-    boxZoom: {
-      enabled: boxZoomEnabled,
-      mode: boxZoomMode,
-      modifier: boxZoomModifier,
-    },
-  };
-}
 
 export function createPlot(
   canvas: HTMLCanvasElement,
@@ -1437,100 +1305,6 @@ function cursorEquals(a: CursorState | null, b: CursorState | null): boolean {
     Math.abs(a.dataY - b.dataY) < RANGE_EPSILON &&
     arraysEqual(a.values ?? null, b.values ?? null)
   );
-}
-
-function isDarkColor(color: string): boolean {
-  return estimateLuminance(color) < 0.5;
-}
-
-function estimateLuminance(color: string): number {
-  const rgb = parseColor(color);
-  if (!rgb) return 0.5;
-  const toLinear = (v: number) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  };
-  const r = toLinear(rgb.r);
-  const g = toLinear(rgb.g);
-  const b = toLinear(rgb.b);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function parseColor(color: string): { r: number; g: number; b: number } | null {
-  if (!color) return null;
-  const trimmed = color.trim();
-  const hexMatch = trimmed.match(/^#([0-9a-f]{3})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1];
-    const r = parseInt(hex[0] + hex[0], 16);
-    const g = parseInt(hex[1] + hex[1], 16);
-    const b = parseInt(hex[2] + hex[2], 16);
-    return { r, g, b };
-  }
-  const hex6Match = trimmed.match(/^#([0-9a-f]{6})$/i);
-  if (hex6Match) {
-    const hex = hex6Match[1];
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    return { r, g, b };
-  }
-  const rgbMatch = trimmed.match(
-    /^rgba?\(\s*([0-9.+-]+)\s*,\s*([0-9.+-]+)\s*,\s*([0-9.+-]+)/
-  );
-  if (rgbMatch) {
-    const r = Number.parseFloat(rgbMatch[1]);
-    const g = Number.parseFloat(rgbMatch[2]);
-    const b = Number.parseFloat(rgbMatch[3]);
-    return {
-      r: Math.max(0, Math.min(255, r)),
-      g: Math.max(0, Math.min(255, g)),
-      b: Math.max(0, Math.min(255, b)),
-    };
-  }
-  return null;
-}
-
-function buildAxisOptions(
-  side: "left" | "right" | "top" | "bottom",
-  config: PlotAxisOptions | undefined
-): AxisOptions {
-  return {
-    side,
-    label: config?.label,
-    format: config?.formatter,
-    ticksTarget: config?.ticksTarget,
-    scale: config?.scale,
-    unit: config?.unit,
-  };
-}
-
-function createAxisFormatter(config: PlotAxisOptions | undefined) {
-  const formatter = config?.formatter;
-  if (formatter) {
-    return (value: number) => formatter(value);
-  }
-  return (value: number) => formatNumber(value);
-}
-
-function formatNumber(value: number): string {
-  if (!Number.isFinite(value)) {
-    return "NaN";
-  }
-  const abs = Math.abs(value);
-  if (abs >= 1e4 || (abs > 0 && abs < 1e-2)) {
-    return value.toExponential(3);
-  }
-  if (abs >= 1000) {
-    return value.toFixed(0);
-  }
-  if (abs >= 100) {
-    return value.toFixed(1);
-  }
-  if (abs >= 10) {
-    return value.toFixed(2);
-  }
-  return value.toFixed(3);
 }
 
 function arraysEqual(a: string[] | null, b: string[] | null): boolean {
