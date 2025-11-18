@@ -1,6 +1,7 @@
 """Task management REST API routes"""
 
 import time
+import uuid
 from typing import Dict, List, Union
 from fastapi import APIRouter, HTTPException
 
@@ -22,15 +23,12 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 # In-memory task storage (replace with database in production)
 tasks: Dict[str, Task] = {}
-task_counter = 1
+task_sources: Dict[str, str] = {}
 
 
 def generate_task_id() -> str:
     """Generate a unique task ID"""
-    global task_counter
-    task_id = f"task-{task_counter}"
-    task_counter += 1
-    return task_id
+    return uuid.uuid4().hex
 
 
 @router.get("/", response_model=List[Task])
@@ -97,6 +95,7 @@ async def create_task(params: Union[CreateRxTaskParams, CreateTxTaskParams]):
         fft_size=task.fft_size or 2048,
     )
     await source_manager.register(source)
+    task_sources[task_id] = source.id
 
     return task
 
@@ -141,7 +140,7 @@ async def delete_task(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Unregister the data source for this task
-    source_id = f"{task_id}-spectral"
+    source_id = task_sources.pop(task_id, f"{task_id}-spectral")
     await source_manager.unregister(source_id)
 
     del tasks[task_id]
