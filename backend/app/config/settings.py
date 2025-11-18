@@ -65,9 +65,7 @@ def get_settings() -> Settings:
         cors_allow_origins=_parse_origins(os.getenv("SDR_CORS_ALLOW_ORIGINS")),
         seed_mock_tasks=_parse_bool(os.getenv("SDR_SEED_MOCK_TASKS"), True),
         log_level=_parse_log_level(os.getenv("LOG_LEVEL"), "INFO"),
-        compression_level=_parse_compression_level(
-            os.getenv("ZSTD_COMPRESSION_LEVEL"), 3
-        ),
+        compression_level=_parse_compression_level(os.getenv("ZSTD_COMPRESSION_LEVEL"), 3),
     )
 
 
