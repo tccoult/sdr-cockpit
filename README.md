@@ -45,9 +45,9 @@ flowchart LR
 
     UI -->|"Create Task"| API
     API -->|"Register"| Sources
-    Viz -->|"Subscribe"| WS
+    Viz -->|"List Sources"| API
+    Viz <-->|"Stream Data"| WS
     Sources -->|"Publish"| WS
-    WS -->|"Stream Data"| Viz
 ```
 
 ### Flow Description
