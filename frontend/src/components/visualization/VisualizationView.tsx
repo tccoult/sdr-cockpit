@@ -118,6 +118,13 @@ export const VisualizationView = memo(function VisualizationView({
     autoRange();
   }, [centerFreq, sampleRate, autoRange]);
 
+  // Respond to external auto-range button clicks
+  useEffect(() => {
+    if (externalAutoRangeKey !== undefined && externalAutoRangeKey > 0) {
+      autoRange();
+    }
+  }, [externalAutoRangeKey, autoRange]);
+
   const handleFrequencyRangeChange = useCallback((range: FrequencyRange) => {
     setFrequencyRange(range);
   }, []);
