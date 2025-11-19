@@ -112,7 +112,7 @@ FFTDisplay.tsx listens and renders
 
 ### 6. Visualization
 
-FFTDisplay renders the spectrum using WebGL.
+FFTDisplay renders the spectrum using Canvas 2D.
 
 ```typescript
 // frontend/src/components/visualization/FFTDisplay.tsx
@@ -132,89 +132,4 @@ const handleFFTData = (event: CustomEvent<FFTDataBatch>) => {
 - `frontend/src/components/visualization/FFTDisplay.tsx` - FFT line plot
 - `frontend/src/components/visualization/WaterfallDisplay.tsx` - Waterfall view
 - `frontend/src/components/visualization/SpectrogramDisplay.tsx` - Combined view
-- `frontend/src/plot/` - WebGL plotting engine
-
-## Key Design Decisions
-
-### Source-Based Streaming
-Tasks create sources. Clients subscribe to sources, not tasks directly. This allows:
-- Multiple clients viewing the same data
-- Lazy activation (no data generated without subscribers)
-- Future support for non-task sources
-
-### Protobuf + Zstandard
-Binary protocol for performance:
-- Protobuf: Compact serialization (~10x smaller than JSON)
-- Zstandard: Fast compression (~3x reduction)
-
-Schema: `frontend/src/proto/spectral_data.proto`
-
-### Event Bus Pattern
-FFT data dispatched via window events, not React props:
-- Decouples WebSocket from visualization
-- Multiple components can subscribe
-- Avoids React re-render overhead
-
-See: `frontend/src/utils/fftEventBus.ts`
-
-### OpenAPI-First
-Types generated from `api/openapi.yaml`:
-- `frontend/src/types/generated/api.ts` - TypeScript
-- `backend/app/models/generated.py` - Pydantic
-
-Regenerate with: `./scripts/generate-types.sh`
-
-## Directory Structure
-
-```
-sdr-cockpit/
-├── frontend/src/
-│   ├── api/              # API clients (REST + WebSocket)
-│   ├── components/       # React components
-│   │   ├── tasks/        # Task management UI
-│   │   └── visualization/ # FFT, waterfall, spectrogram
-│   ├── hooks/            # React hooks (data fetching, streaming)
-│   ├── plot/             # WebGL plotting engine
-│   └── types/            # TypeScript types (generated + manual)
-│
-├── backend/app/
-│   ├── api/routes/       # REST endpoints
-│   ├── api/websocket.py  # WebSocket streaming
-│   ├── sources/          # Data source management
-│   └── models/           # Pydantic models (generated)
-│
-├── simulator/            # Mock SDR data generator
-└── api/                  # OpenAPI specification (source of truth)
-```
-
-## Common Tasks
-
-### Add a new API endpoint
-
-1. Define in `api/openapi.yaml`
-2. Run `./scripts/generate-types.sh`
-3. Implement in `backend/app/api/routes/`
-4. Add frontend method in `frontend/src/services/api/ApiService.ts`
-
-### Add a visualization component
-
-1. Create component in `frontend/src/components/visualization/`
-2. Subscribe to FFT events: `window.addEventListener('fft-data', handler)`
-3. Use plot engine from `frontend/src/plot/`
-
-### Modify data generation
-
-1. Edit `backend/app/sources/spectral.py` for FFT parameters
-2. Edit `simulator/src/simulator/generator.py` for signal types
-
-## Testing
-
-```bash
-./scripts/test.sh      # Run all tests
-./scripts/check.sh     # Full CI checks (lint, type-check, test, build)
-```
-
-Key test files:
-- `frontend/src/__tests__/smoke.test.ts` - Critical user flows
-- `backend/tests/test_integration.py` - API lifecycle tests
-- `simulator/tests/test_simulator.py` - Data generation tests
+- `frontend/src/plot/` - Canvas 2D plotting engine
