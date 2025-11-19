@@ -28,8 +28,6 @@ SDR Cockpit provides an intuitive interface for tasking SDR hardware, visualizin
 
 The system follows a **source-based streaming model** where tasks create data sources that web clients can subscribe to via WebSocket connections.
 
-### Data Flow Overview
-
 ```mermaid
 flowchart TB
     subgraph Backend
@@ -50,19 +48,7 @@ flowchart TB
     WS -->|"5: Stream Data"| Viz
 ```
 
-### Flow Description
-
-1. **Task Creation**: User creates an RX/TX task → Backend registers a new data source
-2. **Source Discovery**: Frontend polls for available sources → Displayed in source selector
-3. **Client Attachment**: User selects source → WebSocket connection established → Client subscribed to source
-4. **Data Streaming**: Source generates FFT data → Published to all subscribed clients via WebSocket
-5. **Visualization**: Clients receive protobuf-encoded frames → Decoded and rendered in real-time
-
-### Key Design Patterns
-
-- **Lazy Activation**: Sources only generate data when subscribers are attached
-- **Backpressure Handling**: Queue overflow drops oldest frames to maintain real-time performance
-- **Multi-user Support**: Multiple clients can subscribe to the same source simultaneously
+For detailed architecture documentation including data flow, key files, and common development tasks, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## Prerequisites
 

@@ -27,6 +27,7 @@ dev-dependencies = [
     "pytest>=8.4",
     "pytest-asyncio>=1.2",
     "httpx>=0.28",
+    "httpx-ws>=0.7",
     "black>=25.9",
     "ruff>=0.14",
     "mypy>=1.18",
