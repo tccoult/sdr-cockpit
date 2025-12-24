@@ -1,5 +1,5 @@
 # Dev container based on Alma Linux 9
-FROM almalinux/9-base
+FROM docker.io/almalinux/9-base
 
 # Install Node.js 20
 RUN dnf install -y gcc-c++ make && \

@@ -15,7 +15,7 @@ echo ""
 
 echo ""
 echo "Starting services:"
-echo "  - Frontend dev server: http://localhost:5173"
+echo "  - Frontend dev server: http://localhost:3000"
 echo "  - Backend API: http://localhost:8000"
 echo "  - Backend health: http://localhost:8000/api/health"
 echo ""
@@ -24,7 +24,7 @@ echo ""
 
 # Start backend in background with DEBUG logging
 cd "$PROJECT_ROOT/backend"
-ZSTD_COMPRESSION_LEVEL=3 LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+SDR_CORS_ALLOW_ORIGINS="*" ZSTD_COMPRESSION_LEVEL=3 LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 # Start frontend in foreground
