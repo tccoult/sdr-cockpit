@@ -5,6 +5,7 @@ import time
 from typing import Dict, List, Optional, TypedDict
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from app.models.generated import (
     BitMetrics,
@@ -14,6 +15,7 @@ from app.models.generated import (
     BitTest,
     BitTreeNode,
 )
+from app.core.bit_storage import get_bit_storage
 
 
 class TestConfig(TypedDict):
@@ -450,4 +452,169 @@ async def get_bit_results() -> BitResult:
         tests=tests,
         functionTree=function_tree,
         hardwareTree=hardware_tree,
+    )
+
+
+# --- Response models for new endpoints ---
+
+
+class BitAlertResponse(BaseModel):
+    """Alert response model"""
+
+    id: int
+    timestamp: int
+    testId: str
+    testName: str
+    previousStatus: Optional[str]
+    newStatus: str
+    severity: str
+    message: str
+    acknowledged: bool
+
+
+class BitAlertListResponse(BaseModel):
+    """Alert list response model"""
+
+    alerts: List[BitAlertResponse]
+    totalCount: int
+    unacknowledgedCount: int
+
+
+class TestFailureCountResponse(BaseModel):
+    """Failure count for a test"""
+
+    testId: str
+    testName: str
+    failCount: int
+
+
+class BitHealthMetricsResponse(BaseModel):
+    """Health metrics response model"""
+
+    windowMinutes: int
+    snapshotCount: int
+    uptimePercent: float
+    degradedMinutes: float
+    nonOpMinutes: float
+    failureCount: int
+    topFailingTests: List[TestFailureCountResponse]
+
+
+class BitTestHistoryPointResponse(BaseModel):
+    """Single history point"""
+
+    timestamp: int
+    status: str
+    durationMs: Optional[int]
+
+
+class BitTestHistoryResponse(BaseModel):
+    """Test history response model"""
+
+    testId: str
+    testName: str
+    points: List[BitTestHistoryPointResponse]
+
+
+class AcknowledgeAlertsRequest(BaseModel):
+    """Request to acknowledge alerts"""
+
+    alertIds: List[int]
+
+
+class AcknowledgeAlertsResponse(BaseModel):
+    """Response from acknowledging alerts"""
+
+    acknowledgedCount: int
+
+
+# --- New endpoints ---
+
+
+@router.get("/bit/alerts", response_model=BitAlertListResponse)
+async def get_bit_alerts(
+    since: Optional[int] = None,
+    limit: int = 50,
+    unacknowledged_only: bool = False,
+) -> BitAlertListResponse:
+    """Get recent BIT alerts with optional filtering"""
+    storage = get_bit_storage()
+    alerts, total_count, unack_count = storage.get_alerts(
+        since=since, limit=limit, unacknowledged_only=unacknowledged_only
+    )
+
+    return BitAlertListResponse(
+        alerts=[
+            BitAlertResponse(
+                id=a.id,
+                timestamp=a.timestamp,
+                testId=a.test_id,
+                testName=a.test_name,
+                previousStatus=a.previous_status,
+                newStatus=a.new_status,
+                severity=a.severity,
+                message=a.message,
+                acknowledged=a.acknowledged,
+            )
+            for a in alerts
+        ],
+        totalCount=total_count,
+        unacknowledgedCount=unack_count,
+    )
+
+
+@router.post("/bit/alerts/acknowledge", response_model=AcknowledgeAlertsResponse)
+async def acknowledge_alerts(request: AcknowledgeAlertsRequest) -> AcknowledgeAlertsResponse:
+    """Mark alerts as acknowledged"""
+    storage = get_bit_storage()
+    count = storage.acknowledge_alerts(request.alertIds)
+    return AcknowledgeAlertsResponse(acknowledgedCount=count)
+
+
+@router.get("/bit/metrics", response_model=BitHealthMetricsResponse)
+async def get_bit_metrics(window_minutes: int = 240) -> BitHealthMetricsResponse:
+    """Get health metrics over a time window"""
+    storage = get_bit_storage()
+    metrics = storage.get_metrics(window_minutes=window_minutes)
+
+    return BitHealthMetricsResponse(
+        windowMinutes=metrics.window_minutes,
+        snapshotCount=metrics.snapshot_count,
+        uptimePercent=metrics.uptime_percent,
+        degradedMinutes=metrics.degraded_minutes,
+        nonOpMinutes=metrics.non_op_minutes,
+        failureCount=metrics.failure_count,
+        topFailingTests=[
+            TestFailureCountResponse(
+                testId=t.test_id,
+                testName=t.test_name,
+                failCount=t.fail_count,
+            )
+            for t in metrics.top_failing_tests
+        ],
+    )
+
+
+@router.get("/bit/history", response_model=BitTestHistoryResponse)
+async def get_bit_history(
+    test_id: str,
+    since: Optional[int] = None,
+    until: Optional[int] = None,
+) -> BitTestHistoryResponse:
+    """Get status history for a specific test"""
+    storage = get_bit_storage()
+    points = storage.get_test_history(test_id=test_id, since=since, until=until)
+    test_name = storage.get_test_name(test_id)
+
+    return BitTestHistoryResponse(
+        testId=test_id,
+        testName=test_name,
+        points=[
+            BitTestHistoryPointResponse(
+                timestamp=p.timestamp,
+                status=p.status,
+                durationMs=p.duration_ms,
+            )
+            for p in points
+        ],
     )

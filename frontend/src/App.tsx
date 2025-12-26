@@ -33,7 +33,9 @@ function App() {
   const isMobile = useMobile();
 
   // Data hooks
-  const bitResult = useHealthData();
+  const healthData = useHealthData();
+  const { bitResult } = healthData;
+  // alerts, metrics, acknowledgeAlerts available via healthData for future use
   const systemInfo = getMockSystemInfo();
 
   // UI state

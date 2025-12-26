@@ -278,6 +278,144 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BitResult'
+  /api/health/bit/alerts:
+    get:
+      tags:
+      - health
+      summary: Get Bit Alerts
+      description: Get recent BIT alerts with optional filtering
+      operationId: get_bit_alerts
+      parameters:
+      - name: since
+        in: query
+        required: false
+        schema:
+          type: integer
+          title: Since
+          description: Unix timestamp in ms (default 4 hours ago)
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          title: Limit
+      - name: unacknowledged_only
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Unacknowledged Only
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BitAlertList'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/health/bit/alerts/acknowledge:
+    post:
+      tags:
+      - health
+      summary: Acknowledge Alerts
+      description: Mark alerts as acknowledged
+      operationId: acknowledge_alerts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcknowledgeAlertsRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcknowledgeAlertsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/health/bit/metrics:
+    get:
+      tags:
+      - health
+      summary: Get Bit Metrics
+      description: Get health metrics over a time window
+      operationId: get_bit_metrics
+      parameters:
+      - name: window_minutes
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 240
+          title: Window Minutes
+          description: Time window in minutes (default 4 hours)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BitHealthMetrics'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/health/bit/history:
+    get:
+      tags:
+      - health
+      summary: Get Bit Test History
+      description: Get status history for a specific test
+      operationId: get_bit_history
+      parameters:
+      - name: test_id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Test Id
+      - name: since
+        in: query
+        required: false
+        schema:
+          type: integer
+          title: Since
+          description: Unix timestamp in ms
+      - name: until
+        in: query
+        required: false
+        schema:
+          type: integer
+          title: Until
+          description: Unix timestamp in ms
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BitTestHistory'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/system/update/lock:
     post:
       tags:
@@ -514,6 +652,24 @@ components:
       $ref: './schemas/health.yaml#/BitTest'
     BitTreeNode:
       $ref: './schemas/health.yaml#/BitTreeNode'
+    BitAlert:
+      $ref: './schemas/health.yaml#/BitAlert'
+    BitAlertSeverity:
+      $ref: './schemas/health.yaml#/BitAlertSeverity'
+    BitAlertList:
+      $ref: './schemas/health.yaml#/BitAlertList'
+    BitHealthMetrics:
+      $ref: './schemas/health.yaml#/BitHealthMetrics'
+    TestFailureCount:
+      $ref: './schemas/health.yaml#/TestFailureCount'
+    BitTestHistoryPoint:
+      $ref: './schemas/health.yaml#/BitTestHistoryPoint'
+    BitTestHistory:
+      $ref: './schemas/health.yaml#/BitTestHistory'
+    AcknowledgeAlertsRequest:
+      $ref: './schemas/health.yaml#/AcknowledgeAlertsRequest'
+    AcknowledgeAlertsResponse:
+      $ref: './schemas/health.yaml#/AcknowledgeAlertsResponse'
 
     # System update-related schemas
     UpdateStatus:

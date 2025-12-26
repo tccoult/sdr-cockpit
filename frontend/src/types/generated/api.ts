@@ -160,6 +160,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/health/bit/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bit Alerts
+         * @description Get recent BIT alerts with optional filtering
+         */
+        get: operations["get_bit_alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health/bit/alerts/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge Alerts
+         * @description Mark alerts as acknowledged
+         */
+        post: operations["acknowledge_alerts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health/bit/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bit Metrics
+         * @description Get health metrics over a time window
+         */
+        get: operations["get_bit_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health/bit/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bit Test History
+         * @description Get status history for a specific test
+         */
+        get: operations["get_bit_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/update/lock": {
         parameters: {
             query?: never;
@@ -652,6 +732,122 @@ export interface components {
             tests?: string[] | null;
         };
         /**
+         * BitAlert
+         * @description Alert generated from BIT status transitions
+         */
+        BitAlert: {
+            /** Id */
+            id: number;
+            /**
+             * Timestamp
+             * @description Unix timestamp in ms
+             */
+            timestamp: number;
+            /** TestId */
+            testId: string;
+            /** TestName */
+            testName: string;
+            previousStatus?: components["schemas"]["BitStatus"] | null;
+            newStatus: components["schemas"]["BitStatus"];
+            severity: components["schemas"]["BitAlertSeverity"];
+            /** Message */
+            message: string;
+            /** Acknowledged */
+            acknowledged: boolean;
+        };
+        /**
+         * BitAlertSeverity
+         * @description Severity level of a BIT alert
+         * @enum {string}
+         */
+        BitAlertSeverity: "failed" | "degraded" | "recovered";
+        /**
+         * BitAlertList
+         * @description List of BIT alerts with counts
+         */
+        BitAlertList: {
+            /** Alerts */
+            alerts: components["schemas"]["BitAlert"][];
+            /** TotalCount */
+            totalCount: number;
+            /** UnacknowledgedCount */
+            unacknowledgedCount: number;
+        };
+        /**
+         * BitHealthMetrics
+         * @description Health metrics over a time window
+         */
+        BitHealthMetrics: {
+            /** WindowMinutes */
+            windowMinutes: number;
+            /** SnapshotCount */
+            snapshotCount: number;
+            /** UptimePercent */
+            uptimePercent: number;
+            /** DegradedMinutes */
+            degradedMinutes: number;
+            /** NonOpMinutes */
+            nonOpMinutes: number;
+            /** FailureCount */
+            failureCount: number;
+            /** TopFailingTests */
+            topFailingTests: components["schemas"]["TestFailureCount"][];
+        };
+        /**
+         * TestFailureCount
+         * @description Failure count for a specific test
+         */
+        TestFailureCount: {
+            /** TestId */
+            testId: string;
+            /** TestName */
+            testName: string;
+            /** FailCount */
+            failCount: number;
+        };
+        /**
+         * BitTestHistoryPoint
+         * @description Single point in test history
+         */
+        BitTestHistoryPoint: {
+            /**
+             * Timestamp
+             * @description Unix timestamp in ms
+             */
+            timestamp: number;
+            status: components["schemas"]["BitStatus"];
+            /** DurationMs */
+            durationMs?: number | null;
+        };
+        /**
+         * BitTestHistory
+         * @description Status history for a specific test
+         */
+        BitTestHistory: {
+            /** TestId */
+            testId: string;
+            /** TestName */
+            testName: string;
+            /** Points */
+            points: components["schemas"]["BitTestHistoryPoint"][];
+        };
+        /**
+         * AcknowledgeAlertsRequest
+         * @description Request to acknowledge alerts
+         */
+        AcknowledgeAlertsRequest: {
+            /** AlertIds */
+            alertIds: number[];
+        };
+        /**
+         * AcknowledgeAlertsResponse
+         * @description Response from acknowledging alerts
+         */
+        AcknowledgeAlertsResponse: {
+            /** AcknowledgedCount */
+            acknowledgedCount: number;
+        };
+        /**
          * UpdateStatus
          * @description System update status
          * @enum {string}
@@ -1076,6 +1272,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BitResult"];
+                };
+            };
+        };
+    };
+    get_bit_alerts: {
+        parameters: {
+            query?: {
+                since?: number;
+                limit?: number;
+                unacknowledged_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BitAlertList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledge_alerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcknowledgeAlertsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcknowledgeAlertsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bit_metrics: {
+        parameters: {
+            query?: {
+                window_minutes?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BitHealthMetrics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bit_history: {
+        parameters: {
+            query: {
+                test_id: string;
+                since?: number;
+                until?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BitTestHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

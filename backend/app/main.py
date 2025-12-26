@@ -16,6 +16,8 @@ from app.models.generated import Task, TaskType, TaskStatus, TaskOwner, Visualiz
 from app.config.constants import TARGET_FPS
 from app.config.settings import get_settings
 from app.sources import MockTaskDataSource, source_manager
+from app.core import init_bit_storage
+from app.handlers import init_alert_manager, init_bit_subscriber, shutdown_bit_subscriber
 
 # Configure logging
 logging.basicConfig(
@@ -51,7 +53,14 @@ app.include_router(websocket.router)
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    """Initialize test tasks on startup"""
+    """Initialize application on startup"""
+    # Initialize BIT system components
+    # Order matters: storage first (subscribes to events), then alert manager, then subscriber
+    await init_bit_storage()
+    await init_alert_manager()
+    await init_bit_subscriber()
+    logger.info("BIT system initialized")
+
     if not get_settings().seed_mock_tasks:
         logger.info("Skipping mock task seeding (SDR_SEED_MOCK_TASKS disabled)")
         return
@@ -125,6 +134,13 @@ async def startup_event() -> None:
         await source_manager.register(source)
 
     logger.info(f"Registered {len(test_tasks)} test task sources")
+
+
+@app.on_event("shutdown")
+async def shutdown_event() -> None:
+    """Clean up on shutdown"""
+    await shutdown_bit_subscriber()
+    logger.info("Application shutdown complete")
 
 
 @app.get("/api/")

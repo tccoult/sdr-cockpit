@@ -4,358 +4,268 @@
 
 Enhance the BIT/health panel with persistent storage, alert logging, and analytics metrics to provide operators with better situational awareness of system health over time.
 
-## Current State
+## Architecture
 
-- **Frontend**: 3-view panel (Tests, Function Tree, Hardware Tree) with real-time status display
-- **Backend**: Generates random test data on each request (no persistence)
-- **Polling**: 3-second refresh interval
-- **Data Model**: 7 atomic tests rolled up into Function and Hardware hierarchies
+### Backend Structure
 
-## Proposed Enhancements
+```
+backend/app/
+├── api/routes/
+│   └── health.py          # REST endpoints (existing + new)
+├── core/
+│   ├── event_bus.py       # Central pub/sub for internal events
+│   └── bit_storage.py     # SQLite persistence layer
+└── handlers/
+    ├── bit_subscriber.py  # Mock ZMQ subscriber (adapter)
+    └── alert_manager.py   # Alert detection and creation
+```
 
-### 1. SQLite Persistence Layer
+### Event Flow
 
-Add SQLite database to store BIT history, enabling time-series analysis and alert generation.
+```
+MockBitSubscriber (handlers/)
+    │
+    └──> publishes to EventBus (Topic.BIT_RESULT)
+              │
+              ├──> BitStorage.handle_result() - persists snapshot + tests
+              │
+              └──> AlertManager.handle_result() - detects state changes
+                        │
+                        └──> publishes to EventBus (Topic.BIT_ALERT)
+                                  │
+                                  └──> BitStorage.handle_alert() - persists alert
+```
 
-**Database Schema:**
+### Event Bus
+
+Simple topic-based pub/sub with typed topics:
+
+```python
+from enum import StrEnum
+
+class Topic(StrEnum):
+    BIT_RESULT = "bit.result"
+    BIT_ALERT = "bit.alert"
+```
+
+## Database Schema
+
+SQLite with Postgres-compatible SQL. 7-day retention with daily rotation.
 
 ```sql
--- Store each BIT result snapshot
+-- BIT result snapshots (one per update, every 2-3 seconds)
 CREATE TABLE bit_snapshots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp INTEGER NOT NULL,  -- Unix ms
+    id INTEGER PRIMARY KEY,
+    timestamp INTEGER NOT NULL,        -- Unix ms
     summary_total INTEGER NOT NULL,
     summary_ok INTEGER NOT NULL,
     summary_warn INTEGER NOT NULL,
     summary_fail INTEGER NOT NULL
 );
+CREATE INDEX idx_snapshots_timestamp ON bit_snapshots(timestamp);
 
--- Store individual test results per snapshot
+-- Individual test results per snapshot
 CREATE TABLE bit_test_results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     snapshot_id INTEGER NOT NULL,
     test_id TEXT NOT NULL,
-    status TEXT NOT NULL,  -- ok, warn, fail, unknown
+    status TEXT NOT NULL,              -- ok, warn, fail, unknown
     duration_ms INTEGER,
-    metrics_json TEXT,  -- JSON blob for metrics
-    FOREIGN KEY (snapshot_id) REFERENCES bit_snapshots(id)
+    metrics_json TEXT,                 -- JSON blob for metrics
+    FOREIGN KEY (snapshot_id) REFERENCES bit_snapshots(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_test_results_test_id ON bit_test_results(test_id);
 CREATE INDEX idx_test_results_snapshot ON bit_test_results(snapshot_id);
+CREATE INDEX idx_test_results_test_status ON bit_test_results(test_id, status);
 
--- Store status transition events (alerts)
+-- Status transition alerts
 CREATE TABLE bit_alerts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp INTEGER NOT NULL,  -- Unix ms
+    id INTEGER PRIMARY KEY,
+    timestamp INTEGER NOT NULL,        -- Unix ms
     test_id TEXT NOT NULL,
     test_name TEXT NOT NULL,
-    previous_status TEXT,  -- null if first observation
+    previous_status TEXT,              -- null if first observation
     new_status TEXT NOT NULL,
-    severity TEXT NOT NULL,  -- 'degraded' (ok->warn), 'failed' (ok/warn->fail), 'recovered' (fail/warn->ok)
-    message TEXT NOT NULL
+    severity TEXT NOT NULL,            -- failed, degraded, recovered
+    message TEXT NOT NULL,
+    acknowledged INTEGER DEFAULT 0     -- 0=unread, 1=read
 );
 CREATE INDEX idx_alerts_timestamp ON bit_alerts(timestamp);
-CREATE INDEX idx_alerts_test_id ON bit_alerts(test_id);
+CREATE INDEX idx_alerts_unacknowledged ON bit_alerts(acknowledged, timestamp);
 ```
 
-**Backend Components:**
+## API Endpoints
 
-- `backend/app/db/bit_storage.py` - SQLite connection and CRUD operations
-- `backend/app/services/bit_service.py` - Business logic: alert detection, metrics calculation
-- Database file: `data/bit_history.db` (configurable via settings)
+### GET /api/health/bit/alerts
 
----
+Returns recent alerts.
 
-### 2. Alert Log System
+Query params:
+- `since`: Unix timestamp ms (default: 4 hours ago)
+- `limit`: Max alerts (default: 50)
+- `unacknowledged_only`: Boolean (default: false)
 
-Track status transitions and surface them as alerts in the UI.
-
-**Alert Types:**
-
-| Severity   | Trigger                          | Example Message                                      |
-|------------|----------------------------------|------------------------------------------------------|
-| `failed`   | Status changed to `fail`         | "IF Output Linearity test failed at 14:32:05"        |
-| `degraded` | Status changed to `warn`         | "Clock PLL Discipline degraded to warning at 14:30:12"|
-| `recovered`| Status changed from fail/warn to `ok` | "GPS Holdover Stability recovered at 14:35:00" |
-
-**API Endpoints:**
-
-```yaml
-GET /api/health/bit/alerts
-  Query params:
-    - since: Unix timestamp (ms) - optional, default last 4 hours
-    - limit: number of alerts to return (default 50)
-    - test_id: filter by test ID (optional)
-    - severity: filter by severity (optional)
-  Response: BitAlertList
+Response:
+```json
+{
+  "alerts": [
+    {
+      "id": 1,
+      "timestamp": 1703520000000,
+      "testId": "rf-if-linearity",
+      "testName": "IF Output Linearity",
+      "previousStatus": "ok",
+      "newStatus": "fail",
+      "severity": "failed",
+      "message": "IF Output Linearity test failed",
+      "acknowledged": false
+    }
+  ],
+  "totalCount": 5,
+  "unacknowledgedCount": 2
+}
 ```
 
-**Frontend Component:**
+### GET /api/health/bit/metrics
 
-- New `AlertsView` component as a 4th tab in SystemHealthPanel
-- Shows chronological list of alerts with severity icons
-- Click alert to navigate to related test
-- Optional: toast notifications for new alerts
+Returns health metrics over a time window.
 
----
+Query params:
+- `window_minutes`: Time window (default: 240 = 4 hours)
 
-### 3. Analytics Metrics
-
-Calculate and display health metrics over configurable time windows.
-
-**Metrics to Track:**
-
-| Metric | Description | Calculation |
-|--------|-------------|-------------|
-| Uptime % | Time in fully operational state | `(ok_duration / total_duration) * 100` |
-| Degraded Time | Total time spent in degraded (warn) state | Sum of warn durations |
-| Non-Op Time | Total time in non-operational (fail) state | Sum of fail durations |
-| MTBF | Mean Time Between Failures | Average time between fail events |
-| Most Failing Tests | Tests with highest failure counts | Count failures per test_id |
-| Failure Rate | Failures per hour | `fail_count / hours` |
-
-**API Endpoints:**
-
-```yaml
-GET /api/health/bit/metrics
-  Query params:
-    - window: time window in minutes (default 240 = 4 hours)
-  Response: BitMetricsResponse
-
-GET /api/health/bit/history
-  Query params:
-    - test_id: required
-    - since: Unix timestamp (ms) - optional
-    - until: Unix timestamp (ms) - optional
-  Response: BitTestHistory (for future time-series graphs)
+Response:
+```json
+{
+  "windowMinutes": 240,
+  "snapshotCount": 4800,
+  "uptimePercent": 98.5,
+  "degradedMinutes": 12.5,
+  "nonOpMinutes": 2.3,
+  "failureCount": 3,
+  "topFailingTests": [
+    {"testId": "rf-if-linearity", "testName": "IF Output Linearity", "failCount": 2},
+    {"testId": "clock-discipline", "testName": "Clock PLL Discipline", "failCount": 1}
+  ]
+}
 ```
 
-**Frontend Component:**
+### GET /api/health/bit/history
 
-- New `MetricsSummary` component at top of SystemHealthPanel
-- Compact display: "98.5% uptime | 2 failures today | Top issue: IF Output Linearity"
-- Expandable for detailed breakdown
-- Time window selector (1h, 4h, 24h, 7d)
+Returns test history for time-series visualization (future use).
 
----
+Query params:
+- `test_id`: Required
+- `since`: Unix timestamp ms
+- `until`: Unix timestamp ms
 
-### 4. Mock ZMQ Subscriber (Placeholder)
-
-Since actual ZMQ rollup messages are proprietary, create a mock subscriber that simulates receiving BIT updates.
-
-**Implementation:**
-
-```python
-# backend/app/services/bit_subscriber.py
-
-class MockBitSubscriber:
-    """Mock ZMQ subscriber that generates BIT updates every 2-3 seconds"""
-
-    def __init__(self, callback: Callable[[BitResult], None]):
-        self.callback = callback
-        self._running = False
-
-    async def start(self):
-        """Start generating mock BIT updates"""
-        self._running = True
-        while self._running:
-            result = generate_mock_bit_result()  # From existing logic
-            self.callback(result)
-            await asyncio.sleep(random.uniform(2, 3))
-
-    def stop(self):
-        self._running = False
-
-# In production, this would be replaced with actual ZMQ subscriber:
-# class ZmqBitSubscriber:
-#     def __init__(self, endpoint: str, callback):
-#         self.context = zmq.asyncio.Context()
-#         self.socket = self.context.socket(zmq.SUB)
-#         self.socket.connect(endpoint)
-#         ...
+Response:
+```json
+{
+  "testId": "rf-if-linearity",
+  "testName": "IF Output Linearity",
+  "points": [
+    {"timestamp": 1703520000000, "status": "ok", "durationMs": 850},
+    {"timestamp": 1703520003000, "status": "warn", "durationMs": 920}
+  ]
+}
 ```
 
-**Lifecycle:**
+### POST /api/health/bit/alerts/acknowledge
 
-- Start subscriber on app startup via FastAPI lifespan
-- Subscriber writes to SQLite and triggers alert detection
-- Frontend continues polling API (or use WebSocket for push updates)
+Mark alerts as acknowledged.
 
----
+Body:
+```json
+{
+  "alertIds": [1, 2, 3]
+}
+```
 
-### 5. Enhanced UI Layout
+## Frontend Components
 
-**Proposed Panel Layout:**
+### Panel Layout
 
 ```
 ┌─────────────────────────────────────────┐
-│ [Metrics Summary Bar]                    │
-│ 98.5% uptime │ 2 fails today │ ▾ More   │
+│ [MetricsSummary] ← Fixed 48px           │
+│ 98.5% uptime │ 2 fails │ ▾ Details      │
 ├─────────────────────────────────────────┤
-│ [Tests] [Function] [Hardware] [Alerts]  │
+│ ▼ Alerts (2 new) ← Collapsible          │
+│ ┌─────────────────────────────────────┐ │
+│ │ ⚠ IF Output failed 2m ago          │ │  Max 120px when expanded
+│ │ ⚡ Clock degraded 5m ago            │ │  Own scroll if overflow
+│ │ [View full history]                 │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ [Tests] [Function] [Hardware]           │ ← Fixed 40px
 ├─────────────────────────────────────────┤
 │                                         │
-│  (Selected View Content)                │
-│                                         │
+│  Tab content (scrolls independently)    │  flex-1
 │                                         │
 └─────────────────────────────────────────┘
 ```
 
-**Alert Badge:**
+### New Components
 
-- Show unread alert count on Alerts tab: `Alerts (3)`
-- Clear badge when user views alerts
+- `MetricsSummary.tsx` - Compact metrics bar with expandable details
+- `AlertsSection.tsx` - Collapsible recent alerts with badge
+- `AlertHistoryModal.tsx` - Full alert log (opened via "View full history")
 
----
+### Scrolling Behavior
+
+- MetricsSummary: Fixed height, never scrolls
+- AlertsSection: Max height 120px when expanded, internal scroll
+- Tab bar: Fixed height
+- Tab content: Takes remaining space, scrolls independently
+
+## Alert Logic
+
+### Severity Types
+
+| Severity | Trigger | Message Template |
+|----------|---------|------------------|
+| `failed` | Any status → `fail` | "{test_name} test failed" |
+| `degraded` | `ok` → `warn` | "{test_name} degraded to warning" |
+| `recovered` | `fail` or `warn` → `ok` | "{test_name} recovered" |
+
+### Debouncing
+
+30-second window per test. If a test flaps within the window, only the final state change generates an alert.
+
+## Metrics Calculation
+
+Metrics are calculated from snapshot summaries (efficient - no join to test_results):
+
+- **Uptime %**: `snapshots where summary_fail == 0 / total snapshots * 100`
+- **Degraded minutes**: `snapshots where summary_warn > 0 and summary_fail == 0 * interval`
+- **Non-op minutes**: `snapshots where summary_fail > 0 * interval`
+- **Failure count**: Count of `failed` severity alerts in window
+
+Top failing tests requires test_results join but uses covering index.
+
+## Data Retention
+
+- 7-day retention
+- Daily rotation: Archive/delete snapshots older than 7 days
+- Cleanup runs on app startup and daily via background task
 
 ## Implementation Phases
 
 ### Phase 1: Backend Foundation
-1. Create SQLite schema and storage layer
-2. Add BitService with alert detection logic
-3. Implement mock ZMQ subscriber
-4. Add `/api/health/bit/alerts` endpoint
-5. Add `/api/health/bit/metrics` endpoint
-6. Add `/api/health/bit/history` endpoint (for future use)
-7. Update OpenAPI schema with new types
+- EventBus with Topic StrEnum
+- SQLite schema and BitStorage
+- AlertManager with debouncing
+- MockBitSubscriber
+- Wire up in app lifespan
+- New API endpoints
 
-### Phase 2: Frontend - Alerts
-1. Add `BitAlert` types to OpenAPI schema
-2. Create `AlertsView` component
-3. Add 4th tab to SystemHealthPanel
-4. Implement alert API calls in useHealthData hook
+### Phase 2: Frontend
+- MetricsSummary component
+- AlertsSection component
+- SystemHealthPanel layout updates
+- useHealthData hook updates
+- AlertHistoryModal
 
-### Phase 3: Frontend - Metrics
-1. Add `BitMetrics` types to OpenAPI schema
-2. Create `MetricsSummary` component
-3. Add metrics display to panel header
-4. Add time window selector
-
-### Phase 4: Polish & Future Prep
-1. Add test coverage for new backend logic
-2. Consider WebSocket push for real-time alerts
-3. Prepare data structure for future time-series graphs
-4. Add right-click context menu placeholder for tests
-
----
-
-## New OpenAPI Schema Types
-
-```yaml
-# api/schemas/health.yaml (additions)
-
-BitAlert:
-  type: object
-  required: [id, timestamp, testId, testName, newStatus, severity, message]
-  properties:
-    id: { type: integer }
-    timestamp: { type: integer, description: "Unix timestamp ms" }
-    testId: { type: string }
-    testName: { type: string }
-    previousStatus: { $ref: '#/BitStatus' }
-    newStatus: { $ref: '#/BitStatus' }
-    severity:
-      type: string
-      enum: [failed, degraded, recovered]
-    message: { type: string }
-
-BitAlertList:
-  type: object
-  required: [alerts, totalCount]
-  properties:
-    alerts: { type: array, items: { $ref: '#/BitAlert' } }
-    totalCount: { type: integer }
-
-BitHealthMetrics:
-  type: object
-  required: [windowMinutes, uptimePercent, degradedMinutes, nonOpMinutes, failureCount, topFailingTests]
-  properties:
-    windowMinutes: { type: integer }
-    uptimePercent: { type: number }
-    degradedMinutes: { type: number }
-    nonOpMinutes: { type: number }
-    failureCount: { type: integer }
-    topFailingTests:
-      type: array
-      items:
-        type: object
-        properties:
-          testId: { type: string }
-          testName: { type: string }
-          failCount: { type: integer }
-
-BitTestHistoryPoint:
-  type: object
-  required: [timestamp, status]
-  properties:
-    timestamp: { type: integer }
-    status: { $ref: '#/BitStatus' }
-    durationMs: { type: integer }
-    metricsJson: { type: string }
-
-BitTestHistory:
-  type: object
-  required: [testId, testName, points]
-  properties:
-    testId: { type: string }
-    testName: { type: string }
-    points: { type: array, items: { $ref: '#/BitTestHistoryPoint' } }
-```
-
----
-
-## File Structure (New Files)
-
-```
-backend/
-├── app/
-│   ├── db/
-│   │   └── bit_storage.py      # SQLite operations
-│   ├── services/
-│   │   ├── bit_service.py      # Alert detection, metrics calc
-│   │   └── bit_subscriber.py   # Mock ZMQ subscriber
-│   └── api/routes/
-│       └── health.py           # (modify) Add new endpoints
-├── data/
-│   └── .gitkeep                # SQLite DB goes here
-└── tests/
-    ├── test_bit_storage.py
-    └── test_bit_service.py
-
-frontend/
-└── src/
-    ├── components/system-health/
-    │   ├── AlertsView.tsx      # New component
-    │   └── MetricsSummary.tsx  # New component
-    └── hooks/
-        └── useHealthData.ts    # (modify) Add alert/metrics fetching
-```
-
----
-
-## Open Questions for Discussion
-
-1. **Retention Policy**: How long should we keep BIT history? 7 days? 30 days? Configurable?
-
-2. **Alert Deduplication**: If a test flaps between warn/fail rapidly, should we debounce alerts?
-
-3. **Real-time Updates**: Should alerts push via WebSocket, or is polling sufficient?
-
-4. **UI Placement**: Should metrics summary be always visible, or collapsed by default?
-
-5. **Time Window Presets**: Which windows make most sense? (1h, 4h, 24h, 7d?)
-
-6. **Graph Interactions**: For future time-series graphs, what granularity? (per-minute, per-snapshot?)
-
----
-
-## Summary
-
-This enhancement adds:
-- **Persistence**: SQLite storage for BIT history
-- **Alerts**: Status transition logging with chronological display
-- **Metrics**: Uptime %, failure counts, top failing tests
-- **Foundation**: Mock ZMQ subscriber ready for production integration
-- **Future-ready**: Data model supports time-series graphs
-
-The implementation is modular and can be delivered in phases, with each phase providing immediate value.
+### Phase 3: Polish
+- Backend tests
+- Run checks, fix issues
+- Documentation updates
