@@ -273,7 +273,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
@@ -336,7 +336,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/simulator.Dockerfile
