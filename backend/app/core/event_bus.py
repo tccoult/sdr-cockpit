@@ -22,7 +22,6 @@ class EventBus:
 
     def __init__(self) -> None:
         self._subscribers: dict[Topic, list[Handler]] = {}
-        self._lock = asyncio.Lock()
 
     def subscribe(self, topic: Topic, handler: Handler) -> Callable[[], None]:
         """
@@ -74,7 +73,3 @@ class EventBus:
     def clear(self) -> None:
         """Remove all subscribers (useful for testing)"""
         self._subscribers.clear()
-
-
-# Global singleton instance
-event_bus = EventBus()

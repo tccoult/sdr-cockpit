@@ -59,9 +59,8 @@ export interface IApiService {
 
   // Health Operations
   getBitResults(): Promise<BitResult>;
-  getBitAlerts(params?: { since?: number; limit?: number; unacknowledgedOnly?: boolean }): Promise<BitAlertList>;
+  getBitAlerts(params?: { since?: number; limit?: number }): Promise<BitAlertList>;
   getBitMetrics(windowMinutes?: number): Promise<BitHealthMetrics>;
-  acknowledgeAlerts(alertIds: number[]): Promise<{ acknowledgedCount: number }>;
 
   // System Update Operations
   getLockStatus(): Promise<LockStatus>;
@@ -175,13 +174,12 @@ class OnlineApiService implements IApiService {
     return data;
   }
 
-  async getBitAlerts(params?: { since?: number; limit?: number; unacknowledgedOnly?: boolean }): Promise<BitAlertList> {
+  async getBitAlerts(params?: { since?: number; limit?: number }): Promise<BitAlertList> {
     const { data, error } = await apiClient.GET('/api/health/bit/alerts', {
       params: {
         query: {
           since: params?.since,
           limit: params?.limit,
-          unacknowledged_only: params?.unacknowledgedOnly,
         },
       },
     });
@@ -196,15 +194,6 @@ class OnlineApiService implements IApiService {
     });
     if (error) throw new Error(`Failed to get BIT metrics: ${error}`);
     if (!data) throw new Error('No data returned from BIT metrics endpoint');
-    return data;
-  }
-
-  async acknowledgeAlerts(alertIds: number[]): Promise<{ acknowledgedCount: number }> {
-    const { data, error } = await apiClient.POST('/api/health/bit/alerts/acknowledge', {
-      body: { alertIds },
-    });
-    if (error) throw new Error(`Failed to acknowledge alerts: ${error}`);
-    if (!data) throw new Error('No data returned from acknowledge alerts endpoint');
     return data;
   }
 
@@ -388,10 +377,10 @@ class OfflineApiService implements IApiService {
     return getMockBitResult();
   }
 
-  async getBitAlerts(_params?: { since?: number; limit?: number; unacknowledgedOnly?: boolean }): Promise<BitAlertList> {
+  async getBitAlerts(_params?: { since?: number; limit?: number }): Promise<BitAlertList> {
     await new Promise(resolve => setTimeout(resolve, 50));
     // Return mock empty alerts in offline mode
-    return { alerts: [], totalCount: 0, unacknowledgedCount: 0 };
+    return { alerts: [], totalCount: 0 };
   }
 
   async getBitMetrics(_windowMinutes?: number): Promise<BitHealthMetrics> {
@@ -406,11 +395,6 @@ class OfflineApiService implements IApiService {
       failureCount: 0,
       topFailingTests: [],
     };
-  }
-
-  async acknowledgeAlerts(_alertIds: number[]): Promise<{ acknowledgedCount: number }> {
-    await new Promise(resolve => setTimeout(resolve, 50));
-    return { acknowledgedCount: 0 };
   }
 
   // ==================== System Update Operations ====================

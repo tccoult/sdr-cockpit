@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from app.core.event_bus import Topic, event_bus
+from app.core.event_bus import EventBus, Topic
 from app.core.bit_storage import BitAlert
 from app.models.generated import BitResult, BitStatus
 
@@ -29,6 +29,11 @@ class AlertManager:
     def __init__(self) -> None:
         self._test_states: dict[str, TestState] = {}
         self._test_names: dict[str, str] = {}  # test_id -> name cache
+        self._event_bus: Optional[EventBus] = None
+
+    def set_event_bus(self, event_bus: EventBus) -> None:
+        """Set the event bus for publishing alerts"""
+        self._event_bus = event_bus
 
     async def handle_result(self, result: BitResult) -> None:
         """Process BIT result and detect status transitions"""
@@ -144,8 +149,11 @@ class AlertManager:
 
     async def _emit_alert(self, alert: BitAlert) -> None:
         """Emit alert to event bus"""
+        if self._event_bus is None:
+            logger.warning("No event bus configured, cannot emit alert")
+            return
         logger.info(f"Alert: [{alert.severity}] {alert.message}")
-        await event_bus.publish(Topic.BIT_ALERT, alert)
+        await self._event_bus.publish(Topic.BIT_ALERT, alert)
 
     async def flush_pending(self) -> None:
         """Flush all pending alerts (useful for shutdown)"""
@@ -158,26 +166,3 @@ class AlertManager:
         """Clear all state (useful for testing)"""
         self._test_states.clear()
         self._test_names.clear()
-
-
-# Module-level instance
-alert_manager: Optional[AlertManager] = None
-
-
-def get_alert_manager() -> AlertManager:
-    """Get the alert manager instance"""
-    if alert_manager is None:
-        raise RuntimeError("AlertManager not initialized")
-    return alert_manager
-
-
-async def init_alert_manager() -> AlertManager:
-    """Initialize the alert manager and subscribe to events"""
-    global alert_manager
-    alert_manager = AlertManager()
-
-    # Subscribe to BIT results
-    event_bus.subscribe(Topic.BIT_RESULT, alert_manager.handle_result)
-
-    logger.info("AlertManager initialized and subscribed to events")
-    return alert_manager

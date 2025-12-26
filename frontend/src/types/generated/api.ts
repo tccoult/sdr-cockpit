@@ -180,26 +180,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/health/bit/alerts/acknowledge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Acknowledge Alerts
-         * @description Mark alerts as acknowledged
-         */
-        post: operations["acknowledge_alerts"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/health/bit/metrics": {
         parameters: {
             query?: never;
@@ -752,8 +732,6 @@ export interface components {
             severity: components["schemas"]["BitAlertSeverity"];
             /** Message */
             message: string;
-            /** Acknowledged */
-            acknowledged: boolean;
         };
         /**
          * BitAlertSeverity
@@ -770,8 +748,6 @@ export interface components {
             alerts: components["schemas"]["BitAlert"][];
             /** TotalCount */
             totalCount: number;
-            /** UnacknowledgedCount */
-            unacknowledgedCount: number;
         };
         /**
          * BitHealthMetrics
@@ -830,22 +806,6 @@ export interface components {
             testName: string;
             /** Points */
             points: components["schemas"]["BitTestHistoryPoint"][];
-        };
-        /**
-         * AcknowledgeAlertsRequest
-         * @description Request to acknowledge alerts
-         */
-        AcknowledgeAlertsRequest: {
-            /** AlertIds */
-            alertIds: number[];
-        };
-        /**
-         * AcknowledgeAlertsResponse
-         * @description Response from acknowledging alerts
-         */
-        AcknowledgeAlertsResponse: {
-            /** AcknowledgedCount */
-            acknowledgedCount: number;
         };
         /**
          * UpdateStatus
@@ -1281,7 +1241,6 @@ export interface operations {
             query?: {
                 since?: number;
                 limit?: number;
-                unacknowledged_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -1296,39 +1255,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BitAlertList"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    acknowledge_alerts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AcknowledgeAlertsRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AcknowledgeAlertsResponse"];
                 };
             };
             /** @description Validation Error */

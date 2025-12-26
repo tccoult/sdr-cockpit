@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Optional
 
-from app.core.event_bus import Topic, event_bus
 from app.models.generated import BitResult
 
 logger = logging.getLogger(__name__)
@@ -34,7 +33,6 @@ class BitAlert:
     new_status: str
     severity: str  # failed, degraded, recovered
     message: str
-    acknowledged: bool = False
 
 
 @dataclass
@@ -75,7 +73,13 @@ class BitStorage:
         self.db_path = db_path or DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._test_names: dict[str, str] = {}  # Cache test_id -> name
+        self._latest_result: Optional[BitResult] = None
         self._init_db()
+
+    @property
+    def latest_result(self) -> Optional[BitResult]:
+        """Get the latest BIT result (if any)"""
+        return self._latest_result
 
     @contextmanager
     def _get_connection(self) -> Generator[sqlite3.Connection, None, None]:
@@ -126,20 +130,18 @@ class BitStorage:
                     previous_status TEXT,
                     new_status TEXT NOT NULL,
                     severity TEXT NOT NULL,
-                    message TEXT NOT NULL,
-                    acknowledged INTEGER DEFAULT 0
+                    message TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_alerts_timestamp
                     ON bit_alerts(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_alerts_unacknowledged
-                    ON bit_alerts(acknowledged, timestamp);
                 """
             )
             conn.commit()
         logger.info(f"Initialized BIT database at {self.db_path}")
 
     async def handle_result(self, result: BitResult) -> None:
-        """Handle incoming BIT result - store snapshot and test results"""
+        """Handle incoming BIT result - cache and store in database"""
+        self._latest_result = result
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._store_result, result)
 
@@ -193,8 +195,8 @@ class BitStorage:
                 """
                 INSERT INTO bit_alerts
                     (timestamp, test_id, test_name, previous_status, new_status,
-                     severity, message, acknowledged)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     severity, message)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     alert.timestamp,
@@ -204,7 +206,6 @@ class BitStorage:
                     alert.new_status,
                     alert.severity,
                     alert.message,
-                    1 if alert.acknowledged else 0,
                 ),
             )
             conn.commit()
@@ -213,35 +214,27 @@ class BitStorage:
         self,
         since: Optional[int] = None,
         limit: int = 50,
-        unacknowledged_only: bool = False,
-    ) -> tuple[list[BitAlert], int, int]:
+    ) -> tuple[list[BitAlert], int]:
         """
         Get alerts with optional filtering.
 
-        Returns: (alerts, total_count, unacknowledged_count)
+        Returns: (alerts, total_count)
         """
         if since is None:
             since = int(time.time() * 1000) - (4 * 60 * 60 * 1000)  # 4 hours ago
 
         with self._get_connection() as conn:
-            # Build query
-            where_clause = "WHERE timestamp >= ?"
-            params: list = [since]
-
-            if unacknowledged_only:
-                where_clause += " AND acknowledged = 0"
-
             # Get alerts
             rows = conn.execute(
-                f"""
+                """
                 SELECT id, timestamp, test_id, test_name, previous_status,
-                       new_status, severity, message, acknowledged
+                       new_status, severity, message
                 FROM bit_alerts
-                {where_clause}
+                WHERE timestamp >= ?
                 ORDER BY timestamp DESC
                 LIMIT ?
                 """,
-                (*params, limit),
+                (since, limit),
             ).fetchall()
 
             alerts = [
@@ -254,36 +247,16 @@ class BitStorage:
                     new_status=row["new_status"],
                     severity=row["severity"],
                     message=row["message"],
-                    acknowledged=bool(row["acknowledged"]),
                 )
                 for row in rows
             ]
 
-            # Get counts
+            # Get total count
             total_count = conn.execute(
                 "SELECT COUNT(*) FROM bit_alerts WHERE timestamp >= ?", (since,)
             ).fetchone()[0]
 
-            unack_count = conn.execute(
-                "SELECT COUNT(*) FROM bit_alerts WHERE timestamp >= ? AND acknowledged = 0",
-                (since,),
-            ).fetchone()[0]
-
-            return alerts, total_count, unack_count
-
-    def acknowledge_alerts(self, alert_ids: list[int]) -> int:
-        """Mark alerts as acknowledged. Returns count of updated rows."""
-        if not alert_ids:
-            return 0
-
-        placeholders = ",".join("?" * len(alert_ids))
-        with self._get_connection() as conn:
-            cursor = conn.execute(
-                f"UPDATE bit_alerts SET acknowledged = 1 WHERE id IN ({placeholders})",
-                alert_ids,
-            )
-            conn.commit()
-            return cursor.rowcount
+            return alerts, total_count
 
     def get_metrics(self, window_minutes: int = 240) -> BitHealthMetrics:
         """Calculate health metrics over a time window"""
@@ -419,30 +392,3 @@ class BitStorage:
                 logger.info(f"Cleaned up {snapshots_deleted} snapshots and {alerts_deleted} alerts")
 
             return snapshots_deleted + alerts_deleted
-
-
-# Module-level storage instance (initialized in app startup)
-bit_storage: Optional[BitStorage] = None
-
-
-def get_bit_storage() -> BitStorage:
-    """Get the bit storage instance"""
-    if bit_storage is None:
-        raise RuntimeError("BitStorage not initialized")
-    return bit_storage
-
-
-async def init_bit_storage(db_path: Optional[Path] = None) -> BitStorage:
-    """Initialize the bit storage and subscribe to events"""
-    global bit_storage
-    bit_storage = BitStorage(db_path)
-
-    # Subscribe to events
-    event_bus.subscribe(Topic.BIT_RESULT, bit_storage.handle_result)
-    event_bus.subscribe(Topic.BIT_ALERT, bit_storage.handle_alert)
-
-    # Run initial cleanup
-    await bit_storage.cleanup_old_data()
-
-    logger.info("BitStorage initialized and subscribed to events")
-    return bit_storage

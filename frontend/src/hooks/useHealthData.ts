@@ -3,7 +3,7 @@
  * Handles polling BIT results, alerts, and metrics from API
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { api, type BitResult, type BitAlertList, type BitHealthMetrics } from '../services/api';
 import { getApiMode } from '../api/config';
 import { getMockBitResult } from '../mocks/mockHealth';
@@ -12,13 +12,11 @@ export interface HealthData {
   bitResult: BitResult;
   alerts: BitAlertList;
   metrics: BitHealthMetrics;
-  acknowledgeAlerts: (alertIds: number[]) => Promise<void>;
 }
 
 const DEFAULT_ALERTS: BitAlertList = {
   alerts: [],
   totalCount: 0,
-  unacknowledgedCount: 0,
 };
 
 const DEFAULT_METRICS: BitHealthMetrics = {
@@ -35,17 +33,6 @@ export function useHealthData(): HealthData {
   const [bitResult, setBitResult] = useState<BitResult>(() => getMockBitResult());
   const [alerts, setAlerts] = useState<BitAlertList>(DEFAULT_ALERTS);
   const [metrics, setMetrics] = useState<BitHealthMetrics>(DEFAULT_METRICS);
-
-  const acknowledgeAlerts = useCallback(async (alertIds: number[]) => {
-    try {
-      await api.acknowledgeAlerts(alertIds);
-      // Refresh alerts after acknowledging
-      const newAlerts = await api.getBitAlerts();
-      setAlerts(newAlerts);
-    } catch (error) {
-      console.error('Failed to acknowledge alerts:', error);
-    }
-  }, []);
 
   useEffect(() => {
     const apiMode = getApiMode();
@@ -106,5 +93,5 @@ export function useHealthData(): HealthData {
     };
   }, []);
 
-  return { bitResult, alerts, metrics, acknowledgeAlerts };
+  return { bitResult, alerts, metrics };
 }

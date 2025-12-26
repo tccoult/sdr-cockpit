@@ -300,13 +300,6 @@ paths:
           type: integer
           default: 50
           title: Limit
-      - name: unacknowledged_only
-        in: query
-        required: false
-        schema:
-          type: boolean
-          default: false
-          title: Unacknowledged Only
       responses:
         '200':
           description: Successful Response
@@ -314,32 +307,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BitAlertList'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /api/health/bit/alerts/acknowledge:
-    post:
-      tags:
-      - health
-      summary: Acknowledge Alerts
-      description: Mark alerts as acknowledged
-      operationId: acknowledge_alerts
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AcknowledgeAlertsRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AcknowledgeAlertsResponse'
         '422':
           description: Validation Error
           content:
@@ -666,11 +633,6 @@ components:
       $ref: './schemas/health.yaml#/BitTestHistoryPoint'
     BitTestHistory:
       $ref: './schemas/health.yaml#/BitTestHistory'
-    AcknowledgeAlertsRequest:
-      $ref: './schemas/health.yaml#/AcknowledgeAlertsRequest'
-    AcknowledgeAlertsResponse:
-      $ref: './schemas/health.yaml#/AcknowledgeAlertsResponse'
-
     # System update-related schemas
     UpdateStatus:
       $ref: './schemas/update.yaml#/UpdateStatus'

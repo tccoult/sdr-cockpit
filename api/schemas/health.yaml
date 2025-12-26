@@ -11,7 +11,6 @@ BitAlert:
   - newStatus
   - severity
   - message
-  - acknowledged
   properties:
     id:
       type: integer
@@ -37,9 +36,6 @@ BitAlert:
     message:
       type: string
       title: Message
-    acknowledged:
-      type: boolean
-      title: Acknowledged
   title: BitAlert
   description: Alert generated from BIT status transitions
 
@@ -57,7 +53,6 @@ BitAlertList:
   required:
   - alerts
   - totalCount
-  - unacknowledgedCount
   properties:
     alerts:
       type: array
@@ -67,9 +62,6 @@ BitAlertList:
     totalCount:
       type: integer
       title: TotalCount
-    unacknowledgedCount:
-      type: integer
-      title: UnacknowledgedCount
   title: BitAlertList
   description: List of BIT alerts with counts
 
@@ -169,30 +161,6 @@ BitTestHistory:
       title: Points
   title: BitTestHistory
   description: Status history for a specific test
-
-AcknowledgeAlertsRequest:
-  type: object
-  required:
-  - alertIds
-  properties:
-    alertIds:
-      type: array
-      items:
-        type: integer
-      title: AlertIds
-  title: AcknowledgeAlertsRequest
-  description: Request to acknowledge alerts
-
-AcknowledgeAlertsResponse:
-  type: object
-  required:
-  - acknowledgedCount
-  properties:
-    acknowledgedCount:
-      type: integer
-      title: AcknowledgedCount
-  title: AcknowledgeAlertsResponse
-  description: Response from acknowledging alerts
 
 BitMetrics:
   properties:

@@ -6,7 +6,7 @@ import random
 import time
 from typing import Optional, TypedDict
 
-from app.core.event_bus import Topic, event_bus
+from app.core.event_bus import EventBus, Topic
 from app.models.generated import (
     BitMetrics,
     BitResult,
@@ -44,8 +44,13 @@ class MockBitSubscriber:
 
     def __init__(self) -> None:
         self._running = False
-        self._task: Optional[asyncio.Task] = None
+        self._task: Optional[asyncio.Task[None]] = None
         self._test_states: dict[str, BitStatus] = {}  # Persist states for continuity
+        self._event_bus: Optional[EventBus] = None
+
+    def set_event_bus(self, event_bus: EventBus) -> None:
+        """Set the event bus for publishing BIT results"""
+        self._event_bus = event_bus
 
     async def start(self) -> None:
         """Start generating mock BIT updates"""
@@ -72,8 +77,13 @@ class MockBitSubscriber:
         """Main loop - generate and publish BIT results"""
         while self._running:
             try:
+                if self._event_bus is None:
+                    logger.warning("No event bus configured, cannot publish BIT result")
+                    await asyncio.sleep(1.0)
+                    continue
+
                 result = self._generate_bit_result()
-                await event_bus.publish(Topic.BIT_RESULT, result)
+                await self._event_bus.publish(Topic.BIT_RESULT, result)
 
                 # Random interval between 2-3 seconds
                 await asyncio.sleep(random.uniform(2.0, 3.0))
@@ -465,28 +475,3 @@ class MockBitSubscriber:
                 ),
             ],
         )
-
-
-# Module-level instance
-bit_subscriber: Optional[MockBitSubscriber] = None
-
-
-def get_bit_subscriber() -> MockBitSubscriber:
-    """Get the bit subscriber instance"""
-    if bit_subscriber is None:
-        raise RuntimeError("MockBitSubscriber not initialized")
-    return bit_subscriber
-
-
-async def init_bit_subscriber() -> MockBitSubscriber:
-    """Initialize and start the mock bit subscriber"""
-    global bit_subscriber
-    bit_subscriber = MockBitSubscriber()
-    await bit_subscriber.start()
-    return bit_subscriber
-
-
-async def shutdown_bit_subscriber() -> None:
-    """Stop the bit subscriber"""
-    if bit_subscriber:
-        await bit_subscriber.stop()
