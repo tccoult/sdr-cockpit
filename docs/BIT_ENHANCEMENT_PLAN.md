@@ -4,6 +4,12 @@
 
 Enhance the BIT/health panel with persistent storage, alert logging, and analytics metrics to provide operators with better situational awareness of system health over time.
 
+## Current Status
+
+- **Phase 1 (Backend Foundation)**: ✅ COMPLETE
+- **Phase 2 (Frontend)**: 🔄 IN PROGRESS
+- **Phase 3 (Polish)**: ⏳ PENDING
+
 ## Architecture
 
 ### Backend Structure
@@ -11,7 +17,7 @@ Enhance the BIT/health panel with persistent storage, alert logging, and analyti
 ```
 backend/app/
 ├── api/routes/
-│   └── health.py          # REST endpoints (existing + new)
+│   └── health.py          # REST endpoints (4 endpoints)
 ├── core/
 │   ├── event_bus.py       # Central pub/sub for internal events
 │   └── bit_storage.py     # SQLite persistence layer
@@ -27,13 +33,38 @@ MockBitSubscriber (handlers/)
     │
     └──> publishes to EventBus (Topic.BIT_RESULT)
               │
-              ├──> BitStorage.handle_result() - persists snapshot + tests
+              ├──> BitStorage.handle_result() - caches & persists snapshot + tests
               │
               └──> AlertManager.handle_result() - detects state changes
                         │
                         └──> publishes to EventBus (Topic.BIT_ALERT)
                                   │
                                   └──> BitStorage.handle_alert() - persists alert
+```
+
+### Initialization (FastAPI Lifespan)
+
+All components are instantiated and wired in `main.py` lifespan context manager:
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create instances
+    event_bus = EventBus()
+    bit_storage = BitStorage()
+    alert_manager = AlertManager()
+    bit_subscriber = MockBitSubscriber()
+
+    # Wire event subscriptions
+    event_bus.subscribe(Topic.BIT_RESULT, bit_storage.handle_result)
+    event_bus.subscribe(Topic.BIT_ALERT, bit_storage.handle_alert)
+    event_bus.subscribe(Topic.BIT_RESULT, alert_manager.handle_result)
+    alert_manager.set_event_bus(event_bus)
+    bit_subscriber.set_event_bus(event_bus)
+
+    # Store in app.state for route access
+    app.state.bit_storage = bit_storage
+    ...
 ```
 
 ### Event Bus
@@ -86,23 +117,26 @@ CREATE TABLE bit_alerts (
     previous_status TEXT,              -- null if first observation
     new_status TEXT NOT NULL,
     severity TEXT NOT NULL,            -- failed, degraded, recovered
-    message TEXT NOT NULL,
-    acknowledged INTEGER DEFAULT 0     -- 0=unread, 1=read
+    message TEXT NOT NULL
 );
 CREATE INDEX idx_alerts_timestamp ON bit_alerts(timestamp);
-CREATE INDEX idx_alerts_unacknowledged ON bit_alerts(acknowledged, timestamp);
 ```
 
 ## API Endpoints
 
+### GET /api/health/bit/results
+
+Returns the latest BIT result with all tests and trees.
+
+Response: Full `BitResult` object with `tests`, `functionTree`, `hardwareTree`, and `summary`.
+
 ### GET /api/health/bit/alerts
 
-Returns recent alerts.
+Returns recent alerts. Frontend uses time-based filtering to avoid duplication (no acknowledgment state).
 
 Query params:
 - `since`: Unix timestamp ms (default: 4 hours ago)
 - `limit`: Max alerts (default: 50)
-- `unacknowledged_only`: Boolean (default: false)
 
 Response:
 ```json
@@ -116,12 +150,10 @@ Response:
       "previousStatus": "ok",
       "newStatus": "fail",
       "severity": "failed",
-      "message": "IF Output Linearity test failed",
-      "acknowledged": false
+      "message": "IF Output Linearity test failed"
     }
   ],
-  "totalCount": 5,
-  "unacknowledgedCount": 2
+  "totalCount": 5
 }
 ```
 
@@ -166,17 +198,6 @@ Response:
     {"timestamp": 1703520000000, "status": "ok", "durationMs": 850},
     {"timestamp": 1703520003000, "status": "warn", "durationMs": 920}
   ]
-}
-```
-
-### POST /api/health/bit/alerts/acknowledge
-
-Mark alerts as acknowledged.
-
-Body:
-```json
-{
-  "alertIds": [1, 2, 3]
 }
 ```
 
@@ -250,22 +271,51 @@ Top failing tests requires test_results join but uses covering index.
 
 ## Implementation Phases
 
-### Phase 1: Backend Foundation
-- EventBus with Topic StrEnum
-- SQLite schema and BitStorage
-- AlertManager with debouncing
-- MockBitSubscriber
-- Wire up in app lifespan
-- New API endpoints
+### Phase 1: Backend Foundation ✅ COMPLETE
 
-### Phase 2: Frontend
-- MetricsSummary component
-- AlertsSection component
-- SystemHealthPanel layout updates
-- useHealthData hook updates
-- AlertHistoryModal
+- [x] EventBus with Topic StrEnum (`app/core/event_bus.py`)
+- [x] SQLite schema and BitStorage (`app/core/bit_storage.py`)
+- [x] AlertManager with 30s debouncing (`app/handlers/alert_manager.py`)
+- [x] MockBitSubscriber generates realistic BIT data (`app/handlers/bit_subscriber.py`)
+- [x] Wire up in app lifespan using `app.state` (no global singletons)
+- [x] API endpoints: `/bit/results`, `/bit/alerts`, `/bit/metrics`, `/bit/history`
+- [x] Generated types used for API responses (no manual route models)
 
-### Phase 3: Polish
-- Backend tests
-- Run checks, fix issues
-- Documentation updates
+### Phase 2: Frontend 🔄 IN PROGRESS
+
+Remaining tasks:
+
+1. **MetricsSummary component** (`frontend/src/components/health/MetricsSummary.tsx`)
+   - Display uptime %, failure count, degraded/non-op minutes
+   - Fetch from `GET /api/health/bit/metrics`
+   - Expandable/collapsible details
+   - Compact fixed-height bar (48px)
+
+2. **AlertsSection component** (`frontend/src/components/health/AlertsSection.tsx`)
+   - Display recent alerts with severity icons
+   - Fetch from `GET /api/health/bit/alerts?since=<30s_ago>` for polling
+   - Initial load: `since=<1hr_ago>`
+   - Frontend deduplication by alert ID
+   - Collapsible, max 120px height with internal scroll
+   - Badge showing count of recent alerts
+
+3. **useHealthData hook updates** (`frontend/src/hooks/useHealthData.ts`)
+   - Add metrics fetching (optional, lower frequency than BIT results)
+   - Add alerts fetching with time-based pagination
+   - Track `lastAlertTimestamp` for incremental fetching
+
+4. **SystemHealthPanel layout** (`frontend/src/components/health/SystemHealthPanel.tsx`)
+   - Integrate MetricsSummary at top
+   - Integrate AlertsSection below metrics
+   - Adjust flex layout for remaining tab content
+
+5. **AlertHistoryModal** (optional, lower priority)
+   - Full alert log with filtering
+   - Opened via "View full history" link in AlertsSection
+
+### Phase 3: Polish ⏳ PENDING
+
+- [x] Backend unit tests for core modules
+- [ ] Frontend tests for new components
+- [ ] Run full check suite
+- [ ] Final documentation updates
