@@ -6,11 +6,18 @@ import logging
 import sqlite3
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Optional
 
-from app.models.generated import BitResult
+from app.models.generated import (
+    BitAlert,
+    BitAlertSeverity,
+    BitHealthMetrics,
+    BitResult,
+    BitStatus,
+    BitTestHistoryPoint,
+    TestFailureCount,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,51 +26,6 @@ RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 
 # Default database path
 DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "bit_history.db"
-
-
-@dataclass
-class BitAlert:
-    """Alert generated from BIT status transitions"""
-
-    id: int
-    timestamp: int  # Unix ms
-    test_id: str
-    test_name: str
-    previous_status: Optional[str]
-    new_status: str
-    severity: str  # failed, degraded, recovered
-    message: str
-
-
-@dataclass
-class TestFailureCount:
-    """Count of failures for a specific test"""
-
-    test_id: str
-    test_name: str
-    fail_count: int
-
-
-@dataclass
-class BitHealthMetrics:
-    """Health metrics over a time window"""
-
-    window_minutes: int
-    snapshot_count: int
-    uptime_percent: float
-    degraded_minutes: float
-    non_op_minutes: float
-    failure_count: int
-    top_failing_tests: list[TestFailureCount]
-
-
-@dataclass
-class BitTestHistoryPoint:
-    """Single point in test history"""
-
-    timestamp: int
-    status: str
-    duration_ms: Optional[int]
 
 
 class BitStorage:
@@ -191,6 +153,11 @@ class BitStorage:
     def _store_alert(self, alert: BitAlert) -> None:
         """Store alert in database (sync)"""
         with self._get_connection() as conn:
+            # Convert enums to strings for storage
+            prev_status = alert.previous_status.value if alert.previous_status else None
+            new_status = alert.new_status.value
+            severity = alert.severity.value
+
             conn.execute(
                 """
                 INSERT INTO bit_alerts
@@ -202,9 +169,9 @@ class BitStorage:
                     alert.timestamp,
                     alert.test_id,
                     alert.test_name,
-                    alert.previous_status,
-                    alert.new_status,
-                    alert.severity,
+                    prev_status,
+                    new_status,
+                    severity,
                     alert.message,
                 ),
             )
@@ -241,11 +208,13 @@ class BitStorage:
                 BitAlert(
                     id=row["id"],
                     timestamp=row["timestamp"],
-                    test_id=row["test_id"],
-                    test_name=row["test_name"],
-                    previous_status=row["previous_status"],
-                    new_status=row["new_status"],
-                    severity=row["severity"],
+                    testId=row["test_id"],
+                    testName=row["test_name"],
+                    previousStatus=(
+                        BitStatus(row["previous_status"]) if row["previous_status"] else None
+                    ),
+                    newStatus=BitStatus(row["new_status"]),
+                    severity=BitAlertSeverity(row["severity"]),
                     message=row["message"],
                 )
                 for row in rows
@@ -315,21 +284,21 @@ class BitStorage:
 
             top_failing_tests = [
                 TestFailureCount(
-                    test_id=row["test_id"],
-                    test_name=self._test_names.get(row["test_id"], row["test_id"]),
-                    fail_count=row["fail_count"],
+                    testId=row["test_id"],
+                    testName=self._test_names.get(row["test_id"], row["test_id"]),
+                    failCount=row["fail_count"],
                 )
                 for row in top_failing_rows
             ]
 
             return BitHealthMetrics(
-                window_minutes=window_minutes,
-                snapshot_count=total,
-                uptime_percent=round(uptime_percent, 2),
-                degraded_minutes=round(degraded_minutes, 2),
-                non_op_minutes=round(non_op_minutes, 2),
-                failure_count=failure_count,
-                top_failing_tests=top_failing_tests,
+                windowMinutes=window_minutes,
+                snapshotCount=total,
+                uptimePercent=round(uptime_percent, 2),
+                degradedMinutes=round(degraded_minutes, 2),
+                nonOpMinutes=round(non_op_minutes, 2),
+                failureCount=failure_count,
+                topFailingTests=top_failing_tests,
             )
 
     def get_test_history(
@@ -358,8 +327,8 @@ class BitStorage:
             return [
                 BitTestHistoryPoint(
                     timestamp=row["timestamp"],
-                    status=row["status"],
-                    duration_ms=row["duration_ms"],
+                    status=BitStatus(row["status"]),
+                    durationMs=row["duration_ms"],
                 )
                 for row in rows
             ]

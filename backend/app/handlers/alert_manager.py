@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from app.core.event_bus import EventBus, Topic
-from app.core.bit_storage import BitAlert
-from app.models.generated import BitResult, BitStatus
+from app.models.generated import BitAlert, BitAlertSeverity, BitResult, BitStatus
 
 logger = logging.getLogger(__name__)
 
@@ -111,39 +110,41 @@ class AlertManager:
         return BitAlert(
             id=0,  # Will be set by database
             timestamp=timestamp,
-            test_id=test_id,
-            test_name=test_name,
-            previous_status=prev_status.value,
-            new_status=new_status.value,
+            testId=test_id,
+            testName=test_name,
+            previousStatus=prev_status,
+            newStatus=new_status,
             severity=severity,
             message=message,
         )
 
-    def _determine_severity(self, prev_status: BitStatus, new_status: BitStatus) -> Optional[str]:
+    def _determine_severity(
+        self, prev_status: BitStatus, new_status: BitStatus
+    ) -> Optional[BitAlertSeverity]:
         """Determine alert severity based on status transition"""
         # Any status -> fail = failed
         if new_status == BitStatus.fail:
-            return "failed"
+            return BitAlertSeverity.failed
 
         # ok -> warn = degraded
         if prev_status == BitStatus.ok and new_status == BitStatus.warn:
-            return "degraded"
+            return BitAlertSeverity.degraded
 
         # fail or warn -> ok = recovered
         if new_status == BitStatus.ok and prev_status in (BitStatus.fail, BitStatus.warn):
-            return "recovered"
+            return BitAlertSeverity.recovered
 
         # All other transitions (e.g., unknown -> ok, warn -> fail) don't generate alerts
         # Actually, warn -> fail should be "failed", which is already covered
         return None
 
-    def _create_message(self, test_name: str, severity: str) -> str:
+    def _create_message(self, test_name: str, severity: BitAlertSeverity) -> str:
         """Create human-readable alert message"""
-        if severity == "failed":
+        if severity == BitAlertSeverity.failed:
             return f"{test_name} test failed"
-        elif severity == "degraded":
+        elif severity == BitAlertSeverity.degraded:
             return f"{test_name} degraded to warning"
-        elif severity == "recovered":
+        elif severity == BitAlertSeverity.recovered:
             return f"{test_name} recovered"
         return f"{test_name} status changed"
 

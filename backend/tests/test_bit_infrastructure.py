@@ -10,10 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from app.core.bit_storage import BitAlert, BitStorage
+from app.core.bit_storage import BitStorage
 from app.core.event_bus import EventBus, Topic
 from app.handlers.alert_manager import AlertManager, DEBOUNCE_WINDOW_MS
 from app.models.generated import (
+    BitAlert,
+    BitAlertSeverity,
     BitResult,
     BitStatus,
     BitSummary,
@@ -91,11 +93,11 @@ async def test_bit_storage_stores_and_retrieves_alerts(temp_storage):
     alert = BitAlert(
         id=0,
         timestamp=1000000,
-        test_id="test-1",
-        test_name="Test 1",
-        previous_status="ok",
-        new_status="fail",
-        severity="failed",
+        testId="test-1",
+        testName="Test 1",
+        previousStatus=BitStatus.ok,
+        newStatus=BitStatus.fail,
+        severity=BitAlertSeverity.failed,
         message="Test 1 failed",
     )
 
@@ -105,7 +107,7 @@ async def test_bit_storage_stores_and_retrieves_alerts(temp_storage):
     assert total == 1
     assert len(alerts) == 1
     assert alerts[0].test_id == "test-1"
-    assert alerts[0].severity == "failed"
+    assert alerts[0].severity == BitAlertSeverity.failed
 
 
 @pytest.mark.asyncio
@@ -116,11 +118,11 @@ async def test_bit_storage_get_alerts_respects_since(temp_storage):
         alert = BitAlert(
             id=0,
             timestamp=ts,
-            test_id=f"test-{i}",
-            test_name=f"Test {i}",
-            previous_status="ok",
-            new_status="fail",
-            severity="failed",
+            testId=f"test-{i}",
+            testName=f"Test {i}",
+            previousStatus=BitStatus.ok,
+            newStatus=BitStatus.fail,
+            severity=BitAlertSeverity.failed,
             message=f"Test {i} failed",
         )
         await temp_storage.handle_alert(alert)
@@ -162,7 +164,7 @@ async def test_bit_storage_test_history(temp_storage):
 
     history = temp_storage.get_test_history(test_id=test_id, since=0, until=now + 10000)
     assert len(history) == 3
-    assert all(p.status == "ok" for p in history)
+    assert all(p.status == BitStatus.ok for p in history)
 
 
 # --- AlertManager Tests ---
@@ -221,7 +223,7 @@ async def test_alert_manager_detects_failure():
         create_simple_result("test-1", BitStatus.fail, now + DEBOUNCE_WINDOW_MS + 1000)
     )
     assert len(alerts) == 1
-    assert alerts[0].severity == "failed"
+    assert alerts[0].severity == BitAlertSeverity.failed
 
 
 @pytest.mark.asyncio
@@ -247,7 +249,7 @@ async def test_alert_manager_detects_degradation():
     )
 
     assert len(alerts) == 1
-    assert alerts[0].severity == "degraded"
+    assert alerts[0].severity == BitAlertSeverity.degraded
 
 
 @pytest.mark.asyncio
@@ -273,7 +275,7 @@ async def test_alert_manager_detects_recovery():
     )
 
     assert len(alerts) == 1
-    assert alerts[0].severity == "recovered"
+    assert alerts[0].severity == BitAlertSeverity.recovered
 
 
 @pytest.mark.asyncio
@@ -304,7 +306,7 @@ async def test_alert_manager_debounce_replaces_pending():
 
     # Should only have recovery alert (the final state change)
     assert len(alerts) == 1
-    assert alerts[0].severity == "recovered"
+    assert alerts[0].severity == BitAlertSeverity.recovered
 
 
 @pytest.mark.asyncio
@@ -332,4 +334,4 @@ async def test_alert_manager_flush_pending():
     await manager.flush_pending()
 
     assert len(alerts) == 1
-    assert alerts[0].severity == "failed"
+    assert alerts[0].severity == BitAlertSeverity.failed
