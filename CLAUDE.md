@@ -22,6 +22,10 @@
 - Look for existing common code/functions and avoid unnecessary duplication
 - Reuse existing patterns and utilities where possible
 
+**Code Style Requirements:**
+
+- **Color Usage:** Always use Tailwind theme colors / CSS variables instead of hardcoded hex values. All theme colors are defined in `frontend/tailwind.config.js` and `frontend/src/index.css`
+
 ### 3. Testing Philosophy
 
 **High-value tests only:**
@@ -79,11 +83,3 @@
   - `./scripts/check-frontend.sh`
   - `./scripts/check-backend.sh`
   - `./scripts/check-simulator.sh`
-
-## Code Style Guidelines
-
-### Color Usage
-
-**IMPORTANT:** Always use Tailwind theme colors / CSS variables instead of hardcoded hex values.
-
-All theme colors are defined in `frontend/tailwind.config.js` and `frontend/src/index.css`.
