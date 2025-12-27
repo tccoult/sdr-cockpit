@@ -159,8 +159,8 @@ class BitStorage:
 
     def _cleanup_old_rotations(self) -> None:
         """Remove old rotated database files beyond max_files limit"""
-        # Find all rotated database files
-        pattern = str(self.db_dir / "bit_history_*.db")
+        # Find all rotated database files (timestamped only, not the active db)
+        pattern = str(self.db_dir / "bit_history_[0-9]*.db")
         rotated_files = sorted(glob.glob(pattern), reverse=True)
 
         # Keep only max_files most recent
