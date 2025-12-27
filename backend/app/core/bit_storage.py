@@ -1,14 +1,18 @@
 """SQLite persistence layer for BIT results and alerts"""
 
 import asyncio
+import glob
 import json
 import logging
+import os
 import sqlite3
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Generator, Optional
 
+from app.config.settings import Settings
 from app.models.generated import (
     BitAlert,
     BitAlertSeverity,
@@ -24,19 +28,25 @@ logger = logging.getLogger(__name__)
 # Retention period in milliseconds (7 days)
 RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 
-# Default database path
-DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "bit_history.db"
-
 
 class BitStorage:
     """SQLite storage for BIT snapshots and alerts"""
 
-    def __init__(self, db_path: Optional[Path] = None):
-        self.db_path = db_path or DEFAULT_DB_PATH
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.db_dir = Path(settings.bit_db_path)
+        self.db_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path = self.db_dir / "bit_history.db"
         self._test_names: dict[str, str] = {}  # Cache test_id -> name
         self._latest_result: Optional[BitResult] = None
+        self._last_rotation_check = time.time()
         self._init_db()
+        logger.info(
+            f"BIT database initialized at {self.db_path} "
+            f"(rotation: {settings.bit_rotation_hours}h, "
+            f"max size: {settings.bit_max_file_size_mb}MB, "
+            f"max files: {settings.bit_max_files})"
+        )
 
     @property
     def latest_result(self) -> Optional[BitResult]:
@@ -99,7 +109,73 @@ class BitStorage:
                 """
             )
             conn.commit()
-        logger.info(f"Initialized BIT database at {self.db_path}")
+
+    def _should_rotate(self) -> bool:
+        """Check if database should be rotated based on time or size"""
+        if not self.db_path.exists():
+            return False
+
+        # Check rotation interval
+        rotation_interval_seconds = self.settings.bit_rotation_hours * 3600
+        time_since_check = time.time() - self._last_rotation_check
+        if time_since_check >= rotation_interval_seconds:
+            logger.info(
+                f"Rotation triggered by time: {time_since_check:.0f}s >= {rotation_interval_seconds}s"
+            )
+            return True
+
+        # Check file size
+        file_size_mb = self.db_path.stat().st_size / (1024 * 1024)
+        if file_size_mb >= self.settings.bit_max_file_size_mb:
+            logger.info(
+                f"Rotation triggered by size: {file_size_mb:.1f}MB >= {self.settings.bit_max_file_size_mb}MB"
+            )
+            return True
+
+        return False
+
+    def _rotate_database(self) -> None:
+        """Rotate current database to timestamped file and create new one"""
+        if not self.db_path.exists():
+            logger.debug("No database file to rotate")
+            return
+
+        # Generate timestamped filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        rotated_path = self.db_dir / f"bit_history_{timestamp}.db"
+
+        # Rename current database
+        self.db_path.rename(rotated_path)
+        logger.info(f"Rotated database to {rotated_path}")
+
+        # Create new database
+        self._init_db()
+
+        # Update rotation timestamp
+        self._last_rotation_check = time.time()
+
+        # Clean up old rotated files
+        self._cleanup_old_rotations()
+
+    def _cleanup_old_rotations(self) -> None:
+        """Remove old rotated database files beyond max_files limit"""
+        # Find all rotated database files (timestamped only, not the active db)
+        pattern = str(self.db_dir / "bit_history_[0-9]*.db")
+        rotated_files = sorted(glob.glob(pattern), reverse=True)
+
+        # Keep only max_files most recent
+        files_to_delete = rotated_files[self.settings.bit_max_files :]
+        for file_path in files_to_delete:
+            try:
+                os.remove(file_path)
+                logger.info(f"Removed old rotated database: {file_path}")
+            except OSError as e:
+                logger.error(f"Failed to remove {file_path}: {e}")
+
+    def _check_and_rotate(self) -> None:
+        """Check if rotation is needed and perform it"""
+        if self._should_rotate():
+            self._rotate_database()
 
     async def handle_result(self, result: BitResult) -> None:
         """Handle incoming BIT result - cache and store in database"""
@@ -109,6 +185,9 @@ class BitStorage:
 
     def _store_result(self, result: BitResult) -> None:
         """Store BIT result in database (sync)"""
+        # Check if rotation is needed before writing
+        self._check_and_rotate()
+
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """
@@ -152,6 +231,9 @@ class BitStorage:
 
     def _store_alert(self, alert: BitAlert) -> None:
         """Store alert in database (sync)"""
+        # Check if rotation is needed before writing
+        self._check_and_rotate()
+
         with self._get_connection() as conn:
             # Convert enums to strings for storage
             prev_status = alert.previous_status.value if alert.previous_status else None

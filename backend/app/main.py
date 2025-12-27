@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Create instances
     event_bus = EventBus()
-    bit_storage = BitStorage()
+    bit_storage = BitStorage(get_settings())
     alert_manager = AlertManager()
     bit_subscriber = MockBitSubscriber()
 

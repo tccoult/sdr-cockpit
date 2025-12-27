@@ -6,10 +6,10 @@ Tests BitStorage and AlertManager.
 
 import tempfile
 import time
-from pathlib import Path
 
 import pytest
 
+from app.config.settings import Settings
 from app.core.bit_storage import BitStorage
 from app.core.event_bus import EventBus, Topic
 from app.handlers.alert_manager import AlertManager, DEBOUNCE_WINDOW_MS
@@ -71,8 +71,13 @@ def create_test_result(timestamp: int, ok: int = 5, warn: int = 0, fail: int = 0
 def temp_storage():
     """Create a BitStorage with a temporary database"""
     with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test.db"
-        storage = BitStorage(db_path=db_path)
+        settings = Settings(
+            bit_db_path=tmpdir,
+            bit_rotation_hours=24,
+            bit_max_file_size_mb=100,
+            bit_max_files=7,
+        )
+        storage = BitStorage(settings)
         yield storage
 
 

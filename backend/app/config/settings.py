@@ -47,6 +47,16 @@ def _parse_compression_level(value: str | None, default: int = 3) -> int:
     return max(0, min(22, level))
 
 
+def _parse_int(value: str | None, default: int) -> int:
+    if value is None:
+        return default
+
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 @dataclass
 class Settings:
     """Runtime configuration for the backend service."""
@@ -55,6 +65,12 @@ class Settings:
     seed_mock_tasks: bool = True
     log_level: str = "INFO"
     compression_level: int = 3
+
+    # BIT database configuration
+    bit_db_path: str = "/tmp/sdr-cockpit/bit"
+    bit_rotation_hours: int = 24
+    bit_max_file_size_mb: int = 100
+    bit_max_files: int = 7
 
 
 @lru_cache()
@@ -66,6 +82,10 @@ def get_settings() -> Settings:
         seed_mock_tasks=_parse_bool(os.getenv("SDR_SEED_MOCK_TASKS"), True),
         log_level=_parse_log_level(os.getenv("LOG_LEVEL"), "INFO"),
         compression_level=_parse_compression_level(os.getenv("ZSTD_COMPRESSION_LEVEL"), 3),
+        bit_db_path=os.getenv("SDR_BIT_DB_PATH", "/tmp/sdr-cockpit/bit"),
+        bit_rotation_hours=_parse_int(os.getenv("SDR_BIT_ROTATION_HOURS"), 24),
+        bit_max_file_size_mb=_parse_int(os.getenv("SDR_BIT_MAX_FILE_SIZE_MB"), 100),
+        bit_max_files=_parse_int(os.getenv("SDR_BIT_MAX_FILES"), 7),
     )
 
 
