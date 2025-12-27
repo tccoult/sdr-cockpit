@@ -22,7 +22,7 @@ const DEFAULT_ALERTS: BitAlertList = {
 const DEFAULT_METRICS: BitHealthMetrics = {
   windowMinutes: 240,
   snapshotCount: 0,
-  uptimePercent: 100,
+  operationalPercent: 100,
   degradedMinutes: 0,
   nonOpMinutes: 0,
   failureCount: 0,

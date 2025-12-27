@@ -69,7 +69,7 @@ async def get_bit_metrics(request: Request, window_minutes: int = 240) -> BitHea
     return BitHealthMetrics(
         windowMinutes=metrics.window_minutes,
         snapshotCount=metrics.snapshot_count,
-        uptimePercent=metrics.uptime_percent,
+        operationalPercent=metrics.operational_percent,
         degradedMinutes=metrics.degraded_minutes,
         nonOpMinutes=metrics.non_op_minutes,
         failureCount=metrics.failure_count,

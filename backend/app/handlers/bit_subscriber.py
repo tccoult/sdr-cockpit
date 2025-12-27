@@ -117,8 +117,12 @@ class MockBitSubscriber:
             fail=sum(1 for t in tests if t.status == BitStatus.fail),
         )
 
+        # Overall status is derived from function tree root rollup
+        overall_status = function_tree.status
+
         return BitResult(
             timestamp=now,
+            overallStatus=overall_status,
             summary=summary,
             tests=tests,
             functionTree=function_tree,

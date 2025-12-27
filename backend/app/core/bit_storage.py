@@ -72,6 +72,7 @@ class BitStorage:
                 CREATE TABLE IF NOT EXISTS bit_snapshots (
                     id INTEGER PRIMARY KEY,
                     timestamp INTEGER NOT NULL,
+                    overall_status TEXT NOT NULL DEFAULT 'unknown',
                     summary_total INTEGER NOT NULL,
                     summary_ok INTEGER NOT NULL,
                     summary_warn INTEGER NOT NULL,
@@ -192,11 +193,12 @@ class BitStorage:
             cursor = conn.execute(
                 """
                 INSERT INTO bit_snapshots
-                    (timestamp, summary_total, summary_ok, summary_warn, summary_fail)
-                VALUES (?, ?, ?, ?, ?)
+                    (timestamp, overall_status, summary_total, summary_ok, summary_warn, summary_fail)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     result.timestamp,
+                    result.overall_status.value,
                     result.summary.total,
                     result.summary.ok,
                     result.summary.warn,
@@ -310,19 +312,19 @@ class BitStorage:
             return alerts, total_count
 
     def get_metrics(self, window_minutes: int = 240) -> BitHealthMetrics:
-        """Calculate health metrics over a time window"""
+        """Calculate health metrics over a time window based on overall system status"""
         now = int(time.time() * 1000)
         since = now - (window_minutes * 60 * 1000)
 
         with self._get_connection() as conn:
-            # Get snapshot counts by status
+            # Get snapshot counts by overall_status (derived from function tree rollup)
             row = conn.execute(
                 """
                 SELECT
                     COUNT(*) as total,
-                    SUM(CASE WHEN summary_fail = 0 AND summary_warn = 0 THEN 1 ELSE 0 END) as fully_ok,
-                    SUM(CASE WHEN summary_fail = 0 AND summary_warn > 0 THEN 1 ELSE 0 END) as degraded,
-                    SUM(CASE WHEN summary_fail > 0 THEN 1 ELSE 0 END) as non_op
+                    SUM(CASE WHEN overall_status = 'ok' THEN 1 ELSE 0 END) as operational,
+                    SUM(CASE WHEN overall_status = 'warn' THEN 1 ELSE 0 END) as degraded,
+                    SUM(CASE WHEN overall_status = 'fail' THEN 1 ELSE 0 END) as non_op
                 FROM bit_snapshots
                 WHERE timestamp >= ?
                 """,
@@ -330,7 +332,7 @@ class BitStorage:
             ).fetchone()
 
             total = row["total"] or 0
-            fully_ok = row["fully_ok"] or 0
+            operational = row["operational"] or 0
             degraded = row["degraded"] or 0
             non_op = row["non_op"] or 0
 
@@ -338,7 +340,7 @@ class BitStorage:
             # Assume ~2.5 seconds between snapshots
             snapshot_interval_minutes = 2.5 / 60
 
-            uptime_percent = (fully_ok / total * 100) if total > 0 else 100.0
+            operational_percent = (operational / total * 100) if total > 0 else 100.0
             degraded_minutes = degraded * snapshot_interval_minutes
             non_op_minutes = non_op * snapshot_interval_minutes
 
@@ -376,7 +378,7 @@ class BitStorage:
             return BitHealthMetrics(
                 windowMinutes=window_minutes,
                 snapshotCount=total,
-                uptimePercent=round(uptime_percent, 2),
+                operationalPercent=round(operational_percent, 2),
                 degradedMinutes=round(degraded_minutes, 2),
                 nonOpMinutes=round(non_op_minutes, 2),
                 failureCount=failure_count,

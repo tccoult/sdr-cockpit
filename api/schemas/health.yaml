@@ -70,7 +70,7 @@ BitHealthMetrics:
   required:
   - windowMinutes
   - snapshotCount
-  - uptimePercent
+  - operationalPercent
   - degradedMinutes
   - nonOpMinutes
   - failureCount
@@ -82,9 +82,9 @@ BitHealthMetrics:
     snapshotCount:
       type: integer
       title: SnapshotCount
-    uptimePercent:
+    operationalPercent:
       type: number
-      title: UptimePercent
+      title: OperationalPercent
     degradedMinutes:
       type: number
       title: DegradedMinutes
@@ -194,6 +194,9 @@ BitResult:
       type: integer
       title: Timestamp
       description: Unix timestamp in ms
+    overallStatus:
+      $ref: '#/BitStatus'
+      description: Overall system status derived from function tree rollup
     summary:
       $ref: '#/BitSummary'
     tests:
@@ -208,6 +211,7 @@ BitResult:
   type: object
   required:
   - timestamp
+  - overallStatus
   - summary
   - tests
   - functionTree

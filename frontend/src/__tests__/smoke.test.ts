@@ -33,7 +33,7 @@ describe('Smoke Tests - Critical User Flows', () => {
       listSources: vi.fn().mockResolvedValue([]),
       getBitResults: vi.fn(),
       getBitAlerts: vi.fn().mockResolvedValue({ alerts: [], totalCount: 0 }),
-      getBitMetrics: vi.fn().mockResolvedValue({ windowMinutes: 240, snapshotCount: 0, uptimePercent: 100, degradedMinutes: 0, nonOpMinutes: 0, failureCount: 0, topFailingTests: [] }),
+      getBitMetrics: vi.fn().mockResolvedValue({ windowMinutes: 240, snapshotCount: 0, operationalPercent: 100, degradedMinutes: 0, nonOpMinutes: 0, failureCount: 0, topFailingTests: [] }),
       getLockStatus: vi.fn(),
       acquireLock: vi.fn(),
       releaseLock: vi.fn(),

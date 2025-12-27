@@ -135,8 +135,12 @@ export function getMockBitResult(): BitResult {
     { total: 0, ok: 0, warn: 0, fail: 0 }
   )
 
+  // Overall status is derived from function tree root rollup
+  const overallStatus = functionTree.status
+
   return {
     timestamp: now,
+    overallStatus,
     summary,
     tests,
     functionTree,

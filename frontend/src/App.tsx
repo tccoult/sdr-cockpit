@@ -23,6 +23,23 @@ import { SettingsMenuItem } from './components/settings/SettingsMenu';
 import { getHealthIndicator } from './styles/theme';
 import { PLASMA } from './utils/colorMaps';
 import { getMockSystemInfo } from './mocks/mockHealth';
+import type { BitStatus } from './services/api';
+
+/**
+ * Map BitStatus (ok/warn/fail/unknown) to HealthStatus (operational/degraded/non-operational/unknown)
+ */
+function mapBitStatusToHealthStatus(status: BitStatus | undefined): HealthStatus {
+  switch (status) {
+    case 'ok':
+      return 'operational';
+    case 'warn':
+      return 'degraded';
+    case 'fail':
+      return 'non-operational';
+    default:
+      return 'unknown';
+  }
+}
 
 const TASK_DRAWER_WIDTH = 300;
 const SYSTEM_HEALTH_PANEL_WIDTH = 300;
@@ -133,8 +150,8 @@ function App() {
     ? `${SYSTEM_HEALTH_PANEL_WIDTH}px`
     : '0';
 
-  // Health status (simplified - no longer tracking stream status here)
-  const healthStatus: HealthStatus = 'healthy';
+  // Derive health status from BIT overall status
+  const healthStatus: HealthStatus = mapBitStatusToHealthStatus(bitResult?.overallStatus);
 
   const healthIndicator = getHealthIndicator(healthStatus);
 

@@ -169,7 +169,7 @@ Response:
 {
   "windowMinutes": 240,
   "snapshotCount": 4800,
-  "uptimePercent": 98.5,
+  "operationalPercent": 98.5,
   "degradedMinutes": 12.5,
   "nonOpMinutes": 2.3,
   "failureCount": 3,

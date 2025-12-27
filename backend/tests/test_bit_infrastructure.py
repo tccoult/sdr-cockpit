@@ -58,12 +58,21 @@ def create_test_result(timestamp: int, ok: int = 5, warn: int = 0, fail: int = 0
             durationMs=100,
         )
 
+    # Determine overall status based on worst case
+    if fail > 0:
+        overall_status = BitStatus.fail
+    elif warn > 0:
+        overall_status = BitStatus.warn
+    else:
+        overall_status = BitStatus.ok
+
     return BitResult(
         timestamp=timestamp,
+        overallStatus=overall_status,
         summary=BitSummary(total=len(tests), ok=ok, warn=warn, fail=fail),
         tests=tests,
-        functionTree=BitTreeNode(id="root", name="Root", status=BitStatus.ok),
-        hardwareTree=BitTreeNode(id="root", name="Root", status=BitStatus.ok),
+        functionTree=BitTreeNode(id="root", name="Root", status=overall_status),
+        hardwareTree=BitTreeNode(id="root", name="Root", status=overall_status),
     )
 
 
@@ -152,8 +161,8 @@ async def test_bit_storage_metrics_calculation(temp_storage):
     metrics = temp_storage.get_metrics(window_minutes=60)
 
     assert metrics.snapshot_count == 5
-    # 3 fully ok out of 5 = 60%
-    assert metrics.uptime_percent == 60.0
+    # 3 with overallStatus=ok out of 5 = 60%
+    assert metrics.operational_percent == 60.0
 
 
 @pytest.mark.asyncio
@@ -179,6 +188,7 @@ def create_simple_result(test_id: str, status: BitStatus, timestamp: int) -> Bit
     """Helper to create a simple BitResult with one test"""
     return BitResult(
         timestamp=timestamp,
+        overallStatus=status,
         summary=BitSummary(
             total=1,
             ok=1 if status == BitStatus.ok else 0,

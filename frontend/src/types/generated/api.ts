@@ -631,6 +631,8 @@ export interface components {
              * @description Unix timestamp in ms
              */
             timestamp: number;
+            /** @description Overall system status derived from function tree rollup */
+            overallStatus: components["schemas"]["BitStatus"];
             summary: components["schemas"]["BitSummary"];
             /** Tests */
             tests: components["schemas"]["BitTest"][];
@@ -758,8 +760,8 @@ export interface components {
             windowMinutes: number;
             /** SnapshotCount */
             snapshotCount: number;
-            /** UptimePercent */
-            uptimePercent: number;
+            /** OperationalPercent */
+            operationalPercent: number;
             /** DegradedMinutes */
             degradedMinutes: number;
             /** NonOpMinutes */
