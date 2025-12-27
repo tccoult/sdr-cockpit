@@ -1,6 +1,167 @@
 # Health/BIT-related schemas
 # Auto-generate TypeScript and Python types from this file
 
+BitAlert:
+  type: object
+  required:
+  - id
+  - timestamp
+  - testId
+  - testName
+  - newStatus
+  - severity
+  - message
+  properties:
+    id:
+      type: integer
+      title: Id
+    timestamp:
+      type: integer
+      title: Timestamp
+      description: Unix timestamp in ms
+    testId:
+      type: string
+      title: TestId
+    testName:
+      type: string
+      title: TestName
+    previousStatus:
+      anyOf:
+      - $ref: '#/BitStatus'
+      - type: 'null'
+    newStatus:
+      $ref: '#/BitStatus'
+    severity:
+      $ref: '#/BitAlertSeverity'
+    message:
+      type: string
+      title: Message
+  title: BitAlert
+  description: Alert generated from BIT status transitions
+
+BitAlertSeverity:
+  type: string
+  enum:
+  - failed
+  - degraded
+  - recovered
+  title: BitAlertSeverity
+  description: Severity level of a BIT alert
+
+BitAlertList:
+  type: object
+  required:
+  - alerts
+  - totalCount
+  properties:
+    alerts:
+      type: array
+      items:
+        $ref: '#/BitAlert'
+      title: Alerts
+    totalCount:
+      type: integer
+      title: TotalCount
+  title: BitAlertList
+  description: List of BIT alerts with counts
+
+BitHealthMetrics:
+  type: object
+  required:
+  - windowMinutes
+  - snapshotCount
+  - uptimePercent
+  - degradedMinutes
+  - nonOpMinutes
+  - failureCount
+  - topFailingTests
+  properties:
+    windowMinutes:
+      type: integer
+      title: WindowMinutes
+    snapshotCount:
+      type: integer
+      title: SnapshotCount
+    uptimePercent:
+      type: number
+      title: UptimePercent
+    degradedMinutes:
+      type: number
+      title: DegradedMinutes
+    nonOpMinutes:
+      type: number
+      title: NonOpMinutes
+    failureCount:
+      type: integer
+      title: FailureCount
+    topFailingTests:
+      type: array
+      items:
+        $ref: '#/TestFailureCount'
+      title: TopFailingTests
+  title: BitHealthMetrics
+  description: Health metrics over a time window
+
+TestFailureCount:
+  type: object
+  required:
+  - testId
+  - testName
+  - failCount
+  properties:
+    testId:
+      type: string
+      title: TestId
+    testName:
+      type: string
+      title: TestName
+    failCount:
+      type: integer
+      title: FailCount
+  title: TestFailureCount
+  description: Failure count for a specific test
+
+BitTestHistoryPoint:
+  type: object
+  required:
+  - timestamp
+  - status
+  properties:
+    timestamp:
+      type: integer
+      title: Timestamp
+      description: Unix timestamp in ms
+    status:
+      $ref: '#/BitStatus'
+    durationMs:
+      anyOf:
+      - type: integer
+      - type: 'null'
+      title: DurationMs
+  title: BitTestHistoryPoint
+  description: Single point in test history
+
+BitTestHistory:
+  type: object
+  required:
+  - testId
+  - testName
+  - points
+  properties:
+    testId:
+      type: string
+      title: TestId
+    testName:
+      type: string
+      title: TestName
+    points:
+      type: array
+      items:
+        $ref: '#/BitTestHistoryPoint'
+      title: Points
+  title: BitTestHistory
+  description: Status history for a specific test
+
 BitMetrics:
   properties:
     expected:

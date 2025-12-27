@@ -28,6 +28,12 @@ export type BitTreeNode = components['schemas']['BitTreeNode'];
 export type BitStatus = components['schemas']['BitStatus'];
 export type BitSummary = components['schemas']['BitSummary'];
 export type BitMetrics = components['schemas']['BitMetrics'];
+export type BitAlert = components['schemas']['BitAlert'];
+export type BitAlertList = components['schemas']['BitAlertList'];
+export type BitAlertSeverity = components['schemas']['BitAlertSeverity'];
+export type BitHealthMetrics = components['schemas']['BitHealthMetrics'];
+export type BitTestHistory = components['schemas']['BitTestHistory'];
+export type TestFailureCount = components['schemas']['TestFailureCount'];
 export type UpdateStatus = components['schemas']['UpdateStatus'];
 export type LockStatus = components['schemas']['LockStatusResponse'];
 export type UploadProgress = components['schemas']['UploadStatusResponse'];
@@ -53,6 +59,8 @@ export interface IApiService {
 
   // Health Operations
   getBitResults(): Promise<BitResult>;
+  getBitAlerts(params?: { since?: number; limit?: number }): Promise<BitAlertList>;
+  getBitMetrics(windowMinutes?: number): Promise<BitHealthMetrics>;
 
   // System Update Operations
   getLockStatus(): Promise<LockStatus>;
@@ -163,6 +171,29 @@ class OnlineApiService implements IApiService {
     const { data, error } = await apiClient.GET('/api/health/bit/results');
     if (error) throw new Error(`Failed to get BIT results: ${error}`);
     if (!data) throw new Error('No data returned from BIT results endpoint');
+    return data;
+  }
+
+  async getBitAlerts(params?: { since?: number; limit?: number }): Promise<BitAlertList> {
+    const { data, error } = await apiClient.GET('/api/health/bit/alerts', {
+      params: {
+        query: {
+          since: params?.since,
+          limit: params?.limit,
+        },
+      },
+    });
+    if (error) throw new Error(`Failed to get BIT alerts: ${error}`);
+    if (!data) throw new Error('No data returned from BIT alerts endpoint');
+    return data;
+  }
+
+  async getBitMetrics(windowMinutes?: number): Promise<BitHealthMetrics> {
+    const { data, error } = await apiClient.GET('/api/health/bit/metrics', {
+      params: { query: { window_minutes: windowMinutes } },
+    });
+    if (error) throw new Error(`Failed to get BIT metrics: ${error}`);
+    if (!data) throw new Error('No data returned from BIT metrics endpoint');
     return data;
   }
 
@@ -344,6 +375,26 @@ class OfflineApiService implements IApiService {
   async getBitResults(): Promise<BitResult> {
     await new Promise(resolve => setTimeout(resolve, 100));
     return getMockBitResult();
+  }
+
+  async getBitAlerts(_params?: { since?: number; limit?: number }): Promise<BitAlertList> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    // Return mock empty alerts in offline mode
+    return { alerts: [], totalCount: 0 };
+  }
+
+  async getBitMetrics(_windowMinutes?: number): Promise<BitHealthMetrics> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    // Return mock metrics in offline mode
+    return {
+      windowMinutes: 240,
+      snapshotCount: 0,
+      uptimePercent: 100,
+      degradedMinutes: 0,
+      nonOpMinutes: 0,
+      failureCount: 0,
+      topFailingTests: [],
+    };
   }
 
   // ==================== System Update Operations ====================
