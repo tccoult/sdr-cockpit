@@ -5,7 +5,6 @@
 
 import { X } from 'lucide-react';
 import { SettingsMenuItem } from '../settings/SettingsMenu';
-import { DisplaySettings } from '../settings/DisplaySettings';
 import { SystemSettings } from '../settings/SystemSettings';
 import { VersionInfo } from '../settings/VersionInfo';
 import { SystemUpdateWizard } from '../settings/SystemUpdateWizard';
@@ -65,11 +64,7 @@ export function Modals({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border/70 p-4">
               <h2 className="text-lg font-semibold text-foreground">
-                {activeSettingsPanel === 'system'
-                  ? 'System Settings'
-                  : activeSettingsPanel === 'display'
-                  ? 'Display Settings'
-                  : 'Version Info'}
+                {activeSettingsPanel === 'system' ? 'System Settings' : 'Version Info'}
               </h2>
               <button
                 type="button"
@@ -83,7 +78,6 @@ export function Modals({
             {/* Content */}
             <div className="max-h-[70vh] overflow-y-auto">
               {activeSettingsPanel === 'system' && <SystemSettings />}
-              {activeSettingsPanel === 'display' && <DisplaySettings />}
               {activeSettingsPanel === 'version' && (
                 <VersionInfo
                   versionTree={systemInfo.versionTree}

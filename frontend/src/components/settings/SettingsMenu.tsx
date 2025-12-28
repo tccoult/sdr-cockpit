@@ -1,7 +1,7 @@
-import { ExternalLink, Info, Monitor, Settings, Upload } from "lucide-react";
+import { ExternalLink, Info, Settings, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export type SettingsMenuItem = "system" | "display" | "version" | "update";
+export type SettingsMenuItem = "system" | "version" | "update";
 
 export interface SettingsMenuProps {
   onSelectItem: (item: SettingsMenuItem) => void;
@@ -9,7 +9,7 @@ export interface SettingsMenuProps {
 
 /**
  * Settings dropdown menu that appears from the header.
- * Shows options for system settings, display settings, version info, and system update.
+ * Shows options for system settings, version info, and system update.
  */
 export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -82,11 +82,6 @@ export function SettingsMenu({ onSelectItem }: SettingsMenuProps) {
               icon={<Settings size={16} />}
               label="System Settings"
               onClick={() => handleSelectItem("system")}
-            />
-            <MenuItem
-              icon={<Monitor size={16} />}
-              label="Display Settings"
-              onClick={() => handleSelectItem("display")}
             />
             <MenuItem
               icon={<Info size={16} />}
