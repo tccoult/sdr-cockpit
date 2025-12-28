@@ -25,10 +25,12 @@ class TestState:
     """Tracked state for a single test"""
 
     status: BitStatus
-    # Severity of the last emitted degradation alert (None if no active cooldown)
+    # Severity of the last emitted degradation alert (for escalation comparison)
     last_emitted_severity: Optional[BitAlertSeverity] = field(default=None)
     # Timestamp when cooldown expires (0 = no active cooldown)
     cooldown_until: int = field(default=0)
+    # True if we emitted a degradation that hasn't been closed by a recovery
+    has_open_alert: bool = field(default=False)
 
 
 class AlertManager:
@@ -37,7 +39,7 @@ class AlertManager:
     Alerting scheme:
     - On degradation (ok -> warn/fail): emit immediately, start 1-minute cooldown
     - During cooldown: only emit if severity escalates (warn -> fail), reset cooldown
-    - Recovery alerts: always emitted (for DB storage) but don't affect cooldown
+    - Recovery alerts: only emitted if there's a corresponding open degradation alert
     """
 
     def __init__(self) -> None:
@@ -77,6 +79,7 @@ class AlertManager:
                         await self._emit_alert(alert)
                         state.last_emitted_severity = alert.severity
                         state.cooldown_until = now + COOLDOWN_MS
+                        state.has_open_alert = True
                 continue
 
             # Status unchanged - nothing to do
@@ -99,8 +102,10 @@ class AlertManager:
                 continue
 
             if alert.severity == BitAlertSeverity.recovered:
-                # Recovery: always emit (for DB analysis) but don't affect cooldown
-                await self._emit_alert(alert)
+                # Recovery: only emit if there's an open degradation to close
+                if state.has_open_alert:
+                    await self._emit_alert(alert)
+                    state.has_open_alert = False
             else:
                 # Degradation (warn or fail)
                 in_cooldown = now < state.cooldown_until
@@ -117,6 +122,7 @@ class AlertManager:
                     await self._emit_alert(alert)
                     state.last_emitted_severity = alert.severity
                     state.cooldown_until = now + COOLDOWN_MS
+                    state.has_open_alert = True
 
     def _create_alert(
         self,

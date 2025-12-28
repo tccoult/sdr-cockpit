@@ -439,3 +439,34 @@ async def test_alert_manager_first_observation_degraded():
     assert len(alerts) == 1
     assert alerts[0].severity == BitAlertSeverity.failed
     assert alerts[0].previous_status == BitStatus.ok  # Treated as transition from ok
+
+
+@pytest.mark.asyncio
+async def test_alert_manager_recovery_suppressed_without_open_alert():
+    """Verify recovery is suppressed when corresponding failure was suppressed"""
+    manager = AlertManager()
+    bus = EventBus()
+    manager.set_event_bus(bus)
+
+    alerts: list[BitAlert] = []
+
+    async def alert_handler(alert: BitAlert) -> None:
+        alerts.append(alert)
+
+    bus.subscribe(Topic.BIT_ALERT, alert_handler)
+
+    now = 1000000
+
+    # fail -> ok -> fail (suppressed) -> ok (should also be suppressed)
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 1000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 2000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 3000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 4000))
+
+    # Should have: failed, recovered (first pair), then both suppressed
+    assert len(alerts) == 2
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.failed,
+        BitAlertSeverity.recovered,
+    ]
