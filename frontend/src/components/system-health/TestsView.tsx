@@ -180,7 +180,7 @@ export function TestsView({
                         </p>
                       )}
                       {metadata && (
-                        <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/90">
+                        <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/90">
                           {metadata}
                         </p>
                       )}
@@ -241,7 +241,7 @@ function TagGroup({
 
   return (
     <div className="mt-2">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
       <div className="mt-1 flex flex-wrap gap-1.5">
@@ -253,7 +253,7 @@ function TagGroup({
               type="button"
               key={`${scope}-${nodeId}`}
               className={cn(
-                "inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-[11px] font-medium transition",
+                "inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-xs font-medium transition",
                 "bg-muted/70 text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
                 isHighlighted &&
                   "border-accent/40 bg-accent/10 text-foreground shadow-sm"

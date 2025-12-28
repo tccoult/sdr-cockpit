@@ -76,7 +76,7 @@ export function ActiveTaskPanel({
         </div>
 
         {task && (
-          <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
+          <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
             <div>
               <p className="font-semibold uppercase tracking-wide text-muted-foreground/80">
                 Sample Rate

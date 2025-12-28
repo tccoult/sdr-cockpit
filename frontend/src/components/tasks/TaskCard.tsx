@@ -91,13 +91,13 @@ export function TaskCard({
           <p className="truncate text-sm font-semibold text-foreground">
             {task.name}
           </p>
-          <p className="truncate text-[11px] text-muted-foreground">
+          <p className="truncate text-xs text-muted-foreground">
             {formatFrequency(task.frequency)} · {task.type.toUpperCase()}
           </p>
         </div>
         <span
           className={[
-            "whitespace-nowrap rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
+            "whitespace-nowrap rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
             statusStyles.badge,
           ].join(" ")}
         >
@@ -105,7 +105,7 @@ export function TaskCard({
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="font-medium text-foreground/80">Owner</span>
           <span className="text-foreground">{task.ownerName}</span>
@@ -132,7 +132,7 @@ export function TaskCard({
             <div className="mb-3">
               <span
                 className={cn(
-                  "rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
+                  "rounded-md px-2 py-1 text-xs font-medium uppercase tracking-wide",
                   RECORDING_BADGE
                 )}
               >
@@ -223,7 +223,7 @@ export function TaskCard({
           ) : (
             <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
               <p className="font-medium text-foreground/70">View Only</p>
-              <p className="mt-1 text-[11px]">
+              <p className="mt-1 text-xs">
                 This task is owned by {task.ownerName}. You can view it but cannot control it.
               </p>
             </div>
