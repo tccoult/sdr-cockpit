@@ -211,8 +211,13 @@ export function SystemHealthPanel({
     view === "function" ? highlighted.function : highlighted.hardware;
 
   return (
-    <div className="flex h-full flex-col p-3">
-      <div className="flex h-full flex-col overflow-hidden rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15">
+    <div className={cn("flex flex-col p-3", !isMobile && "h-full")}>
+      <div
+        className={cn(
+          "flex flex-col rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15",
+          !isMobile && "h-full overflow-hidden"
+        )}
+      >
         <div className="px-4 pt-4 pb-2">
           <h3 className="text-sm font-semibold text-foreground">Built-In Test</h3>
           <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">

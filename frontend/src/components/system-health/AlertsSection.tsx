@@ -114,7 +114,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
             ? "opacity-100 duration-200 ease-out"
             : "max-h-0 opacity-0 duration-150 ease-in",
           isExpanded && !isMobile && "max-h-40",
-          isExpanded && isMobile && "max-h-[400px]"
+          isExpanded && isMobile && "max-h-[500px]"
         )}
       >
         <div
