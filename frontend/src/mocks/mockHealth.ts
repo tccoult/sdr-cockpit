@@ -3,6 +3,8 @@ import {
   BitStatus,
   BitTest,
   BitTreeNode,
+  BitAlertList,
+  BitHealthMetrics,
 } from '../services/api'
 import {
   SystemInfo,
@@ -146,6 +148,64 @@ export function getMockBitResult(): BitResult {
     functionTree,
     hardwareTree,
   } as BitResult
+}
+
+export function getMockBitAlerts(): BitAlertList {
+  const now = Date.now()
+
+  const alerts = [
+    {
+      id: 101,
+      timestamp: now - 1000 * 60 * 2,
+      testId: 'rf-if-linearity',
+      testName: 'IF Output Linearity',
+      previousStatus: 'ok' as BitStatus,
+      newStatus: 'fail' as BitStatus,
+      severity: 'failed' as const,
+      message: 'IF Output Linearity test failed',
+    },
+    {
+      id: 102,
+      timestamp: now - 1000 * 60 * 6,
+      testId: 'clock-discipline',
+      testName: 'Clock PLL Discipline',
+      previousStatus: 'ok' as BitStatus,
+      newStatus: 'warn' as BitStatus,
+      severity: 'degraded' as const,
+      message: 'Clock PLL Discipline degraded to warning',
+    },
+    {
+      id: 103,
+      timestamp: now - 1000 * 60 * 12,
+      testId: 'gps-holdover',
+      testName: 'GPS Holdover Stability',
+      previousStatus: 'warn' as BitStatus,
+      newStatus: 'ok' as BitStatus,
+      severity: 'recovered' as const,
+      message: 'GPS Holdover Stability recovered',
+    },
+  ]
+
+  return {
+    alerts,
+    totalCount: alerts.length,
+  }
+}
+
+export function getMockBitMetrics(): BitHealthMetrics {
+  return {
+    windowMinutes: 240,
+    snapshotCount: 4800,
+    operationalPercent: 98.5,
+    degradedMinutes: 12.5,
+    nonOpMinutes: 2.3,
+    failureCount: 3,
+    topFailingTests: [
+      { testId: 'rf-if-linearity', testName: 'IF Output Linearity', failMinutes: 12.5 },
+      { testId: 'clock-discipline', testName: 'Clock PLL Discipline', failMinutes: 7.0 },
+      { testId: 'gps-holdover', testName: 'GPS Holdover Stability', failMinutes: 4.2 },
+    ],
+  }
 }
 
 function buildAssignments(tests: BitTest[], key: 'functionNodes' | 'hardwareNodes') {

@@ -51,7 +51,7 @@ function App() {
 
   // Data hooks
   const healthData = useHealthData();
-  const { bitResult } = healthData;
+  const { bitResult, alerts, metrics } = healthData;
   // alerts, metrics, acknowledgeAlerts available via healthData for future use
   const systemInfo = getMockSystemInfo();
 
@@ -192,6 +192,8 @@ function App() {
               tasks={tasks}
               isDiscovering={isDiscovering}
               bitResult={bitResult}
+              alerts={alerts}
+              metrics={metrics}
               colorMap={colorMap}
               onRenderFpsChange={setRenderFps}
               onDataFpsChange={setDataFps}
@@ -222,6 +224,8 @@ function App() {
         isHealthPanelOpen={isHealthPanelOpen}
         isHealthPanelPinned={isHealthPanelPinned}
         bitResult={bitResult}
+        alerts={alerts}
+        metrics={metrics}
         onCloseHealthPanel={() => setIsHealthPanelOpen(false)}
         onToggleHealthPanelPin={() => setIsHealthPanelPinned((prev) => !prev)}
       />

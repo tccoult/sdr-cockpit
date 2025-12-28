@@ -4,7 +4,7 @@
  */
 
 import { Task } from "../../api/client";
-import { BitResult } from "../../services/api";
+import { BitAlertList, BitHealthMetrics, BitResult } from "../../services/api";
 import { ColorMap } from "../../utils/colorMaps";
 import { SystemHealthPanel } from "../system-health/SystemHealthPanel";
 import { TaskRosterPanel } from "../tasks/TaskRosterPanel";
@@ -16,6 +16,8 @@ export interface MobileContentViewProps {
   tasks: Task[];
   isDiscovering: boolean;
   bitResult: BitResult;
+  alerts: BitAlertList;
+  metrics: BitHealthMetrics;
   colorMap: ColorMap;
   onRenderFpsChange: (fps: number) => void;
   onDataFpsChange: (fps: number) => void;
@@ -31,6 +33,8 @@ export function MobileContentView({
   tasks,
   isDiscovering,
   bitResult,
+  alerts,
+  metrics,
   colorMap,
   onRenderFpsChange,
   onDataFpsChange,
@@ -71,7 +75,7 @@ export function MobileContentView({
   // mobileView === 'health'
   return (
     <div className="h-full overflow-auto bg-background">
-      <SystemHealthPanel bitResult={bitResult} />
+      <SystemHealthPanel bitResult={bitResult} alerts={alerts} metrics={metrics} />
     </div>
   );
 }

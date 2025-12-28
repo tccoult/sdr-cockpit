@@ -1,11 +1,13 @@
 import { MoreVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { BitResult, BitTest } from "../../services/api";
+import { BitAlertList, BitHealthMetrics, BitResult, BitTest } from "../../services/api";
 import { Button } from "@/components/ui/button";
 import { TestsView } from "./TestsView";
 import { RollupTreeView } from "./RollupTreeView";
 import { STATUS_PRIORITY } from "./statusTokens";
+import { AlertsSection } from "./AlertsSection";
+import { MetricsSummary } from "./MetricsSummary";
 import {
   buildNodeLookup,
   createDisplayTree,
@@ -14,9 +16,12 @@ import {
   getTerminalNodeIds,
 } from "./utils";
 import { cn } from "@/lib/utils";
+import { useMobile } from "@/hooks/useMobile";
 
 export interface SystemHealthPanelProps {
   bitResult: BitResult | null;
+  alerts: BitAlertList;
+  metrics: BitHealthMetrics;
 }
 
 type PanelView = "tests" | "function" | "hardware";
@@ -26,7 +31,12 @@ interface HighlightState {
   hardware: string[];
 }
 
-export function SystemHealthPanel({ bitResult }: SystemHealthPanelProps) {
+export function SystemHealthPanel({
+  bitResult,
+  alerts,
+  metrics,
+}: SystemHealthPanelProps) {
+  const isMobile = useMobile();
   const [view, setView] = useState<PanelView>("tests");
   const [expandState, setExpandState] = useState<"auto" | "all" | "none">(
     "auto"
@@ -202,12 +212,15 @@ export function SystemHealthPanel({ bitResult }: SystemHealthPanelProps) {
   return (
     <div className="flex h-full flex-col p-3">
       <div className="flex h-full flex-col overflow-hidden rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15">
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 pb-2">
           <h3 className="text-sm font-semibold text-foreground">Built-In Test</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Last updated {formatRelativeTimestamp(bitResult.timestamp)}
           </p>
         </div>
+        <MetricsSummary metrics={metrics} isMobile={isMobile} />
+        <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
+        <div className="border-t border-border/70" />
         <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-2">
           <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
             {(["tests", "function", "hardware"] as PanelView[]).map(

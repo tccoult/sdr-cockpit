@@ -7,7 +7,7 @@ import { Drawer } from '../common/Drawer';
 import { TaskRosterPanel } from '../tasks/TaskRosterPanel';
 import { SystemHealthPanel } from '../system-health/SystemHealthPanel';
 import { Task } from '../../api/client';
-import { BitResult } from '../../services/api';
+import { BitAlertList, BitHealthMetrics, BitResult } from '../../services/api';
 
 const TASK_DRAWER_WIDTH = 300;
 const SYSTEM_HEALTH_PANEL_WIDTH = 300;
@@ -32,6 +32,8 @@ export interface DesktopDrawersProps {
   isHealthPanelOpen: boolean;
   isHealthPanelPinned: boolean;
   bitResult: BitResult;
+  alerts: BitAlertList;
+  metrics: BitHealthMetrics;
   onCloseHealthPanel: () => void;
   onToggleHealthPanelPin: () => void;
 }
@@ -52,6 +54,8 @@ export function DesktopDrawers({
   isHealthPanelOpen,
   isHealthPanelPinned,
   bitResult,
+  alerts,
+  metrics,
   onCloseHealthPanel,
   onToggleHealthPanelPin,
 }: DesktopDrawersProps) {
@@ -91,7 +95,7 @@ export function DesktopDrawers({
         width={`${SYSTEM_HEALTH_PANEL_WIDTH}px`}
         offsetTop={HEADER_HEIGHT}
       >
-        <SystemHealthPanel bitResult={bitResult} />
+        <SystemHealthPanel bitResult={bitResult} alerts={alerts} metrics={metrics} />
       </Drawer>
     </div>
   );
