@@ -289,13 +289,16 @@ async def test_alert_manager_detects_recovery():
         create_simple_result("test-1", BitStatus.ok, now + DEBOUNCE_WINDOW_MS + 1000)
     )
 
-    assert len(alerts) == 1
-    assert alerts[0].severity == BitAlertSeverity.recovered
+    assert len(alerts) == 2
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.failed,
+        BitAlertSeverity.recovered,
+    ]
 
 
 @pytest.mark.asyncio
-async def test_alert_manager_debounce_replaces_pending():
-    """Verify rapid status changes result in single alert for final state"""
+async def test_alert_manager_debounce_emits_pending_before_recovery():
+    """Rapid recoveries should still emit the initial failure alert"""
     manager = AlertManager()
     bus = EventBus()
     manager.set_event_bus(bus)
@@ -319,9 +322,12 @@ async def test_alert_manager_debounce_replaces_pending():
         create_simple_result("test-1", BitStatus.ok, now + DEBOUNCE_WINDOW_MS + 3000)
     )
 
-    # Should only have recovery alert (the final state change)
-    assert len(alerts) == 1
-    assert alerts[0].severity == BitAlertSeverity.recovered
+    # Should emit both the failure and the subsequent recovery
+    assert len(alerts) == 2
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.failed,
+        BitAlertSeverity.recovered,
+    ]
 
 
 @pytest.mark.asyncio
