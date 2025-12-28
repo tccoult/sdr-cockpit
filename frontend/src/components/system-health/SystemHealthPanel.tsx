@@ -252,7 +252,7 @@ export function SystemHealthPanel({
                     size="sm"
                     onClick={() => setView(mode)}
                     className={cn(
-                      "px-3 text-xs font-medium transition",
+                      "px-3 text-sm font-medium transition",
                       "rounded-none first:rounded-l-md last:rounded-r-md",
                       index > 0 && "-ml-px"
                     )}
@@ -283,7 +283,7 @@ export function SystemHealthPanel({
                   <button
                     type="button"
                     className={cn(
-                      "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
+                      "flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-muted-foreground transition",
                       view === "tests"
                         ? "cursor-not-allowed opacity-50"
                         : "hover:bg-muted/70 hover:text-foreground"
@@ -298,14 +298,14 @@ export function SystemHealthPanel({
                     aria-disabled={view === "tests"}
                   >
                     Expand all
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       ⇲
                     </span>
                   </button>
                   <button
                     type="button"
                     className={cn(
-                      "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
+                      "flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-muted-foreground transition",
                       view === "tests"
                         ? "cursor-not-allowed opacity-50"
                         : "hover:bg-muted/70 hover:text-foreground"
@@ -320,7 +320,7 @@ export function SystemHealthPanel({
                     aria-disabled={view === "tests"}
                   >
                     Collapse all
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       ⇱
                     </span>
                   </button>

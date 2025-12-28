@@ -86,16 +86,16 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
         aria-expanded={isExpanded}
       >
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-muted-foreground">
+          <span className="text-sm font-semibold text-muted-foreground">
             Alerts
           </span>
           {!isExpanded && unreadCount > 0 && (
-            <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-warning">
+            <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-status-warning">
               {unreadCount} new
             </span>
           )}
           {isExpanded && alerts.length > 0 && (
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {alerts.length} recent
             </span>
           )}
@@ -148,7 +148,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
                       <p className="text-sm font-medium text-foreground leading-snug">
                         {alert.message}
                       </p>
-                      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <p className="mt-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                         {formatRelativeTimestamp(alert.timestamp)}
                       </p>
                     </div>
@@ -159,7 +159,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
           )}
         </div>
         {isMobile && alerts.length > visibleAlerts.length && (
-          <div className="border-t border-border/60 bg-muted/30 px-4 py-1.5 text-[11px] text-muted-foreground">
+          <div className="border-t border-border/60 bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">
             Showing {visibleAlerts.length} of {alerts.length} alerts
           </div>
         )}

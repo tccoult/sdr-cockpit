@@ -40,7 +40,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             <span className="text-[10px] font-semibold uppercase tracking-wide">
               Window minutes
             </span>
-            <span className="text-[11px] font-semibold text-foreground">
+            <span className="text-xs font-semibold text-foreground">
               {formatWholeMinutes(metrics.windowMinutes)}
             </span>
           </div>
@@ -48,7 +48,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             <span className="text-[10px] font-semibold uppercase tracking-wide">
               Degraded minutes
             </span>
-            <span className="text-[11px] font-semibold text-foreground">
+            <span className="text-xs font-semibold text-foreground">
               {formatMinutes(metrics.degradedMinutes)}
             </span>
           </div>
@@ -56,7 +56,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             <span className="text-[10px] font-semibold uppercase tracking-wide">
               Non-op minutes
             </span>
-            <span className="text-[11px] font-semibold text-foreground">
+            <span className="text-xs font-semibold text-foreground">
               {formatMinutes(metrics.nonOpMinutes)}
             </span>
           </div>
@@ -64,7 +64,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             <span className="text-[10px] font-semibold uppercase tracking-wide">
               Total test failures
             </span>
-            <span className="text-[11px] font-semibold text-foreground">
+            <span className="text-xs font-semibold text-foreground">
               {metrics.failureCount}
             </span>
           </div>
@@ -73,11 +73,11 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
               Top failing tests
             </span>
             {topFailingTests.length === 0 ? (
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 No failing tests in the selected window.
               </p>
             ) : (
-              <div className="mt-1 space-y-1 text-[11px]">
+              <div className="mt-1 space-y-1 text-xs">
                 {topFailingTests.map((test) => (
                   <div
                     key={test.testId}
