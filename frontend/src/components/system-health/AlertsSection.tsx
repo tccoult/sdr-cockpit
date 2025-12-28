@@ -57,7 +57,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
   );
 
   const visibleAlerts = useMemo(
-    () => (isMobile ? alerts.slice(0, 2) : alerts),
+    () => (isMobile ? alerts.slice(0, 8) : alerts),
     [alerts, isMobile]
   );
 
@@ -111,14 +111,16 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
         className={cn(
           "overflow-hidden transition-[max-height,opacity]",
           isExpanded
-            ? "max-h-40 opacity-100 duration-200 ease-out"
-            : "max-h-0 opacity-0 duration-150 ease-in"
+            ? "opacity-100 duration-200 ease-out"
+            : "max-h-0 opacity-0 duration-150 ease-in",
+          isExpanded && !isMobile && "max-h-40",
+          isExpanded && isMobile && "max-h-screen"
         )}
       >
         <div
           className={cn(
-            "max-h-[120px] overflow-y-auto border-t border-border/60 bg-card/40",
-            isMobile && "max-h-[96px]"
+            "border-t border-border/60 bg-card/40",
+            !isMobile && "max-h-[120px] overflow-y-auto"
           )}
         >
           {visibleAlerts.length === 0 ? (

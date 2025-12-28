@@ -18,6 +18,7 @@ interface RollupTreeViewProps {
   forcedExpandIds: string[];
   focusNodeId: string | null;
   onClearFocus: () => void;
+  isMobile?: boolean;
 }
 
 export function RollupTreeView({
@@ -31,6 +32,7 @@ export function RollupTreeView({
   forcedExpandIds,
   focusNodeId,
   onClearFocus,
+  isMobile = false,
 }: RollupTreeViewProps) {
   const autoExpandCondition = useMemo(() => {
     if (expandState !== "auto") return undefined;
@@ -80,11 +82,14 @@ export function RollupTreeView({
   );
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className={cn("flex flex-col", !isMobile && "h-full overflow-hidden")}>
       <div className="px-4 pb-3 pt-4">
         <SummaryBanner summary={summary} />
       </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-4" ref={containerRef}>
+      <div
+        className={cn("px-2 pb-4", !isMobile && "flex-1 overflow-y-auto")}
+        ref={containerRef}
+      >
         <TreeView<RollupDisplayNode>
           key={`${tree.id}-${expandState}`}
           data={tree}
