@@ -12,6 +12,12 @@ logger = logging.getLogger(__name__)
 # Debounce window in milliseconds
 DEBOUNCE_WINDOW_MS = 30_000  # 30 seconds
 
+SEVERITY_PRIORITY = {
+    BitAlertSeverity.failed: 3,
+    BitAlertSeverity.degraded: 2,
+    BitAlertSeverity.recovered: 1,
+}
+
 
 @dataclass
 class TestState:
@@ -45,10 +51,20 @@ class AlertManager:
             prev_state = self._test_states.get(test.id)
 
             if prev_state is None:
-                # First time seeing this test - initialize state, no alert
-                self._test_states[test.id] = TestState(
-                    status=test.status, last_change=now, pending_alert=None
+                # First time seeing this test - treat previous status as OK so we emit
+                # an alert if the initial observation is degraded or failed.
+                initial_alert = self._create_alert(
+                    test_id=test.id,
+                    test_name=test.name,
+                    prev_status=BitStatus.ok,
+                    new_status=test.status,
+                    timestamp=now,
                 )
+
+                prev_state = TestState(
+                    status=test.status, last_change=now, pending_alert=initial_alert
+                )
+                self._test_states[test.id] = prev_state
                 continue
 
             # Check if status changed
@@ -67,12 +83,19 @@ class AlertManager:
                         prev_state.pending_alert
                         and now - prev_state.last_change < DEBOUNCE_WINDOW_MS
                     ):
-                        # Replace pending alert with new one
-                        logger.debug(
-                            f"Replacing pending alert for {test.id}: "
-                            f"{prev_state.pending_alert.severity} -> {alert.severity}"
-                        )
-                        prev_state.pending_alert = alert
+                        pending = prev_state.pending_alert
+
+                        if self._is_more_severe(alert.severity, pending.severity):
+                            logger.debug(
+                                f"Replacing pending alert for {test.id}: "
+                                f"{pending.severity} -> {alert.severity}"
+                            )
+                            prev_state.pending_alert = alert
+                        else:
+                            # Emit the pending alert so we don't lose the failure/degradation
+                            # that triggered it, then track the recovery/de-escalation.
+                            await self._emit_alert(pending)
+                            prev_state.pending_alert = alert
                         prev_state.status = test.status
                         prev_state.last_change = now
                     else:
@@ -117,6 +140,11 @@ class AlertManager:
             severity=severity,
             message=message,
         )
+
+    def _is_more_severe(self, new: BitAlertSeverity, existing: BitAlertSeverity) -> bool:
+        """Return True if new severity is higher priority than existing"""
+
+        return SEVERITY_PRIORITY[new] > SEVERITY_PRIORITY[existing]
 
     def _determine_severity(
         self, prev_status: BitStatus, new_status: BitStatus
