@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload, ExternalLink, Info } from 'lucide-react'
+import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload, BadgeInfo } from 'lucide-react'
 import { SettingsMenuItem } from '../settings/SettingsMenu'
 
 export type MobileView = 'visualization' | 'tasks' | 'health'
@@ -102,11 +102,6 @@ export function MobileNav({
 }: MobileNavProps) {
   if (!isOpen) return null
 
-  const grafanaUrl =
-    typeof window === 'undefined'
-      ? 'http://localhost:3000'
-      : `http://${window.location.hostname}:3000`
-
   const handleViewChange = (view: MobileView) => {
     onViewChange(view)
     onClose()
@@ -194,7 +189,7 @@ export function MobileNav({
               onClick={() => handleSettingsClick('system')}
             />
             <SettingsItem
-              icon={<Info size={20} />}
+              icon={<BadgeInfo size={20} />}
               label="Version Info"
               onClick={() => handleSettingsClick('version')}
             />
@@ -202,12 +197,6 @@ export function MobileNav({
               icon={<Upload size={20} />}
               label="System Update"
               onClick={() => handleSettingsClick('update')}
-            />
-            <SettingsItem
-              icon={<ExternalLink size={20} />}
-              label="Open Grafana Dashboard"
-              href={grafanaUrl}
-              onClick={onClose}
             />
             <button
               type="button"
