@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload, ExternalLink } from 'lucide-react'
+import { X, BarChart3, ListTodo, Activity, Settings, Sun, Moon, Upload, ExternalLink, Info } from 'lucide-react'
 import { SettingsMenuItem } from '../settings/SettingsMenu'
 
 export type MobileView = 'visualization' | 'tasks' | 'health'
@@ -194,12 +194,7 @@ export function MobileNav({
               onClick={() => handleSettingsClick('system')}
             />
             <SettingsItem
-              icon={<Settings size={20} />}
-              label="Display Settings"
-              onClick={() => handleSettingsClick('display')}
-            />
-            <SettingsItem
-              icon={<Settings size={20} />}
+              icon={<Info size={20} />}
               label="Version Info"
               onClick={() => handleSettingsClick('version')}
             />
