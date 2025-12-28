@@ -1,4 +1,4 @@
-import { MoreVertical } from "lucide-react";
+import { ChevronDown, MoreVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BitAlertList, BitHealthMetrics, BitResult, BitTest } from "../../services/api";
@@ -37,6 +37,7 @@ export function SystemHealthPanel({
   metrics,
 }: SystemHealthPanelProps) {
   const isMobile = useMobile();
+  const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [view, setView] = useState<PanelView>("tests");
   const [expandState, setExpandState] = useState<"auto" | "all" | "none">(
     "auto"
@@ -214,101 +215,119 @@ export function SystemHealthPanel({
       <div className="flex h-full flex-col overflow-hidden rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15">
         <div className="px-4 pt-4 pb-2">
           <h3 className="text-sm font-semibold text-foreground">Built-In Test</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Last updated {formatRelativeTimestamp(bitResult.timestamp)}
-          </p>
+          <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>Last updated {formatRelativeTimestamp(bitResult.timestamp)}</span>
+            <button
+              type="button"
+              className="group inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+              onClick={() => setMetricsExpanded((prev) => !prev)}
+              aria-expanded={metricsExpanded}
+              aria-label="Toggle metrics details"
+              title="Metrics"
+            >
+              <span className="text-[10px] uppercase tracking-wide opacity-0 transition-opacity group-hover:opacity-100">
+                Metrics
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  metricsExpanded && "rotate-180"
+                )}
+              />
+            </button>
+          </div>
         </div>
-        <MetricsSummary metrics={metrics} />
+        <MetricsSummary metrics={metrics} isExpanded={metricsExpanded} />
+        <div className="border-t border-border/70" />
         <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
         <div className="border-t border-border/70" />
-        <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-2">
-          <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
-            {(["tests", "function", "hardware"] as PanelView[]).map(
-              (mode, index) => (
-                <Button
-                  key={mode}
-                  variant={view === mode ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setView(mode)}
-                  className={cn(
-                    "px-3 text-xs font-medium transition",
-                    "rounded-none first:rounded-l-md last:rounded-r-md",
-                    index > 0 && "-ml-px"
-                  )}
-                >
-                  {mode === "tests"
-                    ? "Tests"
-                    : mode === "function"
-                    ? "Function"
-                    : "Hardware"}
-                </Button>
-              )
-            )}
-          </div>
-          <div className="relative" ref={menuRef}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-10 p-0"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((prev) => !prev)}
-            >
-              <MoreVertical className="h-5 w-5" />
-              <span className="sr-only">Built-In Test actions</span>
-            </Button>
-            {menuOpen && (
-              <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-md border border-border/70 bg-card shadow-lg">
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
-                    view === "tests"
-                      ? "cursor-not-allowed opacity-50"
-                      : "hover:bg-muted/70 hover:text-foreground"
-                  )}
-                  onClick={() => {
-                    if (view === "tests") return;
-                    setExpandState("all");
-                    setForcedExpand(null);
-                    setFocusRequest(null);
-                    setMenuOpen(false);
-                  }}
-                  aria-disabled={view === "tests"}
-                >
-                  Expand all
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    ⇲
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
-                    view === "tests"
-                      ? "cursor-not-allowed opacity-50"
-                      : "hover:bg-muted/70 hover:text-foreground"
-                  )}
-                  onClick={() => {
-                    if (view === "tests") return;
-                    setExpandState("none");
-                    setForcedExpand(null);
-                    setFocusRequest(null);
-                    setMenuOpen(false);
-                  }}
-                  aria-disabled={view === "tests"}
-                >
-                  Collapse all
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    ⇱
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="border-t border-border/70" />
         <div className="flex-1 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3">
+            <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
+              {(["tests", "function", "hardware"] as PanelView[]).map(
+                (mode, index) => (
+                  <Button
+                    key={mode}
+                    variant={view === mode ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setView(mode)}
+                    className={cn(
+                      "px-3 text-xs font-medium transition",
+                      "rounded-none first:rounded-l-md last:rounded-r-md",
+                      index > 0 && "-ml-px"
+                    )}
+                  >
+                    {mode === "tests"
+                      ? "Tests"
+                      : mode === "function"
+                      ? "Function"
+                      : "Hardware"}
+                  </Button>
+                )
+              )}
+            </div>
+            <div className="relative" ref={menuRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-10 p-0"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((prev) => !prev)}
+              >
+                <MoreVertical className="h-5 w-5" />
+                <span className="sr-only">Built-In Test actions</span>
+              </Button>
+              {menuOpen && (
+                <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-md border border-border/70 bg-card shadow-lg">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
+                      view === "tests"
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:bg-muted/70 hover:text-foreground"
+                    )}
+                    onClick={() => {
+                      if (view === "tests") return;
+                      setExpandState("all");
+                      setForcedExpand(null);
+                      setFocusRequest(null);
+                      setMenuOpen(false);
+                    }}
+                    aria-disabled={view === "tests"}
+                  >
+                    Expand all
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      ⇲
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground transition",
+                      view === "tests"
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:bg-muted/70 hover:text-foreground"
+                    )}
+                    onClick={() => {
+                      if (view === "tests") return;
+                      setExpandState("none");
+                      setForcedExpand(null);
+                      setFocusRequest(null);
+                      setMenuOpen(false);
+                    }}
+                    aria-disabled={view === "tests"}
+                  >
+                    Collapse all
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      ⇱
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
           {view === "tests" && (
             <TestsView
               tests={sortedTests}

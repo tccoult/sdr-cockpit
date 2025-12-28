@@ -75,7 +75,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
   }, [isExpanded, latestTimestamp, lastReadTimestamp]);
 
   return (
-    <div className="border-t border-border/70">
+    <div>
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left"
@@ -145,7 +145,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
                       <Icon className="h-3 w-3" />
                     </span>
                     <div className="flex-1">
-                      <p className="text-xs font-medium text-foreground leading-snug">
+                      <p className="text-sm font-medium text-foreground leading-snug">
                         {alert.message}
                       </p>
                       <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
