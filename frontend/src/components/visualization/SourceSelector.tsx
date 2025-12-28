@@ -96,7 +96,7 @@ export function SourceSelector({
     'inline-flex items-center gap-2 rounded-sm border px-3 py-1.5',
     'border-viz-border/50 bg-transparent text-viz-text transition',
     'hover:bg-viz-bg/70 hover:border-viz-border',
-    'text-[11px] font-medium sm:text-xs',
+    'text-xs font-medium',
   ].join(' ');
 
   return (
@@ -137,11 +137,11 @@ export function SourceSelector({
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-medium">{source.name}</span>
-                        <span className="rounded px-1 py-0.5 text-[9px] font-medium uppercase bg-muted text-muted-foreground">
+                        <span className="rounded px-1 py-0.5 text-xs font-medium uppercase bg-muted text-muted-foreground">
                           {source.typeLabel}
                         </span>
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {formatFrequency(source.centerFrequency)} • {formatSampleRate(source.sampleRate)}
                       </div>
                     </div>

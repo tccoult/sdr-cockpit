@@ -90,12 +90,12 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
             Alerts
           </span>
           {!isExpanded && unreadCount > 0 && (
-            <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-status-warning">
+            <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-status-warning">
               {unreadCount} new
             </span>
           )}
           {isExpanded && alerts.length > 0 && (
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {alerts.length} recent
             </span>
           )}

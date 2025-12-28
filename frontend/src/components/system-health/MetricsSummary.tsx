@@ -37,7 +37,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
         )}
       >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-wide">
               Window minutes
             </span>
             <span className="text-xs font-semibold text-foreground">
@@ -45,7 +45,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             </span>
           </div>
           <div className="mt-1 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-wide">
               Degraded minutes
             </span>
             <span className="text-xs font-semibold text-foreground">
@@ -53,7 +53,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             </span>
           </div>
           <div className="mt-1 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-wide">
               Non-op minutes
             </span>
             <span className="text-xs font-semibold text-foreground">
@@ -61,7 +61,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             </span>
           </div>
           <div className="mt-1 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-wide">
               Total test failures
             </span>
             <span className="text-xs font-semibold text-foreground">
@@ -69,7 +69,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
             </span>
           </div>
           <div className="mt-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide">
+            <span className="text-xs font-semibold uppercase tracking-wide">
               Top failing tests
             </span>
             {topFailingTests.length === 0 ? (

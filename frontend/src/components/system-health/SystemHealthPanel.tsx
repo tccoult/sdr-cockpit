@@ -225,7 +225,7 @@ export function SystemHealthPanel({
               aria-label="Toggle metrics details"
               title="Metrics"
             >
-              <span className="text-[10px] uppercase tracking-wide opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="text-xs uppercase tracking-wide opacity-0 transition-opacity group-hover:opacity-100">
                 Metrics
               </span>
               <ChevronDown
@@ -298,7 +298,7 @@ export function SystemHealthPanel({
                     aria-disabled={view === "tests"}
                   >
                     Expand all
-                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
                       ⇲
                     </span>
                   </button>
@@ -320,7 +320,7 @@ export function SystemHealthPanel({
                     aria-disabled={view === "tests"}
                   >
                     Collapse all
-                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
                       ⇱
                     </span>
                   </button>

@@ -28,7 +28,7 @@ function SummaryChip({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide",
+        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide",
         STATUS_TOKENS[status].tint,
         STATUS_TOKENS[status].badge
       )}
@@ -44,7 +44,7 @@ export function StatusBadge({ status }: { status: BitStatus }) {
   return (
     <span
       className={cn(
-        "text-[11px] font-semibold uppercase tracking-wide",
+        "text-xs font-semibold uppercase tracking-wide",
         STATUS_TOKENS[status].badge
       )}
     >
