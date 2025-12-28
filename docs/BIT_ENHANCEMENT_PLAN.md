@@ -164,6 +164,10 @@ Returns health metrics over a time window.
 Query params:
 - `window_minutes`: Time window (default: 240 = 4 hours)
 
+Notes:
+- `snapshotCount` is the number of samples in the window (not time-weighted).
+- `topFailingTests` uses time-weighted `failMinutes`.
+
 Response:
 ```json
 {
