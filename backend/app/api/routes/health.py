@@ -42,7 +42,7 @@ async def get_bit_alerts(
 
 @router.get("/bit/metrics", response_model=BitHealthMetrics)
 async def get_bit_metrics(request: Request, window_minutes: int = 240) -> BitHealthMetrics:
-    """Get health metrics over a time window (from in-memory tracking)"""
+    """Get health metrics over a time window (from rollup tables)"""
     storage: BitStorage = request.app.state.bit_storage
     return storage.get_metrics(window_minutes=window_minutes)
 

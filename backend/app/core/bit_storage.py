@@ -1,4 +1,4 @@
-"""SQLite persistence layer for BIT results and alerts with in-memory metrics tracking"""
+"""SQLite persistence layer for BIT results and alerts with rollup metrics tracking"""
 
 import asyncio
 import glob
@@ -6,11 +6,10 @@ import logging
 import os
 import sqlite3
 import time
-from collections import deque
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Deque, Generator, Optional, Tuple
+from typing import Generator, Optional
 
 from app.config.settings import Settings
 from app.models.generated import (
@@ -27,12 +26,6 @@ logger = logging.getLogger(__name__)
 
 # Retention period in milliseconds (7 days)
 RETENTION_MS = 7 * 24 * 60 * 60 * 1000
-
-# Max window for in-memory metrics (24 hours in ms)
-MAX_METRICS_WINDOW_MS = 24 * 60 * 60 * 1000
-
-# Snapshot interval for time calculations (seconds)
-SNAPSHOT_INTERVAL_SECONDS = 2.5
 
 # Status integer mappings (more efficient than strings in DB)
 STATUS_INT = {
@@ -53,7 +46,7 @@ INT_SEVERITY = {v: k for k, v in SEVERITY_INT.items()}
 
 
 class BitStorage:
-    """SQLite storage for BIT snapshots and alerts with in-memory metrics"""
+    """SQLite storage for BIT snapshots, alerts, and rollup metrics"""
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -62,15 +55,15 @@ class BitStorage:
         self.db_path = self.db_dir / "bit_history.db"
         self._test_names: dict[str, str] = {}  # Cache test_id -> name
         self._latest_result: Optional[BitResult] = None
-        self._last_rotation_check = time.time()
-
-        # In-memory metrics tracking: deque of (timestamp_ms, status_int)
-        self._status_history: Deque[Tuple[int, int]] = deque()
-        # Track failure alerts count in memory too
-        self._alert_timestamps: Deque[int] = deque()  # timestamps of 'failed' alerts
+        self._last_rotation_check_monotonic = time.monotonic()
+        self._last_snapshot_ts_ms: Optional[int] = None
+        self._last_snapshot_status: Optional[int] = None
+        self._last_snapshot_mono_ms: Optional[float] = None
+        self._last_test_status: dict[str, int] = {}
 
         self._init_db()
-        self._load_recent_history()
+        self._load_last_snapshot_state()
+        self._load_test_names()
 
         logger.info(
             f"BIT database initialized at {self.db_path} "
@@ -100,6 +93,11 @@ class BitStorage:
         with self._get_connection() as conn:
             conn.executescript(
                 """
+                CREATE TABLE IF NOT EXISTS bit_tests (
+                    test_id TEXT PRIMARY KEY,
+                    test_name TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS bit_snapshots (
                     id INTEGER PRIMARY KEY,
                     timestamp INTEGER NOT NULL,
@@ -133,62 +131,61 @@ class BitStorage:
                 );
                 CREATE INDEX IF NOT EXISTS idx_alerts_timestamp
                     ON bit_alerts(timestamp);
+
+                CREATE TABLE IF NOT EXISTS bit_metrics_rollups (
+                    bucket_start INTEGER NOT NULL,
+                    bucket_ms INTEGER NOT NULL,
+                    ok_ms INTEGER NOT NULL DEFAULT 0,
+                    warn_ms INTEGER NOT NULL DEFAULT 0,
+                    fail_ms INTEGER NOT NULL DEFAULT 0,
+                    sample_count INTEGER NOT NULL DEFAULT 0,
+                    fail_alert_count INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (bucket_start, bucket_ms)
+                );
+                CREATE INDEX IF NOT EXISTS idx_metrics_rollups_bucket
+                    ON bit_metrics_rollups(bucket_start);
+
+                CREATE TABLE IF NOT EXISTS bit_test_rollups (
+                    bucket_start INTEGER NOT NULL,
+                    bucket_ms INTEGER NOT NULL,
+                    test_id TEXT NOT NULL,
+                    ok_ms INTEGER NOT NULL DEFAULT 0,
+                    warn_ms INTEGER NOT NULL DEFAULT 0,
+                    fail_ms INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (bucket_start, bucket_ms, test_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_test_rollups_bucket
+                    ON bit_test_rollups(bucket_start);
                 """
             )
             conn.commit()
 
-    def _load_recent_history(self) -> None:
-        """Load recent history from DB to initialize in-memory state"""
-        now = int(time.time() * 1000)
-        since = now - MAX_METRICS_WINDOW_MS
-
+    def _load_last_snapshot_state(self) -> None:
+        """Load latest snapshot state to seed rollup attribution"""
         with self._get_connection() as conn:
-            # Load snapshot status history
-            rows = conn.execute(
-                "SELECT timestamp, overall_status FROM bit_snapshots WHERE timestamp >= ? ORDER BY timestamp",
-                (since,),
-            ).fetchall()
+            row = conn.execute(
+                "SELECT id, timestamp, overall_status FROM bit_snapshots ORDER BY timestamp DESC LIMIT 1"
+            ).fetchone()
+            if row is None:
+                return
 
+            self._last_snapshot_ts_ms = row["timestamp"]
+            self._last_snapshot_status = row["overall_status"]
+            self._last_snapshot_mono_ms = time.monotonic() * 1000
+
+            test_rows = conn.execute(
+                "SELECT test_id, status FROM bit_test_results WHERE snapshot_id = ?",
+                (row["id"],),
+            ).fetchall()
+            for test_row in test_rows:
+                self._last_test_status[test_row["test_id"]] = test_row["status"]
+
+    def _load_test_names(self) -> None:
+        """Load persisted test names"""
+        with self._get_connection() as conn:
+            rows = conn.execute("SELECT test_id, test_name FROM bit_tests").fetchall()
             for row in rows:
-                self._status_history.append((row["timestamp"], row["overall_status"]))
-
-            # Load failure alert timestamps
-            alert_rows = conn.execute(
-                "SELECT timestamp FROM bit_alerts WHERE timestamp >= ? AND severity = ?",
-                (since, SEVERITY_INT[BitAlertSeverity.failed]),
-            ).fetchall()
-
-            for row in alert_rows:
-                self._alert_timestamps.append(row["timestamp"])
-
-            # Load test names
-            name_rows = conn.execute(
-                """
-                SELECT DISTINCT r.test_id, r.test_id as name
-                FROM bit_test_results r
-                JOIN bit_snapshots s ON r.snapshot_id = s.id
-                WHERE s.timestamp >= ?
-                """,
-                (since,),
-            ).fetchall()
-
-            for row in name_rows:
-                self._test_names[row["test_id"]] = row["name"]
-
-        logger.info(
-            f"Loaded {len(self._status_history)} snapshots and "
-            f"{len(self._alert_timestamps)} failure alerts from history"
-        )
-
-    def _expire_old_entries(self, now_ms: int) -> None:
-        """Remove entries older than max window from in-memory tracking"""
-        cutoff = now_ms - MAX_METRICS_WINDOW_MS
-
-        while self._status_history and self._status_history[0][0] < cutoff:
-            self._status_history.popleft()
-
-        while self._alert_timestamps and self._alert_timestamps[0] < cutoff:
-            self._alert_timestamps.popleft()
+                self._test_names[row["test_id"]] = row["test_name"]
 
     def _should_rotate(self) -> bool:
         """Check if database should be rotated based on time or size"""
@@ -197,7 +194,7 @@ class BitStorage:
 
         # Check rotation interval
         rotation_interval_seconds = self.settings.bit_rotation_hours * 3600
-        time_since_check = time.time() - self._last_rotation_check
+        time_since_check = time.monotonic() - self._last_rotation_check_monotonic
         if time_since_check >= rotation_interval_seconds:
             logger.info(
                 f"Rotation triggered by time: {time_since_check:.0f}s >= {rotation_interval_seconds}s"
@@ -232,7 +229,7 @@ class BitStorage:
         self._init_db()
 
         # Update rotation timestamp
-        self._last_rotation_check = time.time()
+        self._last_rotation_check_monotonic = time.monotonic()
 
         # Clean up old rotated files
         self._cleanup_old_rotations()
@@ -261,11 +258,6 @@ class BitStorage:
         """Handle incoming BIT result - cache, track in memory, and store in database"""
         self._latest_result = result
 
-        # Update in-memory tracking
-        status_int = STATUS_INT[result.overall_status]
-        self._status_history.append((result.timestamp, status_int))
-        self._expire_old_entries(result.timestamp)
-
         # Cache test names
         for test in result.tests:
             self._test_names[test.id] = test.name
@@ -279,10 +271,14 @@ class BitStorage:
         # Check if rotation is needed before writing
         self._check_and_rotate()
 
+        snapshot_status = STATUS_INT[result.overall_status]
+        now_mono_ms = time.monotonic() * 1000
+        current_test_status = {test.id: STATUS_INT[test.status] for test in result.tests}
+
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "INSERT INTO bit_snapshots (timestamp, overall_status) VALUES (?, ?)",
-                (result.timestamp, STATUS_INT[result.overall_status]),
+                (result.timestamp, snapshot_status),
             )
             snapshot_id = cursor.lastrowid
 
@@ -295,15 +291,26 @@ class BitStorage:
                     (snapshot_id, test.id, STATUS_INT[test.status], test.duration_ms),
                 )
 
+            for test in result.tests:
+                conn.execute(
+                    """
+                    INSERT INTO bit_tests (test_id, test_name)
+                    VALUES (?, ?)
+                    ON CONFLICT(test_id) DO UPDATE SET test_name = excluded.test_name
+                    """,
+                    (test.id, test.name),
+                )
+
+            self._update_rollups(conn, result.timestamp, now_mono_ms)
             conn.commit()
+
+        self._last_snapshot_ts_ms = result.timestamp
+        self._last_snapshot_status = snapshot_status
+        self._last_snapshot_mono_ms = now_mono_ms
+        self._last_test_status = current_test_status
 
     async def handle_alert(self, alert: BitAlert) -> None:
         """Handle incoming alert - track in memory and store in database"""
-        # Track failure alerts in memory
-        if alert.severity == BitAlertSeverity.failed:
-            self._alert_timestamps.append(alert.timestamp)
-            self._expire_old_entries(alert.timestamp)
-
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._store_alert, alert)
 
@@ -331,6 +338,9 @@ class BitStorage:
                     alert.message,
                 ),
             )
+
+            if alert.severity == BitAlertSeverity.failed:
+                self._increment_failure_alert_count(conn, alert.timestamp)
             conn.commit()
 
     def get_alerts(
@@ -386,41 +396,47 @@ class BitStorage:
             return alerts, total_count
 
     def get_metrics(self, window_minutes: int = 240) -> BitHealthMetrics:
-        """Calculate health metrics from in-memory tracking"""
-        now = int(time.time() * 1000)
+        """Calculate health metrics from rollup tables"""
+        now = (
+            self._latest_result.timestamp
+            if self._latest_result is not None
+            else int(time.time() * 1000)
+        )
         since = now - (window_minutes * 60 * 1000)
+        bucket_ms = self.settings.bit_rollup_bucket_ms
+        bucket_floor = since - (since % bucket_ms)
 
-        # Count from in-memory status history
-        operational = 0
-        degraded = 0
-        non_op = 0
+        with self._get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT
+                    COALESCE(SUM(ok_ms), 0) as ok_ms,
+                    COALESCE(SUM(warn_ms), 0) as warn_ms,
+                    COALESCE(SUM(fail_ms), 0) as fail_ms,
+                    COALESCE(SUM(sample_count), 0) as sample_count,
+                    COALESCE(SUM(fail_alert_count), 0) as fail_alert_count
+                FROM bit_metrics_rollups
+                WHERE bucket_start >= ? AND bucket_start <= ?
+                """,
+                (bucket_floor, now),
+            ).fetchone()
 
-        for timestamp, status_int in self._status_history:
-            if timestamp >= since:
-                if status_int == STATUS_INT[BitStatus.ok]:
-                    operational += 1
-                elif status_int == STATUS_INT[BitStatus.warn]:
-                    degraded += 1
-                elif status_int == STATUS_INT[BitStatus.fail]:
-                    non_op += 1
+        ok_ms = row["ok_ms"]
+        warn_ms = row["warn_ms"]
+        fail_ms = row["fail_ms"]
+        total_ms = ok_ms + warn_ms + fail_ms
 
-        total = operational + degraded + non_op
+        operational_percent = (ok_ms / total_ms * 100) if total_ms > 0 else 100.0
+        degraded_minutes = warn_ms / 60000
+        non_op_minutes = fail_ms / 60000
+        snapshot_count = row["sample_count"]
+        failure_count = row["fail_alert_count"]
 
-        # Calculate percentages and time
-        snapshot_interval_minutes = SNAPSHOT_INTERVAL_SECONDS / 60
-        operational_percent = (operational / total * 100) if total > 0 else 100.0
-        degraded_minutes = degraded * snapshot_interval_minutes
-        non_op_minutes = non_op * snapshot_interval_minutes
-
-        # Count failure alerts from in-memory tracking
-        failure_count = sum(1 for ts in self._alert_timestamps if ts >= since)
-
-        # Top failing tests still needs DB query (complex aggregation)
-        top_failing_tests = self._get_top_failing_tests(since)
+        top_failing_tests = self._get_top_failing_tests(bucket_floor)
 
         return BitHealthMetrics(
             windowMinutes=window_minutes,
-            snapshotCount=total,
+            snapshotCount=snapshot_count,
             operationalPercent=round(operational_percent, 2),
             degradedMinutes=round(degraded_minutes, 2),
             nonOpMinutes=round(non_op_minutes, 2),
@@ -428,29 +444,31 @@ class BitStorage:
             topFailingTests=top_failing_tests,
         )
 
-    def _get_top_failing_tests(self, since: int) -> list[TestFailureCount]:
-        """Get top failing tests from DB (still needs aggregation query)"""
+    def _get_top_failing_tests(self, bucket_floor: int) -> list[TestFailureCount]:
+        """Get top failing tests from rollup durations"""
         with self._get_connection() as conn:
             rows = conn.execute(
                 """
-                SELECT test_id, COUNT(*) as fail_count
-                FROM bit_test_results
-                WHERE snapshot_id IN (
-                    SELECT id FROM bit_snapshots WHERE timestamp >= ?
-                )
-                AND status = ?
-                GROUP BY test_id
-                ORDER BY fail_count DESC
-                LIMIT 5
+                SELECT
+                    r.test_id,
+                    COALESCE(SUM(r.fail_ms), 0) as fail_ms,
+                    COALESCE(t.test_name, r.test_id) as test_name
+                FROM bit_test_rollups r
+                LEFT JOIN bit_tests t ON t.test_id = r.test_id
+                WHERE r.bucket_start >= ?
+                GROUP BY r.test_id
+                HAVING fail_ms > 0
+                ORDER BY fail_ms DESC
+                LIMIT ?
                 """,
-                (since, STATUS_INT[BitStatus.fail]),
+                (bucket_floor, self.settings.bit_top_failing_tests),
             ).fetchall()
 
             return [
                 TestFailureCount(
                     testId=row["test_id"],
-                    testName=self._test_names.get(row["test_id"], row["test_id"]),
-                    failCount=row["fail_count"],
+                    testName=row["test_name"],
+                    failMinutes=round(row["fail_ms"] / 60000, 2),
                 )
                 for row in rows
             ]
@@ -509,9 +527,180 @@ class BitStorage:
             cursor = conn.execute("DELETE FROM bit_alerts WHERE timestamp < ?", (cutoff,))
             alerts_deleted = cursor.rowcount
 
+            # Delete old rollups
+            cursor = conn.execute(
+                "DELETE FROM bit_metrics_rollups WHERE bucket_start < ?", (cutoff,)
+            )
+            metrics_deleted = cursor.rowcount
+            cursor = conn.execute("DELETE FROM bit_test_rollups WHERE bucket_start < ?", (cutoff,))
+            test_rollups_deleted = cursor.rowcount
+
             conn.commit()
 
-            if snapshots_deleted > 0 or alerts_deleted > 0:
-                logger.info(f"Cleaned up {snapshots_deleted} snapshots and {alerts_deleted} alerts")
+            if snapshots_deleted > 0 or alerts_deleted > 0 or metrics_deleted > 0:
+                logger.info(
+                    "Cleaned up "
+                    f"{snapshots_deleted} snapshots, {alerts_deleted} alerts, "
+                    f"{metrics_deleted} metrics buckets, {test_rollups_deleted} test rollups"
+                )
 
-            return snapshots_deleted + alerts_deleted
+            return snapshots_deleted + alerts_deleted + metrics_deleted + test_rollups_deleted
+
+    def _update_rollups(
+        self,
+        conn: sqlite3.Connection,
+        current_ts_ms: int,
+        current_mono_ms: float,
+    ) -> None:
+        """Update rollup tables using time-weighted durations."""
+        self._increment_sample_count(conn, current_ts_ms)
+
+        if (
+            self._last_snapshot_ts_ms is None
+            or self._last_snapshot_status is None
+            or self._last_snapshot_mono_ms is None
+        ):
+            return
+
+        event_delta = current_ts_ms - self._last_snapshot_ts_ms
+        mono_delta = current_mono_ms - self._last_snapshot_mono_ms
+
+        if event_delta < -self.settings.bit_clock_backward_jump_ms:
+            logger.warning("BIT clock moved backward; skipping rollup attribution")
+            return
+        if event_delta > self.settings.bit_clock_forward_jump_ms:
+            logger.warning("BIT clock jumped forward; skipping rollup attribution")
+            return
+        if event_delta <= 0:
+            logger.warning("BIT timestamp did not advance; skipping rollup attribution")
+            return
+        if mono_delta <= 0:
+            logger.warning("Monotonic clock moved backward; skipping rollup attribution")
+            return
+
+        if self._last_snapshot_status in (
+            STATUS_INT[BitStatus.ok],
+            STATUS_INT[BitStatus.warn],
+            STATUS_INT[BitStatus.fail],
+        ):
+            self._attribute_duration(
+                conn,
+                self._last_snapshot_ts_ms,
+                current_ts_ms,
+                self._last_snapshot_status,
+                None,
+            )
+
+        for test_id, last_status in self._last_test_status.items():
+            if last_status not in (
+                STATUS_INT[BitStatus.ok],
+                STATUS_INT[BitStatus.warn],
+                STATUS_INT[BitStatus.fail],
+            ):
+                continue
+            self._attribute_duration(
+                conn, self._last_snapshot_ts_ms, current_ts_ms, last_status, test_id
+            )
+
+    def _attribute_duration(
+        self,
+        conn: sqlite3.Connection,
+        start_ms: int,
+        end_ms: int,
+        status_int: int,
+        test_id: Optional[str],
+    ) -> None:
+        """Attribute time duration to rollup buckets."""
+        if end_ms <= start_ms:
+            return
+
+        bucket_ms = self.settings.bit_rollup_bucket_ms
+        current = start_ms
+        while current < end_ms:
+            bucket_start = current - (current % bucket_ms)
+            bucket_end = bucket_start + bucket_ms
+            segment_end = min(end_ms, bucket_end)
+            duration_ms = segment_end - current
+            if duration_ms <= 0:
+                break
+
+            if test_id is None:
+                self._upsert_metrics_rollup(conn, bucket_start, duration_ms, status_int)
+            else:
+                self._upsert_test_rollup(conn, bucket_start, duration_ms, status_int, test_id)
+
+            current = segment_end
+
+    def _upsert_metrics_rollup(
+        self, conn: sqlite3.Connection, bucket_start: int, duration_ms: int, status_int: int
+    ) -> None:
+        ok_ms = duration_ms if status_int == STATUS_INT[BitStatus.ok] else 0
+        warn_ms = duration_ms if status_int == STATUS_INT[BitStatus.warn] else 0
+        fail_ms = duration_ms if status_int == STATUS_INT[BitStatus.fail] else 0
+        conn.execute(
+            """
+            INSERT INTO bit_metrics_rollups (bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(bucket_start, bucket_ms) DO UPDATE SET
+                ok_ms = ok_ms + excluded.ok_ms,
+                warn_ms = warn_ms + excluded.warn_ms,
+                fail_ms = fail_ms + excluded.fail_ms
+            """,
+            (bucket_start, self.settings.bit_rollup_bucket_ms, ok_ms, warn_ms, fail_ms),
+        )
+
+    def _upsert_test_rollup(
+        self,
+        conn: sqlite3.Connection,
+        bucket_start: int,
+        duration_ms: int,
+        status_int: int,
+        test_id: str,
+    ) -> None:
+        ok_ms = duration_ms if status_int == STATUS_INT[BitStatus.ok] else 0
+        warn_ms = duration_ms if status_int == STATUS_INT[BitStatus.warn] else 0
+        fail_ms = duration_ms if status_int == STATUS_INT[BitStatus.fail] else 0
+        conn.execute(
+            """
+            INSERT INTO bit_test_rollups (bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(bucket_start, bucket_ms, test_id) DO UPDATE SET
+                ok_ms = ok_ms + excluded.ok_ms,
+                warn_ms = warn_ms + excluded.warn_ms,
+                fail_ms = fail_ms + excluded.fail_ms
+            """,
+            (
+                bucket_start,
+                self.settings.bit_rollup_bucket_ms,
+                test_id,
+                ok_ms,
+                warn_ms,
+                fail_ms,
+            ),
+        )
+
+    def _increment_sample_count(self, conn: sqlite3.Connection, timestamp_ms: int) -> None:
+        bucket_ms = self.settings.bit_rollup_bucket_ms
+        bucket_start = timestamp_ms - (timestamp_ms % bucket_ms)
+        conn.execute(
+            """
+            INSERT INTO bit_metrics_rollups (bucket_start, bucket_ms, sample_count)
+            VALUES (?, ?, 1)
+            ON CONFLICT(bucket_start, bucket_ms) DO UPDATE SET
+                sample_count = sample_count + 1
+            """,
+            (bucket_start, bucket_ms),
+        )
+
+    def _increment_failure_alert_count(self, conn: sqlite3.Connection, timestamp_ms: int) -> None:
+        bucket_ms = self.settings.bit_rollup_bucket_ms
+        bucket_start = timestamp_ms - (timestamp_ms % bucket_ms)
+        conn.execute(
+            """
+            INSERT INTO bit_metrics_rollups (bucket_start, bucket_ms, fail_alert_count)
+            VALUES (?, ?, 1)
+            ON CONFLICT(bucket_start, bucket_ms) DO UPDATE SET
+                fail_alert_count = fail_alert_count + 1
+            """,
+            (bucket_start, bucket_ms),
+        )

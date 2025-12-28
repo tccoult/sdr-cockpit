@@ -71,6 +71,10 @@ class Settings:
     bit_rotation_hours: int = 24
     bit_max_file_size_mb: int = 100
     bit_max_files: int = 7
+    bit_rollup_bucket_ms: int = 10_000
+    bit_top_failing_tests: int = 3
+    bit_clock_forward_jump_ms: int = 60 * 60 * 1000
+    bit_clock_backward_jump_ms: int = 30 * 1000
 
 
 @lru_cache()
@@ -86,6 +90,14 @@ def get_settings() -> Settings:
         bit_rotation_hours=_parse_int(os.getenv("SDR_BIT_ROTATION_HOURS"), 24),
         bit_max_file_size_mb=_parse_int(os.getenv("SDR_BIT_MAX_FILE_SIZE_MB"), 100),
         bit_max_files=_parse_int(os.getenv("SDR_BIT_MAX_FILES"), 7),
+        bit_rollup_bucket_ms=_parse_int(os.getenv("SDR_BIT_ROLLUP_BUCKET_MS"), 10_000),
+        bit_top_failing_tests=_parse_int(os.getenv("SDR_BIT_TOP_FAILING_TESTS"), 3),
+        bit_clock_forward_jump_ms=_parse_int(
+            os.getenv("SDR_BIT_CLOCK_FORWARD_JUMP_MS"), 60 * 60 * 1000
+        ),
+        bit_clock_backward_jump_ms=_parse_int(
+            os.getenv("SDR_BIT_CLOCK_BACKWARD_JUMP_MS"), 30 * 1000
+        ),
     )
 
 

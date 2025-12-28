@@ -773,15 +773,15 @@ export interface components {
         };
         /**
          * TestFailureCount
-         * @description Failure count for a specific test
+         * @description Time-weighted failure duration (minutes) for a specific test
          */
         TestFailureCount: {
             /** TestId */
             testId: string;
             /** TestName */
             testName: string;
-            /** FailCount */
-            failCount: number;
+            /** FailMinutes */
+            failMinutes: number;
         };
         /**
          * BitTestHistoryPoint

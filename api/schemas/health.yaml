@@ -107,7 +107,7 @@ TestFailureCount:
   required:
   - testId
   - testName
-  - failCount
+  - failMinutes
   properties:
     testId:
       type: string
@@ -115,11 +115,11 @@ TestFailureCount:
     testName:
       type: string
       title: TestName
-    failCount:
-      type: integer
-      title: FailCount
+    failMinutes:
+      type: number
+      title: FailMinutes
   title: TestFailureCount
-  description: Failure count for a specific test
+  description: Time-weighted failure duration (minutes) for a specific test
 
 BitTestHistoryPoint:
   type: object

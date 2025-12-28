@@ -174,8 +174,8 @@ Response:
   "nonOpMinutes": 2.3,
   "failureCount": 3,
   "topFailingTests": [
-    {"testId": "rf-if-linearity", "testName": "IF Output Linearity", "failCount": 2},
-    {"testId": "clock-discipline", "testName": "Clock PLL Discipline", "failCount": 1}
+    {"testId": "rf-if-linearity", "testName": "IF Output Linearity", "failMinutes": 12.5},
+    {"testId": "clock-discipline", "testName": "Clock PLL Discipline", "failMinutes": 7.0}
   ]
 }
 ```

@@ -149,11 +149,11 @@ async def test_bit_storage_get_alerts_respects_since(temp_storage):
 
 @pytest.mark.asyncio
 async def test_bit_storage_metrics_calculation(temp_storage):
-    """Verify metrics are calculated correctly from snapshots"""
+    """Verify metrics are calculated correctly from time-weighted rollups"""
     # Use current time so snapshots fall within the metrics window
     now = int(time.time() * 1000)
 
-    # Store snapshots: 3 ok, 1 degraded, 1 failed
+    # Store snapshots: 3 ok intervals, 1 degraded interval, then a final fail snapshot
     for i, (ok, warn, fail) in enumerate([(5, 0, 0), (5, 0, 0), (5, 0, 0), (4, 1, 0), (4, 0, 1)]):
         result = create_test_result(timestamp=now + i * 1000, ok=ok, warn=warn, fail=fail)
         await temp_storage.handle_result(result)
@@ -161,8 +161,8 @@ async def test_bit_storage_metrics_calculation(temp_storage):
     metrics = temp_storage.get_metrics(window_minutes=60)
 
     assert metrics.snapshot_count == 5
-    # 3 with overallStatus=ok out of 5 = 60%
-    assert metrics.operational_percent == 60.0
+    # Time-weighted: 3s ok, 1s warn, 0s fail -> 75% ok
+    assert metrics.operational_percent == 75.0
 
 
 @pytest.mark.asyncio
