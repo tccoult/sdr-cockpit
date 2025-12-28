@@ -120,7 +120,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
         <div
           className={cn(
             "border-t border-border/60 bg-card/40",
-            !isMobile && "max-h-[200px] overflow-y-auto"
+            !isMobile && "max-h-[180px] overflow-y-auto"
           )}
         >
           {visibleAlerts.length === 0 ? (
