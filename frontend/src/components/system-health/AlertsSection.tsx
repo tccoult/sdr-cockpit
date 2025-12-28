@@ -57,8 +57,8 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
   );
 
   const visibleAlerts = useMemo(
-    () => (isMobile ? alerts.slice(0, 2) : alerts),
-    [alerts, isMobile]
+    () => (isMobile ? alerts.slice(0, isExpanded ? 8 : 2) : alerts),
+    [alerts, isExpanded, isMobile]
   );
 
   useEffect(() => {
@@ -117,8 +117,8 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
       >
         <div
           className={cn(
-            "max-h-[120px] overflow-y-auto border-t border-border/60 bg-card/40",
-            isMobile && "max-h-[96px]"
+            "border-t border-border/60 bg-card/40",
+            !isMobile && "max-h-[120px] overflow-y-auto"
           )}
         >
           {visibleAlerts.length === 0 ? (
@@ -158,7 +158,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
             </div>
           )}
         </div>
-        {isMobile && alerts.length > visibleAlerts.length && (
+        {isMobile && isExpanded && alerts.length > visibleAlerts.length && (
           <div className="border-t border-border/60 bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">
             Showing {visibleAlerts.length} of {alerts.length} alerts
           </div>

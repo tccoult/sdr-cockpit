@@ -211,8 +211,13 @@ export function SystemHealthPanel({
     view === "function" ? highlighted.function : highlighted.hardware;
 
   return (
-    <div className="flex h-full flex-col p-3">
-      <div className="flex h-full flex-col overflow-hidden rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15">
+    <div className={cn("flex flex-col p-3", !isMobile && "h-full")}>
+      <div
+        className={cn(
+          "flex flex-col rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15",
+          !isMobile && "h-full overflow-hidden"
+        )}
+      >
         <div className="px-4 pt-4 pb-2">
           <h3 className="text-sm font-semibold text-foreground">Built-In Test</h3>
           <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -241,7 +246,7 @@ export function SystemHealthPanel({
         <div className="border-t border-border/70" />
         <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
         <div className="border-t border-border/70" />
-        <div className="flex-1 overflow-hidden">
+        <div className={cn("flex flex-col", !isMobile && "flex-1 overflow-hidden")}>
           <div className="flex items-center justify-between gap-3 px-4 pb-1 pt-3">
             <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
               {(["tests", "function", "hardware"] as PanelView[]).map(
@@ -342,6 +347,7 @@ export function SystemHealthPanel({
               onFocusNode={handleFocusNode}
               focusRequest={testFocusRequest}
               onConsumeFocusRequest={consumeTestFocusRequest}
+              isMobile={isMobile}
             />
           )}
           {view !== "tests" && currentTree && (
