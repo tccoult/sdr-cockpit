@@ -113,14 +113,14 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
           isExpanded
             ? "opacity-100 duration-200 ease-out"
             : "max-h-0 opacity-0 duration-150 ease-in",
-          isExpanded && !isMobile && "max-h-40",
+          isExpanded && !isMobile && "max-h-[200px]",
           isExpanded && isMobile && "max-h-screen"
         )}
       >
         <div
           className={cn(
             "border-t border-border/60 bg-card/40",
-            !isMobile && "max-h-[120px] overflow-y-auto"
+            !isMobile && "max-h-[200px] overflow-y-auto"
           )}
         >
           {visibleAlerts.length === 0 ? (
