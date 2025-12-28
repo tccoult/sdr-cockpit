@@ -218,10 +218,10 @@ export function SystemHealthPanel({
             Last updated {formatRelativeTimestamp(bitResult.timestamp)}
           </p>
         </div>
-        <MetricsSummary metrics={metrics} isMobile={isMobile} />
+        <MetricsSummary metrics={metrics} />
         <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
         <div className="border-t border-border/70" />
-        <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-2">
+        <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-2">
           <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
             {(["tests", "function", "hardware"] as PanelView[]).map(
               (mode, index) => (

@@ -137,15 +137,15 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
                   >
                     <span
                       className={cn(
-                        "mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full",
+                        "mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full",
                         STATUS_TOKENS[tone].tint,
                         STATUS_TOKENS[tone].text
                       )}
                     >
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-3 w-3" />
                     </span>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-xs font-medium text-foreground leading-snug">
                         {alert.message}
                       </p>
                       <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">

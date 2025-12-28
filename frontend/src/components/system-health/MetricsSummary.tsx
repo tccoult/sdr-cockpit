@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 
 interface MetricsSummaryProps {
   metrics: BitHealthMetrics;
-  isMobile?: boolean;
 }
 
 const formatNumber = (value: number, decimals = 1) => {
@@ -16,46 +15,43 @@ const formatNumber = (value: number, decimals = 1) => {
 };
 
 const formatMinutes = (value: number) => `${formatNumber(value)}m`;
+const formatWholeMinutes = (value: number) => `${Math.round(value)}m`;
 
-export function MetricsSummary({ metrics, isMobile = false }: MetricsSummaryProps) {
+export function MetricsSummary({ metrics }: MetricsSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const topFailingTests = useMemo(
-    () => metrics.topFailingTests.slice(0, isMobile ? 2 : 3),
-    [metrics.topFailingTests, isMobile]
+    () => metrics.topFailingTests.slice(0, 3),
+    [metrics.topFailingTests]
   );
+  const operationalMinutes = Math.max(
+    0,
+    metrics.windowMinutes - metrics.degradedMinutes - metrics.nonOpMinutes
+  );
+  const statusTone =
+    metrics.nonOpMinutes > 0 ? "fail" : metrics.degradedMinutes > 0 ? "warn" : "ok";
 
   return (
     <div className="border-t border-border/70">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <MetricPill
-            label="Uptime"
-            value={`${formatNumber(metrics.operationalPercent)}%`}
-            tone="ok"
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <span
+            className={cn(
+              "h-2 w-2 rounded-full",
+              STATUS_TOKENS[statusTone].dot
+            )}
           />
-          <MetricPill
-            label="Failures"
-            value={`${metrics.failureCount}`}
-            tone="fail"
-          />
-          <MetricPill
-            label="Degraded"
-            value={formatMinutes(metrics.degradedMinutes)}
-            tone="warn"
-          />
-          <MetricPill
-            label="Non-op"
-            value={formatMinutes(metrics.nonOpMinutes)}
-            tone="fail"
-          />
+          <span className="whitespace-nowrap text-foreground">
+            Operational {formatWholeMinutes(operationalMinutes)}/
+            {formatWholeMinutes(metrics.windowMinutes)}
+          </span>
         </div>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+          className="inline-flex items-center text-xs font-medium text-muted-foreground transition hover:text-foreground"
           onClick={() => setIsExpanded((prev) => !prev)}
           aria-expanded={isExpanded}
+          aria-label="Toggle metrics details"
         >
-          Details
           <ChevronDown
             className={cn(
               "h-4 w-4 transition-transform",
@@ -75,10 +71,34 @@ export function MetricsSummary({ metrics, isMobile = false }: MetricsSummaryProp
         <div className="px-4 pb-3 pt-2 text-xs text-muted-foreground">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold uppercase tracking-wide">
-              Snapshot count
+              Window minutes
             </span>
             <span className="text-[11px] font-semibold text-foreground">
-              {metrics.snapshotCount}
+              {formatNumber(metrics.windowMinutes)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              Degraded minutes
+            </span>
+            <span className="text-[11px] font-semibold text-foreground">
+              {formatMinutes(metrics.degradedMinutes)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              Non-op minutes
+            </span>
+            <span className="text-[11px] font-semibold text-foreground">
+              {formatMinutes(metrics.nonOpMinutes)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              Total test failures
+            </span>
+            <span className="text-[11px] font-semibold text-foreground">
+              {metrics.failureCount}
             </span>
           </div>
           <div className="mt-2">
@@ -109,29 +129,6 @@ export function MetricsSummary({ metrics, isMobile = false }: MetricsSummaryProp
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-interface MetricPillProps {
-  label: string;
-  value: string;
-  tone: "ok" | "warn" | "fail";
-}
-
-function MetricPill({ label, value, tone }: MetricPillProps) {
-  const tokens = STATUS_TOKENS[tone];
-  return (
-    <div
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-border/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
-        tokens.tint,
-        tokens.text
-      )}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      <span>{label}</span>
-      <span className="text-foreground">{value}</span>
     </div>
   );
 }
