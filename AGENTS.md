@@ -68,7 +68,7 @@
 
 ## Pre-Commit Checklist
 
-**MANDATORY:** Before every `git commit`, you MUST:
+**MANDATORY:** Before every `git commit` (or "end of task"), you MUST:
 
 1. Run all checks:
 
@@ -81,5 +81,5 @@
    - ✅ Backend: lint, format check, type-check, test
    - ✅ Simulator: test
 
-3. Only commit if all checks pass
+3. Only commit (consider task complete) if all checks pass
 4. Give a final review of any dead code that may have been left around during your updates. Remove dead code.

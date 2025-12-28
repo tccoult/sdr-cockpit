@@ -9,7 +9,7 @@ export function SummaryBanner({ summary }: { summary: BitSummary }) {
       <SummaryChip label="Fail" value={summary.fail} status={"fail"} />
       <SummaryChip label="Warn" value={summary.warn} status={"warn"} />
       <SummaryChip label="Ok" value={summary.ok} status={"ok"} />
-      <span className="text-[11px] text-muted-foreground">
+      <span className="text-xs text-muted-foreground">
         Total tests: {summary.total}
       </span>
     </div>
@@ -44,7 +44,7 @@ export function StatusBadge({ status }: { status: BitStatus }) {
   return (
     <span
       className={cn(
-        "text-[10px] font-semibold uppercase tracking-wide",
+        "text-[11px] font-semibold uppercase tracking-wide",
         STATUS_TOKENS[status].badge
       )}
     >

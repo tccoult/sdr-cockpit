@@ -3,10 +3,10 @@
  * Handles polling BIT results, alerts, and metrics from API
  */
 
-import { useState, useEffect } from 'react';
-import { api, type BitResult, type BitAlertList, type BitHealthMetrics } from '../services/api';
+import { useEffect, useRef, useState } from 'react';
+import { api, type BitResult, type BitAlertList, type BitHealthMetrics, type BitAlert } from '../services/api';
 import { getApiMode } from '../api/config';
-import { getMockBitResult } from '../mocks/mockHealth';
+import { getMockBitAlerts, getMockBitMetrics, getMockBitResult } from '../mocks/mockHealth';
 
 export interface HealthData {
   bitResult: BitResult;
@@ -29,40 +29,82 @@ const DEFAULT_METRICS: BitHealthMetrics = {
   topFailingTests: [],
 };
 
+const ALERT_LIMIT = 15;
+const METRICS_WINDOW_MINUTES = 240;
+const ALERTS_INITIAL_LOOKBACK_MS = 60 * 60 * 1000;
+const ALERTS_POLL_LOOKBACK_MS = 30 * 1000;
+
+const getLatestAlertTimestamp = (alerts: BitAlert[]) =>
+  alerts.reduce((latest, alert) => Math.max(latest, alert.timestamp), 0);
+
+const mergeAlerts = (current: BitAlertList, incoming: BitAlertList): BitAlertList => {
+  const alertMap = new Map<number, BitAlert>();
+  current.alerts.forEach((alert) => alertMap.set(alert.id, alert));
+  incoming.alerts.forEach((alert) => alertMap.set(alert.id, alert));
+
+  const mergedAlerts = Array.from(alertMap.values()).sort(
+    (a, b) => b.timestamp - a.timestamp
+  );
+
+  return {
+    alerts: mergedAlerts.slice(0, ALERT_LIMIT),
+    totalCount: Math.max(current.totalCount, incoming.totalCount, mergedAlerts.length),
+  };
+};
+
 export function useHealthData(): HealthData {
   const [bitResult, setBitResult] = useState<BitResult>(() => getMockBitResult());
   const [alerts, setAlerts] = useState<BitAlertList>(DEFAULT_ALERTS);
   const [metrics, setMetrics] = useState<BitHealthMetrics>(DEFAULT_METRICS);
+  const lastAlertTimestampRef = useRef<number | null>(null);
 
   useEffect(() => {
     const apiMode = getApiMode();
 
     if (apiMode === 'offline') {
       // In offline mode, update periodically with new mock data
-      const interval = setInterval(() => {
+      const bitInterval = setInterval(() => {
         setBitResult(getMockBitResult());
       }, 3000);
-      return () => clearInterval(interval);
+
+      const auxInterval = setInterval(() => {
+        setAlerts(getMockBitAlerts());
+        setMetrics(getMockBitMetrics());
+      }, 10000);
+
+      setAlerts(getMockBitAlerts());
+      setMetrics(getMockBitMetrics());
+
+      return () => {
+        clearInterval(bitInterval);
+        clearInterval(auxInterval);
+      };
     }
 
     // Online mode - poll the API
-    const fetchHealth = async () => {
+    const fetchInitialHealth = async () => {
       try {
         const [resultData, alertsData, metricsData] = await Promise.all([
           api.getBitResults(),
-          api.getBitAlerts({ limit: 50 }),
-          api.getBitMetrics(240), // 4 hours window
+          api.getBitAlerts({
+            limit: ALERT_LIMIT,
+            since: Date.now() - ALERTS_INITIAL_LOOKBACK_MS,
+          }),
+          api.getBitMetrics(METRICS_WINDOW_MINUTES), // 4 hours window
         ]);
         setBitResult(resultData);
-        setAlerts(alertsData);
+        const mergedAlerts = mergeAlerts(DEFAULT_ALERTS, alertsData);
+        setAlerts(mergedAlerts);
         setMetrics(metricsData);
+        const latestTimestamp = getLatestAlertTimestamp(mergedAlerts.alerts);
+        lastAlertTimestampRef.current = latestTimestamp > 0 ? latestTimestamp : Date.now();
       } catch (error) {
         console.error('Failed to fetch health data:', error);
       }
     };
 
     // Initial fetch
-    fetchHealth();
+    fetchInitialHealth();
 
     // Poll every 3 seconds for BIT results, 10 seconds for alerts/metrics
     const bitInterval = setInterval(async () => {
@@ -76,11 +118,24 @@ export function useHealthData(): HealthData {
 
     const alertsMetricsInterval = setInterval(async () => {
       try {
+        const since =
+          lastAlertTimestampRef.current !== null
+            ? lastAlertTimestampRef.current + 1
+            : Date.now() - ALERTS_POLL_LOOKBACK_MS;
         const [alertsData, metricsData] = await Promise.all([
-          api.getBitAlerts({ limit: 50 }),
-          api.getBitMetrics(240),
+          api.getBitAlerts({ limit: ALERT_LIMIT, since }),
+          api.getBitMetrics(METRICS_WINDOW_MINUTES),
         ]);
-        setAlerts(alertsData);
+        setAlerts((current) => {
+          const mergedAlerts = mergeAlerts(current, alertsData);
+          const latestTimestamp = getLatestAlertTimestamp(mergedAlerts.alerts);
+          const nextTimestamp = latestTimestamp > 0 ? latestTimestamp : Date.now();
+          lastAlertTimestampRef.current = Math.max(
+            lastAlertTimestampRef.current ?? 0,
+            nextTimestamp
+          );
+          return mergedAlerts;
+        });
         setMetrics(metricsData);
       } catch (error) {
         console.error('Failed to fetch alerts/metrics:', error);

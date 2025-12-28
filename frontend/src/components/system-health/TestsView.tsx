@@ -95,7 +95,7 @@ export function TestsView({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="px-4 pb-3 pt-4">
+      <div className="px-4 pb-3 pt-3">
         <SummaryBanner summary={summary} />
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-4" ref={listRef}>

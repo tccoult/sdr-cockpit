@@ -131,7 +131,7 @@ function RollupTreeNode({
         title={test?.description ?? undefined}
         data-tree-node-id={node.testId}
         className={cn(
-          "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition",
+          "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-sm transition",
           "hover:border-border hover:bg-muted/70",
           isActive && "border-accent/40 bg-accent/10 ring-1 ring-accent/50"
         )}
@@ -144,7 +144,7 @@ function RollupTreeNode({
                 STATUS_TOKENS[node.status].dot
               )}
             />
-            <span className="truncate text-xs font-medium text-foreground">
+            <span className="truncate text-sm font-medium text-foreground">
               {node.name}
             </span>
           </div>
@@ -160,7 +160,7 @@ function RollupTreeNode({
   return (
     <div
       className={cn(
-        "rounded-md px-2 py-1.5 text-xs transition",
+        "rounded-md px-2 py-1.5 text-sm transition",
         isHighlighted && "border border-accent/40 bg-accent/10",
         !isHighlighted && containsActiveTest && "bg-accent/10"
       )}
@@ -174,7 +174,7 @@ function RollupTreeNode({
               STATUS_TOKENS[node.status].dot
             )}
           />
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-sm font-medium text-foreground">
             {node.name}
           </span>
         </div>
