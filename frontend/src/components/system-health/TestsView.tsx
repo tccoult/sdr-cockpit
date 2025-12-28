@@ -32,6 +32,7 @@ interface TestsViewProps {
   onFocusNode: (scope: keyof HighlightState, nodeId: string) => void;
   focusRequest: { testId: string; token: number } | null;
   onConsumeFocusRequest: () => void;
+  isMobile?: boolean;
 }
 
 export function TestsView({
@@ -47,6 +48,7 @@ export function TestsView({
   onFocusNode,
   focusRequest,
   onConsumeFocusRequest,
+  isMobile = false,
 }: TestsViewProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
   const [openTestId, setOpenTestId] = useState<string | null>(null);
@@ -94,11 +96,14 @@ export function TestsView({
   }, [openTestId, tests]);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className={cn("flex flex-col", !isMobile && "h-full overflow-hidden")}>
       <div className="px-4 pb-3 pt-3">
         <SummaryBanner summary={summary} />
       </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-4" ref={listRef}>
+      <div
+        className={cn("px-2 pb-4", !isMobile && "flex-1 overflow-y-auto")}
+        ref={listRef}
+      >
         <div className="overflow-hidden rounded-md border border-border/60 bg-card/40">
           <div className="divide-y divide-border/70">
             {tests.map((test) => {

@@ -241,7 +241,7 @@ export function SystemHealthPanel({
         <div className="border-t border-border/70" />
         <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
         <div className="border-t border-border/70" />
-        <div className="flex-1 overflow-hidden">
+        <div className={cn("flex-1", !isMobile && "overflow-hidden")}>
           <div className="flex items-center justify-between gap-3 px-4 pb-1 pt-3">
             <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
               {(["tests", "function", "hardware"] as PanelView[]).map(
@@ -342,6 +342,7 @@ export function SystemHealthPanel({
               onFocusNode={handleFocusNode}
               focusRequest={testFocusRequest}
               onConsumeFocusRequest={consumeTestFocusRequest}
+              isMobile={isMobile}
             />
           )}
           {view !== "tests" && currentTree && (
@@ -371,6 +372,7 @@ export function SystemHealthPanel({
                   setForcedExpand(null);
                 }
               }}
+              isMobile={isMobile}
             />
           )}
         </div>
