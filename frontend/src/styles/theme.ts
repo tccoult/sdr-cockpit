@@ -190,12 +190,12 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 export function getHealthIndicator(
-  status: "healthy" | "warning" | "error" | "unknown"
+  status: "operational" | "degraded" | "non-operational" | "unknown"
 ) {
   const colorMap = {
-    healthy: themeColors.status.success,
-    warning: themeColors.status.warning,
-    error: themeColors.status.error,
+    operational: themeColors.status.success,
+    degraded: themeColors.status.warning,
+    "non-operational": themeColors.status.error,
     unknown: themeColors.status.stopped,
   };
 

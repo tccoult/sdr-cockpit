@@ -3,7 +3,14 @@ import { ThemeToggle } from '../app/ThemeToggle'
 import { SettingsMenu, SettingsMenuItem } from '../settings/SettingsMenu'
 import { getHealthIndicator } from '../../styles/theme'
 
-export type HealthStatus = 'healthy' | 'warning' | 'error' | 'unknown'
+export type HealthStatus = 'operational' | 'degraded' | 'non-operational' | 'unknown'
+
+const HEALTH_STATUS_LABELS: Record<HealthStatus, string> = {
+  'operational': 'Operational',
+  'degraded': 'Degraded',
+  'non-operational': 'Non-Operational',
+  'unknown': 'Unknown',
+}
 
 export interface CompactHeaderProps {
   dataFps: number
@@ -109,8 +116,8 @@ export function CompactHeader({
               ? `0 0 0 2px ${healthIndicator.dotColor}40`
               : undefined,
           }}
-          title={`System health: ${healthStatus}`}
-          aria-label={`System health: ${healthStatus}`}
+          title={`System health: ${HEALTH_STATUS_LABELS[healthStatus]}`}
+          aria-label={`System health: ${HEALTH_STATUS_LABELS[healthStatus]}`}
         >
           <span className="hidden text-xs font-medium text-foreground/90 lg:inline">
             Health

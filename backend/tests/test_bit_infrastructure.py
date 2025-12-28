@@ -58,12 +58,21 @@ def create_test_result(timestamp: int, ok: int = 5, warn: int = 0, fail: int = 0
             durationMs=100,
         )
 
+    # Determine overall status based on worst case
+    if fail > 0:
+        overall_status = BitStatus.fail
+    elif warn > 0:
+        overall_status = BitStatus.warn
+    else:
+        overall_status = BitStatus.ok
+
     return BitResult(
         timestamp=timestamp,
+        overallStatus=overall_status,
         summary=BitSummary(total=len(tests), ok=ok, warn=warn, fail=fail),
         tests=tests,
-        functionTree=BitTreeNode(id="root", name="Root", status=BitStatus.ok),
-        hardwareTree=BitTreeNode(id="root", name="Root", status=BitStatus.ok),
+        functionTree=BitTreeNode(id="root", name="Root", status=overall_status),
+        hardwareTree=BitTreeNode(id="root", name="Root", status=overall_status),
     )
 
 
@@ -140,11 +149,11 @@ async def test_bit_storage_get_alerts_respects_since(temp_storage):
 
 @pytest.mark.asyncio
 async def test_bit_storage_metrics_calculation(temp_storage):
-    """Verify metrics are calculated correctly from snapshots"""
+    """Verify metrics are calculated correctly from time-weighted rollups"""
     # Use current time so snapshots fall within the metrics window
     now = int(time.time() * 1000)
 
-    # Store snapshots: 3 ok, 1 degraded, 1 failed
+    # Store snapshots: 3 ok intervals, 1 degraded interval, then a final fail snapshot
     for i, (ok, warn, fail) in enumerate([(5, 0, 0), (5, 0, 0), (5, 0, 0), (4, 1, 0), (4, 0, 1)]):
         result = create_test_result(timestamp=now + i * 1000, ok=ok, warn=warn, fail=fail)
         await temp_storage.handle_result(result)
@@ -152,8 +161,8 @@ async def test_bit_storage_metrics_calculation(temp_storage):
     metrics = temp_storage.get_metrics(window_minutes=60)
 
     assert metrics.snapshot_count == 5
-    # 3 fully ok out of 5 = 60%
-    assert metrics.uptime_percent == 60.0
+    # Time-weighted: 3s ok, 1s warn, 0s fail -> 75% ok
+    assert metrics.operational_percent == 75.0
 
 
 @pytest.mark.asyncio
@@ -179,6 +188,7 @@ def create_simple_result(test_id: str, status: BitStatus, timestamp: int) -> Bit
     """Helper to create a simple BitResult with one test"""
     return BitResult(
         timestamp=timestamp,
+        overallStatus=status,
         summary=BitSummary(
             total=1,
             ok=1 if status == BitStatus.ok else 0,

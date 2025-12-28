@@ -164,18 +164,22 @@ Returns health metrics over a time window.
 Query params:
 - `window_minutes`: Time window (default: 240 = 4 hours)
 
+Notes:
+- `snapshotCount` is the number of samples in the window (not time-weighted).
+- `topFailingTests` uses time-weighted `failMinutes`.
+
 Response:
 ```json
 {
   "windowMinutes": 240,
   "snapshotCount": 4800,
-  "uptimePercent": 98.5,
+  "operationalPercent": 98.5,
   "degradedMinutes": 12.5,
   "nonOpMinutes": 2.3,
   "failureCount": 3,
   "topFailingTests": [
-    {"testId": "rf-if-linearity", "testName": "IF Output Linearity", "failCount": 2},
-    {"testId": "clock-discipline", "testName": "Clock PLL Discipline", "failCount": 1}
+    {"testId": "rf-if-linearity", "testName": "IF Output Linearity", "failMinutes": 12.5},
+    {"testId": "clock-discipline", "testName": "Clock PLL Discipline", "failMinutes": 7.0}
   ]
 }
 ```
