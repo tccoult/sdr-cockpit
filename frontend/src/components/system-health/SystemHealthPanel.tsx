@@ -242,7 +242,7 @@ export function SystemHealthPanel({
         <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
         <div className="border-t border-border/70" />
         <div className="flex-1 overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3">
+          <div className="flex items-center justify-between gap-3 px-4 pb-1 pt-3">
             <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
               {(["tests", "function", "hardware"] as PanelView[]).map(
                 (mode, index) => (
