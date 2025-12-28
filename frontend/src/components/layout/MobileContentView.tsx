@@ -74,7 +74,7 @@ export function MobileContentView({
 
   // mobileView === 'health'
   return (
-    <div className="h-full overflow-auto bg-background">
+    <div className="min-h-full bg-background">
       <SystemHealthPanel bitResult={bitResult} alerts={alerts} metrics={metrics} />
     </div>
   );

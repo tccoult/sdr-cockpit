@@ -111,7 +111,11 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
         className={cn(
           "overflow-hidden transition-[max-height,opacity]",
           isExpanded
-            ? "max-h-40 opacity-100 duration-200 ease-out"
+            ? cn(
+                isMobile
+                  ? "max-h-[999px] opacity-100 duration-200 ease-out"
+                  : "max-h-40 opacity-100 duration-200 ease-out"
+              )
             : "max-h-0 opacity-0 duration-150 ease-in"
         )}
       >
