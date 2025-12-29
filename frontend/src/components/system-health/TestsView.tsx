@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import {
+  BitStatus,
   BitSummary,
   BitTest,
   BitTreeNode,
-  BitStatus,
 } from "../../services/api";
-import { SummaryBanner, StatusBadge } from "./StatusIndicators";
+import { StatusBadge, SummaryBanner } from "./StatusIndicators";
 import { STATUS_TOKENS } from "./statusTokens";
-import {
-  getTerminalNodeIds,
-  formatRelativeTimestamp,
-} from "./utils";
-import { cn } from "@/lib/utils";
+import { formatRelativeTimestamp, getTerminalNodeIds } from "./utils";
 
 interface HighlightState {
   function: string[];
@@ -171,7 +168,7 @@ export function TestsView({
                           statusTokens.dot
                         )}
                       />
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-xs font-medium text-foreground">
                         {test.name}
                       </span>
                     </div>

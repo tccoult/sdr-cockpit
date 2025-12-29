@@ -1,15 +1,15 @@
 import {
+  AlertCircle,
   AlertTriangle,
   CheckCircle2,
-  AlertCircle,
   ChevronDown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import { BitAlert } from "../../services/api";
 import { STATUS_TOKENS } from "./statusTokens";
 import { formatRelativeTimestamp } from "./utils";
-import { cn } from "@/lib/utils";
 
 interface AlertsSectionProps {
   alerts: BitAlert[];
@@ -160,7 +160,7 @@ export function AlertsSection({
                       <Icon className="h-3 w-3" />
                     </span>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground leading-snug">
+                      <p className="text-xs font-medium text-foreground leading-snug">
                         {alert.message}
                       </p>
                       <p className="mt-0.5 text-xs uppercase tracking-wide text-muted-foreground">
