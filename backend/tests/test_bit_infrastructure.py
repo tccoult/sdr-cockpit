@@ -166,6 +166,45 @@ async def test_bit_storage_metrics_calculation(temp_storage):
 
 
 @pytest.mark.asyncio
+async def test_bit_storage_metrics_window_less_than_requested(temp_storage):
+    """Verify windowMinutes reflects actual data coverage when less than requested"""
+    now = int(time.time() * 1000)
+
+    # Store snapshots spanning only 2 minutes (not 60)
+    for i in range(5):
+        result = create_test_result(timestamp=now + i * 30000, ok=5)  # 30s apart
+        await temp_storage.handle_result(result)
+
+    # Request 60 minute window, but only ~2 minutes of data exists
+    metrics = temp_storage.get_metrics(window_minutes=60)
+
+    # Window should reflect actual data span (~2 minutes), not requested 60
+    # The earliest bucket is at 'now', latest is at now + 120000 (2 min)
+    # So actual window is (now + 120000 - now) / 60000 = 2 minutes
+    assert metrics.window_minutes <= 3  # Allow small margin for bucket alignment
+    assert metrics.window_minutes < 60  # Definitely not the requested window
+
+
+@pytest.mark.asyncio
+async def test_bit_storage_metrics_window_exceeds_requested(temp_storage):
+    """Verify windowMinutes is capped to requested window when more data exists"""
+    now = int(time.time() * 1000)
+
+    # Store snapshots spanning 2 hours (120 minutes)
+    for i in range(13):
+        result = create_test_result(timestamp=now + i * 10 * 60 * 1000, ok=5)  # 10min apart
+        await temp_storage.handle_result(result)
+
+    # Request only 10 minute window, even though 2 hours of data exists
+    metrics = temp_storage.get_metrics(window_minutes=10)
+
+    # Window should be approximately 10 minutes (the requested window),
+    # not 120 minutes (the full data span)
+    assert metrics.window_minutes >= 8  # At least close to requested
+    assert metrics.window_minutes <= 12  # Allow margin for bucket alignment
+
+
+@pytest.mark.asyncio
 async def test_bit_storage_test_history(temp_storage):
     """Verify test history retrieval works"""
     now = 1000000

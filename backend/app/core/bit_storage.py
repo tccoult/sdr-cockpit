@@ -414,7 +414,8 @@ class BitStorage:
                     COALESCE(SUM(warn_ms), 0) as warn_ms,
                     COALESCE(SUM(fail_ms), 0) as fail_ms,
                     COALESCE(SUM(sample_count), 0) as sample_count,
-                    COALESCE(SUM(fail_alert_count), 0) as fail_alert_count
+                    COALESCE(SUM(fail_alert_count), 0) as fail_alert_count,
+                    MIN(bucket_start) as earliest_bucket
                 FROM bit_metrics_rollups
                 WHERE bucket_start >= ? AND bucket_start <= ?
                 """,
@@ -432,10 +433,17 @@ class BitStorage:
         snapshot_count = row["sample_count"]
         failure_count = row["fail_alert_count"]
 
+        # Calculate actual window from earliest bucket with data
+        earliest_bucket = row["earliest_bucket"]
+        if earliest_bucket is not None:
+            actual_window_minutes = (now - earliest_bucket) / 60000
+        else:
+            actual_window_minutes = 0
+
         top_failing_tests = self._get_top_failing_tests(bucket_floor)
 
         return BitHealthMetrics(
-            windowMinutes=window_minutes,
+            windowMinutes=round(actual_window_minutes),
             snapshotCount=snapshot_count,
             operationalPercent=round(operational_percent, 2),
             degradedMinutes=round(degraded_minutes, 2),
