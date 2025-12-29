@@ -178,9 +178,9 @@ class AlertManager:
     def _create_message(self, test_name: str, severity: BitAlertSeverity) -> str:
         """Create human-readable alert message"""
         if severity == BitAlertSeverity.failed:
-            return f"{test_name} test failed"
+            return f"{test_name} failed"
         elif severity == BitAlertSeverity.degraded:
-            return f"{test_name} degraded to warning"
+            return f"{test_name} warning"
         elif severity == BitAlertSeverity.recovered:
             return f"{test_name} recovered"
         return f"{test_name} status changed"
