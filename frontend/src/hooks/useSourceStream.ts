@@ -32,6 +32,7 @@ export function useSourceStream(options: UseSourceStreamOptions): UseSourceStrea
 
   const dataStreamRef = useRef<{ disconnect: () => void } | null>(null);
   const frameCountRef = useRef(0);
+  // eslint-disable-next-line react-hooks/purity -- initial timestamp for FPS calculation
   const lastFpsUpdateRef = useRef(Date.now());
 
   useEffect(() => {

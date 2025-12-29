@@ -115,12 +115,14 @@ export const VisualizationView = memo(function VisualizationView({
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync range with source params
     autoRange();
   }, [centerFreq, sampleRate, autoRange]);
 
   // Respond to external auto-range button clicks
   useEffect(() => {
     if (externalAutoRangeKey !== undefined && externalAutoRangeKey > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- respond to external trigger
       autoRange();
     }
   }, [externalAutoRangeKey, autoRange]);

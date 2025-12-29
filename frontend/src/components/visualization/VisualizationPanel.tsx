@@ -61,6 +61,7 @@ export function VisualizationPanel({
 
   // Auto-unpause when switching sources
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset pause state on source change
     setIsPaused(false);
   }, [activeSource?.id]);
 

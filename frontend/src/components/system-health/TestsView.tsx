@@ -58,6 +58,7 @@ export function TestsView({
       `[data-test-row-id="${testId}"]`
     );
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync with focus request
     setOpenTestId(testId);
 
     if (target) {
@@ -88,6 +89,7 @@ export function TestsView({
   useEffect(() => {
     if (!openTestId) return;
     if (!tests.some((test) => test.id === openTestId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale selection
       setOpenTestId(null);
     }
   }, [openTestId, tests]);

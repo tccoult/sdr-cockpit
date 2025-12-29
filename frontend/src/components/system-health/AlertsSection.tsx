@@ -85,6 +85,7 @@ export function AlertsSection({
 
   useEffect(() => {
     if (!hasInteracted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync with responsive breakpoint
       setIsExpanded(!isMobile);
     }
   }, [hasInteracted, isMobile]);
@@ -92,6 +93,7 @@ export function AlertsSection({
   useEffect(() => {
     if (!isExpanded) return;
     if (latestTimestamp > lastReadTimestamp) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- track read state
       setLastReadTimestamp(latestTimestamp);
     }
   }, [isExpanded, latestTimestamp, lastReadTimestamp]);

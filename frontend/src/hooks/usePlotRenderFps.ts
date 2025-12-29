@@ -13,6 +13,7 @@ export function usePlotRenderFps(plot: PlotHandle | null): number {
 
   useEffect(() => {
     if (!plot || plot.isDestroyed()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on plot destruction
       setFps(0);
       return;
     }
