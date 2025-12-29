@@ -1,7 +1,7 @@
 """Alert detection for BIT status transitions"""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from app.core.event_bus import EventBus, Topic
@@ -9,8 +9,9 @@ from app.models.generated import BitAlert, BitAlertSeverity, BitResult, BitStatu
 
 logger = logging.getLogger(__name__)
 
-# Debounce window in milliseconds
-DEBOUNCE_WINDOW_MS = 30_000  # 30 seconds
+# Cooldown period after emitting a degradation alert (in milliseconds)
+# During cooldown, only severity escalations (warn -> fail) trigger new alerts
+COOLDOWN_MS = 60_000  # 1 minute
 
 SEVERITY_PRIORITY = {
     BitAlertSeverity.failed: 3,
@@ -24,12 +25,22 @@ class TestState:
     """Tracked state for a single test"""
 
     status: BitStatus
-    last_change: int  # Timestamp of last status change
-    pending_alert: Optional[BitAlert]  # Alert waiting for debounce window
+    # Severity of the last emitted degradation alert (for escalation comparison)
+    last_emitted_severity: Optional[BitAlertSeverity] = field(default=None)
+    # Timestamp when cooldown expires (0 = no active cooldown)
+    cooldown_until: int = field(default=0)
+    # True if we emitted a degradation that hasn't been closed by a recovery
+    has_open_alert: bool = field(default=False)
 
 
 class AlertManager:
-    """Detects BIT status transitions and generates alerts with debouncing"""
+    """Detects BIT status transitions and generates alerts.
+
+    Alerting scheme:
+    - On degradation (ok -> warn/fail): emit immediately, start 1-minute cooldown
+    - During cooldown: only emit if severity escalates (warn -> fail), reset cooldown
+    - Recovery alerts: only emitted if there's a corresponding open degradation alert
+    """
 
     def __init__(self) -> None:
         self._test_states: dict[str, TestState] = {}
@@ -48,70 +59,70 @@ class AlertManager:
             # Cache test name
             self._test_names[test.id] = test.name
 
-            prev_state = self._test_states.get(test.id)
+            state = self._test_states.get(test.id)
 
-            if prev_state is None:
-                # First time seeing this test - treat previous status as OK so we emit
-                # an alert if the initial observation is degraded or failed.
-                initial_alert = self._create_alert(
-                    test_id=test.id,
-                    test_name=test.name,
-                    prev_status=BitStatus.ok,
-                    new_status=test.status,
-                    timestamp=now,
-                )
+            if state is None:
+                # First time seeing this test
+                state = TestState(status=test.status)
+                self._test_states[test.id] = state
 
-                prev_state = TestState(
-                    status=test.status, last_change=now, pending_alert=initial_alert
-                )
-                self._test_states[test.id] = prev_state
+                # If starting in a degraded/failed state, treat as if transitioning from OK
+                if test.status in (BitStatus.warn, BitStatus.fail):
+                    alert = self._create_alert(
+                        test_id=test.id,
+                        test_name=test.name,
+                        prev_status=BitStatus.ok,
+                        new_status=test.status,
+                        timestamp=now,
+                    )
+                    if alert:
+                        await self._emit_alert(alert)
+                        state.last_emitted_severity = alert.severity
+                        state.cooldown_until = now + COOLDOWN_MS
+                        state.has_open_alert = True
                 continue
 
-            # Check if status changed
-            if test.status != prev_state.status:
-                alert = self._create_alert(
-                    test_id=test.id,
-                    test_name=test.name,
-                    prev_status=prev_state.status,
-                    new_status=test.status,
-                    timestamp=now,
-                )
+            # Status unchanged - nothing to do
+            if test.status == state.status:
+                continue
 
-                if alert:
-                    # Check debounce - if there's a pending alert within window, replace it
-                    if (
-                        prev_state.pending_alert
-                        and now - prev_state.last_change < DEBOUNCE_WINDOW_MS
-                    ):
-                        pending = prev_state.pending_alert
+            # Status changed - create alert
+            old_status = state.status
+            state.status = test.status
 
-                        if self._is_more_severe(alert.severity, pending.severity):
-                            logger.debug(
-                                f"Replacing pending alert for {test.id}: "
-                                f"{pending.severity} -> {alert.severity}"
-                            )
-                            prev_state.pending_alert = alert
-                        else:
-                            # Emit the pending alert so we don't lose the failure/degradation
-                            # that triggered it, then track the recovery/de-escalation.
-                            await self._emit_alert(pending)
-                            prev_state.pending_alert = alert
-                        prev_state.status = test.status
-                        prev_state.last_change = now
-                    else:
-                        # Emit any pending alert first
-                        if prev_state.pending_alert:
-                            await self._emit_alert(prev_state.pending_alert)
+            alert = self._create_alert(
+                test_id=test.id,
+                test_name=test.name,
+                prev_status=old_status,
+                new_status=test.status,
+                timestamp=now,
+            )
 
-                        # Set new pending alert
-                        prev_state.pending_alert = alert
-                        prev_state.status = test.status
-                        prev_state.last_change = now
+            if alert is None:
+                continue
 
-            # Check if pending alerts have passed debounce window
-            if prev_state.pending_alert and now - prev_state.last_change >= DEBOUNCE_WINDOW_MS:
-                await self._emit_alert(prev_state.pending_alert)
-                prev_state.pending_alert = None
+            if alert.severity == BitAlertSeverity.recovered:
+                # Recovery: only emit if there's an open degradation to close
+                if state.has_open_alert:
+                    await self._emit_alert(alert)
+                    state.has_open_alert = False
+            else:
+                # Degradation (warn or fail)
+                in_cooldown = now < state.cooldown_until
+
+                should_emit = False
+                if not in_cooldown:
+                    # No active cooldown - emit immediately
+                    should_emit = True
+                elif self._is_more_severe(alert.severity, state.last_emitted_severity):
+                    # In cooldown but severity escalated - emit and reset cooldown
+                    should_emit = True
+
+                if should_emit:
+                    await self._emit_alert(alert)
+                    state.last_emitted_severity = alert.severity
+                    state.cooldown_until = now + COOLDOWN_MS
+                    state.has_open_alert = True
 
     def _create_alert(
         self,
@@ -125,7 +136,6 @@ class AlertManager:
         severity = self._determine_severity(prev_status, new_status)
 
         if severity is None:
-            # No alert for this transition (e.g., unknown -> unknown)
             return None
 
         message = self._create_message(test_name, severity)
@@ -141,9 +151,10 @@ class AlertManager:
             message=message,
         )
 
-    def _is_more_severe(self, new: BitAlertSeverity, existing: BitAlertSeverity) -> bool:
+    def _is_more_severe(self, new: BitAlertSeverity, existing: Optional[BitAlertSeverity]) -> bool:
         """Return True if new severity is higher priority than existing"""
-
+        if existing is None:
+            return True
         return SEVERITY_PRIORITY[new] > SEVERITY_PRIORITY[existing]
 
     def _determine_severity(
@@ -162,16 +173,14 @@ class AlertManager:
         if new_status == BitStatus.ok and prev_status in (BitStatus.fail, BitStatus.warn):
             return BitAlertSeverity.recovered
 
-        # All other transitions (e.g., unknown -> ok, warn -> fail) don't generate alerts
-        # Actually, warn -> fail should be "failed", which is already covered
         return None
 
     def _create_message(self, test_name: str, severity: BitAlertSeverity) -> str:
         """Create human-readable alert message"""
         if severity == BitAlertSeverity.failed:
-            return f"{test_name} test failed"
+            return f"{test_name} failed"
         elif severity == BitAlertSeverity.degraded:
-            return f"{test_name} degraded to warning"
+            return f"{test_name} warning"
         elif severity == BitAlertSeverity.recovered:
             return f"{test_name} recovered"
         return f"{test_name} status changed"
@@ -183,13 +192,6 @@ class AlertManager:
             return
         logger.info(f"Alert: [{alert.severity}] {alert.message}")
         await self._event_bus.publish(Topic.BIT_ALERT, alert)
-
-    async def flush_pending(self) -> None:
-        """Flush all pending alerts (useful for shutdown)"""
-        for state in self._test_states.values():
-            if state.pending_alert:
-                await self._emit_alert(state.pending_alert)
-                state.pending_alert = None
 
     def clear(self) -> None:
         """Clear all state (useful for testing)"""

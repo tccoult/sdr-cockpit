@@ -79,7 +79,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # === SHUTDOWN ===
     await bit_subscriber.stop()
-    await alert_manager.flush_pending()
     logger.info("Application shutdown complete")
 
 

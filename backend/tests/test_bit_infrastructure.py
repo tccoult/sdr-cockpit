@@ -12,7 +12,7 @@ import pytest
 from app.config.settings import Settings
 from app.core.bit_storage import BitStorage
 from app.core.event_bus import EventBus, Topic
-from app.handlers.alert_manager import AlertManager, DEBOUNCE_WINDOW_MS
+from app.handlers.alert_manager import AlertManager, COOLDOWN_MS
 from app.models.generated import (
     BitAlert,
     BitAlertSeverity,
@@ -210,13 +210,13 @@ def create_simple_result(test_id: str, status: BitStatus, timestamp: int) -> Bit
 
 
 @pytest.mark.asyncio
-async def test_alert_manager_detects_failure():
-    """Verify AlertManager detects ok -> fail transition after debounce"""
+async def test_alert_manager_emits_failure_immediately():
+    """Verify AlertManager emits failure alert immediately (no debounce delay)"""
     manager = AlertManager()
     bus = EventBus()
     manager.set_event_bus(bus)
 
-    alerts = []
+    alerts: list[BitAlert] = []
 
     async def alert_handler(alert: BitAlert) -> None:
         alerts.append(alert)
@@ -227,28 +227,22 @@ async def test_alert_manager_detects_failure():
 
     # First result: ok
     await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
-    assert len(alerts) == 0  # First observation, no alert
+    assert len(alerts) == 0  # First observation at ok, no alert
 
-    # Second result: fail (triggers pending alert)
+    # Second result: fail - should emit immediately
     await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 1000))
-    assert len(alerts) == 0  # Pending, not yet emitted (within debounce window)
-
-    # Third result: still fail, past debounce window
-    await manager.handle_result(
-        create_simple_result("test-1", BitStatus.fail, now + DEBOUNCE_WINDOW_MS + 1000)
-    )
     assert len(alerts) == 1
     assert alerts[0].severity == BitAlertSeverity.failed
 
 
 @pytest.mark.asyncio
-async def test_alert_manager_detects_degradation():
-    """Verify AlertManager detects ok -> warn transition"""
+async def test_alert_manager_emits_degradation_immediately():
+    """Verify AlertManager emits degradation alert immediately"""
     manager = AlertManager()
     bus = EventBus()
     manager.set_event_bus(bus)
 
-    alerts = []
+    alerts: list[BitAlert] = []
 
     async def alert_handler(alert: BitAlert) -> None:
         alerts.append(alert)
@@ -259,22 +253,19 @@ async def test_alert_manager_detects_degradation():
 
     await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
     await manager.handle_result(create_simple_result("test-1", BitStatus.warn, now + 1000))
-    await manager.handle_result(
-        create_simple_result("test-1", BitStatus.warn, now + DEBOUNCE_WINDOW_MS + 1000)
-    )
 
     assert len(alerts) == 1
     assert alerts[0].severity == BitAlertSeverity.degraded
 
 
 @pytest.mark.asyncio
-async def test_alert_manager_detects_recovery():
-    """Verify AlertManager detects fail -> ok transition"""
+async def test_alert_manager_emits_recovery():
+    """Verify AlertManager emits recovery alert for DB storage"""
     manager = AlertManager()
     bus = EventBus()
     manager.set_event_bus(bus)
 
-    alerts = []
+    alerts: list[BitAlert] = []
 
     async def alert_handler(alert: BitAlert) -> None:
         alerts.append(alert)
@@ -283,11 +274,12 @@ async def test_alert_manager_detects_recovery():
 
     now = 1000000
 
+    # Start in failed state (first observation)
     await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now))
+    assert len(alerts) == 1  # Immediate failure alert
+
+    # Recover
     await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 1000))
-    await manager.handle_result(
-        create_simple_result("test-1", BitStatus.ok, now + DEBOUNCE_WINDOW_MS + 1000)
-    )
 
     assert len(alerts) == 2
     assert [alert.severity for alert in alerts] == [
@@ -297,13 +289,13 @@ async def test_alert_manager_detects_recovery():
 
 
 @pytest.mark.asyncio
-async def test_alert_manager_debounce_emits_pending_before_recovery():
-    """Rapid recoveries should still emit the initial failure alert"""
+async def test_alert_manager_cooldown_suppresses_same_severity():
+    """Verify repeated failures within cooldown are suppressed"""
     manager = AlertManager()
     bus = EventBus()
     manager.set_event_bus(bus)
 
-    alerts = []
+    alerts: list[BitAlert] = []
 
     async def alert_handler(alert: BitAlert) -> None:
         alerts.append(alert)
@@ -312,17 +304,13 @@ async def test_alert_manager_debounce_emits_pending_before_recovery():
 
     now = 1000000
 
-    # ok -> fail -> ok within debounce window
+    # ok -> fail -> ok -> fail within cooldown
     await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
     await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 1000))
     await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 2000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 3000))
 
-    # Past debounce window
-    await manager.handle_result(
-        create_simple_result("test-1", BitStatus.ok, now + DEBOUNCE_WINDOW_MS + 3000)
-    )
-
-    # Should emit both the failure and the subsequent recovery
+    # Should have: 1 failure (first), 1 recovery, no second failure (cooldown)
     assert len(alerts) == 2
     assert [alert.severity for alert in alerts] == [
         BitAlertSeverity.failed,
@@ -331,13 +319,13 @@ async def test_alert_manager_debounce_emits_pending_before_recovery():
 
 
 @pytest.mark.asyncio
-async def test_alert_manager_flush_pending():
-    """Verify flush_pending emits all pending alerts"""
+async def test_alert_manager_cooldown_allows_escalation():
+    """Verify warn -> fail escalation within cooldown still emits"""
     manager = AlertManager()
     bus = EventBus()
     manager.set_event_bus(bus)
 
-    alerts = []
+    alerts: list[BitAlert] = []
 
     async def alert_handler(alert: BitAlert) -> None:
         alerts.append(alert)
@@ -346,13 +334,139 @@ async def test_alert_manager_flush_pending():
 
     now = 1000000
 
-    # Create pending alerts
+    # ok -> warn -> fail within cooldown
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.warn, now + 1000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 2000))
+
+    # Should have both: degraded (immediate), then failed (escalation)
+    assert len(alerts) == 2
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.degraded,
+        BitAlertSeverity.failed,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_alert_manager_cooldown_resets_on_escalation():
+    """Verify escalation resets cooldown timer"""
+    manager = AlertManager()
+    bus = EventBus()
+    manager.set_event_bus(bus)
+
+    alerts: list[BitAlert] = []
+
+    async def alert_handler(alert: BitAlert) -> None:
+        alerts.append(alert)
+
+    bus.subscribe(Topic.BIT_ALERT, alert_handler)
+
+    now = 1000000
+
+    # warn at t=0, fail at t=30s (escalation resets cooldown)
+    # ok at t=60s, fail at t=61s (within NEW cooldown from escalation)
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.warn, now + 1000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 30000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 60000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 61000))
+
+    # Should have: degraded, failed (escalation), recovery, NO second failure (cooldown)
+    assert len(alerts) == 3
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.degraded,
+        BitAlertSeverity.failed,
+        BitAlertSeverity.recovered,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_alert_manager_cooldown_expires():
+    """Verify alerts emit again after cooldown expires"""
+    manager = AlertManager()
+    bus = EventBus()
+    manager.set_event_bus(bus)
+
+    alerts: list[BitAlert] = []
+
+    async def alert_handler(alert: BitAlert) -> None:
+        alerts.append(alert)
+
+    bus.subscribe(Topic.BIT_ALERT, alert_handler)
+
+    now = 1000000
+
+    # First failure
     await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
     await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 1000))
 
-    assert len(alerts) == 0  # Still pending
+    # Recovery and second failure AFTER cooldown expires
+    await manager.handle_result(
+        create_simple_result("test-1", BitStatus.ok, now + COOLDOWN_MS + 2000)
+    )
+    await manager.handle_result(
+        create_simple_result("test-1", BitStatus.fail, now + COOLDOWN_MS + 3000)
+    )
 
-    await manager.flush_pending()
+    # Should have all 4: failed, recovered, failed again, (no recovery yet)
+    assert len(alerts) == 3
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.failed,
+        BitAlertSeverity.recovered,
+        BitAlertSeverity.failed,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_alert_manager_first_observation_degraded():
+    """Verify initial observation in degraded state emits immediately"""
+    manager = AlertManager()
+    bus = EventBus()
+    manager.set_event_bus(bus)
+
+    alerts: list[BitAlert] = []
+
+    async def alert_handler(alert: BitAlert) -> None:
+        alerts.append(alert)
+
+    bus.subscribe(Topic.BIT_ALERT, alert_handler)
+
+    now = 1000000
+
+    # First observation is already failed
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now))
 
     assert len(alerts) == 1
     assert alerts[0].severity == BitAlertSeverity.failed
+    assert alerts[0].previous_status == BitStatus.ok  # Treated as transition from ok
+
+
+@pytest.mark.asyncio
+async def test_alert_manager_recovery_suppressed_without_open_alert():
+    """Verify recovery is suppressed when corresponding failure was suppressed"""
+    manager = AlertManager()
+    bus = EventBus()
+    manager.set_event_bus(bus)
+
+    alerts: list[BitAlert] = []
+
+    async def alert_handler(alert: BitAlert) -> None:
+        alerts.append(alert)
+
+    bus.subscribe(Topic.BIT_ALERT, alert_handler)
+
+    now = 1000000
+
+    # fail -> ok -> fail (suppressed) -> ok (should also be suppressed)
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 1000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 2000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.fail, now + 3000))
+    await manager.handle_result(create_simple_result("test-1", BitStatus.ok, now + 4000))
+
+    # Should have: failed, recovered (first pair), then both suppressed
+    assert len(alerts) == 2
+    assert [alert.severity for alert in alerts] == [
+        BitAlertSeverity.failed,
+        BitAlertSeverity.recovered,
+    ]

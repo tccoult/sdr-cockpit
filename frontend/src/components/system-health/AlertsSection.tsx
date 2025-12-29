@@ -50,15 +50,26 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
   const [hasInteracted, setHasInteracted] = useState(false);
   const [lastReadTimestamp, setLastReadTimestamp] = useState(0);
 
-  const latestTimestamp = useMemo(() => getLatestTimestamp(alerts), [alerts]);
+  // Filter out recovery alerts - live test panel shows current state
+  const displayAlerts = useMemo(
+    () => alerts.filter((alert) => alert.severity !== "recovered"),
+    [alerts]
+  );
+
+  const latestTimestamp = useMemo(
+    () => getLatestTimestamp(displayAlerts),
+    [displayAlerts]
+  );
   const unreadCount = useMemo(
-    () => alerts.filter((alert) => alert.timestamp > lastReadTimestamp).length,
-    [alerts, lastReadTimestamp]
+    () =>
+      displayAlerts.filter((alert) => alert.timestamp > lastReadTimestamp)
+        .length,
+    [displayAlerts, lastReadTimestamp]
   );
 
   const visibleAlerts = useMemo(
-    () => (isMobile ? alerts.slice(0, 8) : alerts),
-    [alerts, isMobile]
+    () => (isMobile ? displayAlerts.slice(0, 8) : displayAlerts),
+    [displayAlerts, isMobile]
   );
 
   useEffect(() => {
@@ -94,9 +105,9 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
               {unreadCount} new
             </span>
           )}
-          {isExpanded && alerts.length > 0 && (
+          {isExpanded && displayAlerts.length > 0 && (
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {alerts.length} recent
+              {displayAlerts.length} recent
             </span>
           )}
         </div>
@@ -160,9 +171,9 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
             </div>
           )}
         </div>
-        {isMobile && alerts.length > visibleAlerts.length && (
+        {isMobile && displayAlerts.length > visibleAlerts.length && (
           <div className="border-t border-border/60 bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">
-            Showing {visibleAlerts.length} of {alerts.length} alerts
+            Showing {visibleAlerts.length} of {displayAlerts.length} alerts
           </div>
         )}
       </div>
