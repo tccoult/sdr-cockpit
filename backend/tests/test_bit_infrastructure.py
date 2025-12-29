@@ -166,6 +166,47 @@ async def test_bit_storage_metrics_calculation(temp_storage):
 
 
 @pytest.mark.asyncio
+async def test_bit_storage_top_failing_tests(temp_storage):
+    """Verify top_failing_tests returns multiple tests ordered by failure duration"""
+    now = int(time.time() * 1000)
+
+    # Create a sequence of snapshots where different tests fail for different durations
+    # Using create_test_result: tests are numbered 0 to (ok+warn+fail-1)
+    # fail tests are indices [ok+warn, ok+warn+fail)
+
+    # Snapshot 0: all ok (baseline)
+    await temp_storage.handle_result(create_test_result(timestamp=now, ok=5))
+
+    # Snapshot 1: test-3 and test-4 fail (2 failing tests) - 1 second later
+    await temp_storage.handle_result(create_test_result(timestamp=now + 1000, ok=3, fail=2))
+
+    # Snapshot 2: only test-4 still fails - 1 second later
+    # (test-3 recovers, test-4 continues failing)
+    await temp_storage.handle_result(create_test_result(timestamp=now + 2000, ok=4, fail=1))
+
+    # Snapshot 3: test-4 still fails - 1 second later
+    await temp_storage.handle_result(create_test_result(timestamp=now + 3000, ok=4, fail=1))
+
+    # Rollups attribute duration from previous snapshot to current:
+    # - Interval [0, 1000]: all ok (no fail time)
+    # - Interval [1000, 2000]: test-3 and test-4 both fail -> 1s each
+    # - Interval [2000, 3000]: test-4 fails -> 1s more for test-4
+    # Result: test-4 has 2s fail time, test-3 has 1s fail time
+
+    metrics = temp_storage.get_metrics(window_minutes=60)
+
+    # Should have 2 failing tests
+    assert len(metrics.top_failing_tests) == 2
+
+    # Should be ordered by fail duration descending
+    assert metrics.top_failing_tests[0].test_id == "test-4"
+    assert metrics.top_failing_tests[1].test_id == "test-3"
+
+    # Verify durations (2s = 2000ms -> ~0.03 minutes, 1s = 1000ms -> ~0.02 minutes)
+    assert metrics.top_failing_tests[0].fail_minutes > metrics.top_failing_tests[1].fail_minutes
+
+
+@pytest.mark.asyncio
 async def test_bit_storage_metrics_window_less_than_requested(temp_storage):
     """Verify windowMinutes reflects actual data coverage when less than requested"""
     now = int(time.time() * 1000)
