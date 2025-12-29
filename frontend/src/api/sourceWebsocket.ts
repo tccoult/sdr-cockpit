@@ -157,7 +157,7 @@ class SourceDataStream {
           }, delay);
         }
       };
-    } catch (_err) {
+    } catch {
       this.callbacks.onStatusChange('error');
       this.callbacks.onError?.('Failed to create connection');
     }
