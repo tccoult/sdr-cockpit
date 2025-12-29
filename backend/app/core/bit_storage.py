@@ -246,133 +246,85 @@ class BitStorage:
 
         Preserves data continuity across rollover by copying the last N hours
         of alerts and metrics rollups into the new database.
+
+        Uses SQLite ATTACH for efficient bulk copying without Python loop overhead.
         """
         overlap_ms = self.settings.bit_rollover_overlap_hours * 60 * 60 * 1000
         cutoff = int(time.time() * 1000) - overlap_ms
 
-        archive_conn: Optional[sqlite3.Connection] = None
         try:
-            archive_conn = sqlite3.connect(archive_path)
-            archive_conn.row_factory = sqlite3.Row
+            with self._get_connection() as conn:
+                # Attach the archive database
+                conn.execute("ATTACH DATABASE ? AS archive", (str(archive_path),))
 
-            with self._get_connection() as new_conn:
-                # Copy recent alerts
-                alerts = archive_conn.execute(
-                    """
-                    SELECT timestamp, test_id, test_name, previous_status,
-                           new_status, severity, message
-                    FROM bit_alerts
-                    WHERE timestamp >= ?
-                    ORDER BY timestamp ASC
-                    """,
-                    (cutoff,),
-                ).fetchall()
-
-                for alert in alerts:
-                    new_conn.execute(
+                try:
+                    # Bulk copy recent alerts
+                    conn.execute(
                         """
                         INSERT INTO bit_alerts
                             (timestamp, test_id, test_name, previous_status,
                              new_status, severity, message)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        SELECT timestamp, test_id, test_name, previous_status,
+                               new_status, severity, message
+                        FROM archive.bit_alerts
+                        WHERE timestamp >= ?
                         """,
-                        (
-                            alert["timestamp"],
-                            alert["test_id"],
-                            alert["test_name"],
-                            alert["previous_status"],
-                            alert["new_status"],
-                            alert["severity"],
-                            alert["message"],
-                        ),
+                        (cutoff,),
                     )
+                    alerts_copied = conn.execute("SELECT changes()").fetchone()[0]
 
-                # Copy recent metrics rollups
-                metrics = archive_conn.execute(
-                    """
-                    SELECT bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
-                           sample_count, fail_alert_count
-                    FROM bit_metrics_rollups
-                    WHERE bucket_start >= ?
-                    """,
-                    (cutoff,),
-                ).fetchall()
-
-                for row in metrics:
-                    new_conn.execute(
+                    # Bulk copy recent metrics rollups
+                    conn.execute(
                         """
                         INSERT INTO bit_metrics_rollups
                             (bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
                              sample_count, fail_alert_count)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        SELECT bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
+                               sample_count, fail_alert_count
+                        FROM archive.bit_metrics_rollups
+                        WHERE bucket_start >= ?
                         """,
-                        (
-                            row["bucket_start"],
-                            row["bucket_ms"],
-                            row["ok_ms"],
-                            row["warn_ms"],
-                            row["fail_ms"],
-                            row["sample_count"],
-                            row["fail_alert_count"],
-                        ),
+                        (cutoff,),
                     )
+                    metrics_copied = conn.execute("SELECT changes()").fetchone()[0]
 
-                # Copy recent test rollups
-                test_rollups = archive_conn.execute(
-                    """
-                    SELECT bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms
-                    FROM bit_test_rollups
-                    WHERE bucket_start >= ?
-                    """,
-                    (cutoff,),
-                ).fetchall()
-
-                for row in test_rollups:
-                    new_conn.execute(
+                    # Bulk copy recent test rollups
+                    conn.execute(
                         """
                         INSERT INTO bit_test_rollups
                             (bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        SELECT bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms
+                        FROM archive.bit_test_rollups
+                        WHERE bucket_start >= ?
                         """,
-                        (
-                            row["bucket_start"],
-                            row["bucket_ms"],
-                            row["test_id"],
-                            row["ok_ms"],
-                            row["warn_ms"],
-                            row["fail_ms"],
-                        ),
+                        (cutoff,),
                     )
+                    test_rollups_copied = conn.execute("SELECT changes()").fetchone()[0]
 
-                # Copy all test names (small table, preserves name cache)
-                test_names = archive_conn.execute(
-                    "SELECT test_id, test_name FROM bit_tests"
-                ).fetchall()
-
-                for row in test_names:
-                    new_conn.execute(
+                    # Bulk copy all test names (small table, upsert for conflicts)
+                    conn.execute(
                         """
                         INSERT INTO bit_tests (test_id, test_name)
-                        VALUES (?, ?)
+                        SELECT test_id, test_name FROM archive.bit_tests
+                        WHERE true
                         ON CONFLICT(test_id) DO UPDATE SET test_name = excluded.test_name
-                        """,
-                        (row["test_id"], row["test_name"]),
+                        """
+                    )
+                    test_names_copied = conn.execute("SELECT changes()").fetchone()[0]
+
+                    conn.commit()
+
+                    logger.info(
+                        f"Copied {alerts_copied} alerts, {metrics_copied} metrics buckets, "
+                        f"{test_rollups_copied} test rollups, {test_names_copied} test names "
+                        f"from archive (overlap: {self.settings.bit_rollover_overlap_hours}h)"
                     )
 
-                new_conn.commit()
-
-                logger.info(
-                    f"Copied {len(alerts)} alerts, {len(metrics)} metrics buckets, "
-                    f"{len(test_rollups)} test rollups, {len(test_names)} test names "
-                    f"from archive (overlap: {self.settings.bit_rollover_overlap_hours}h)"
-                )
+                finally:
+                    conn.execute("DETACH DATABASE archive")
 
         except Exception as e:
             logger.error(f"Failed to copy data from archive {archive_path}: {e}")
-
-        finally:
-            if archive_conn is not None:
-                archive_conn.close()
 
     def _cleanup_old_rotations(self) -> None:
         """Remove old rotated database files beyond max_files limit"""
