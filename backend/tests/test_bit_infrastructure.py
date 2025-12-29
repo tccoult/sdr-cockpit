@@ -150,12 +150,13 @@ async def test_bit_storage_get_alerts_respects_since(temp_storage):
 @pytest.mark.asyncio
 async def test_bit_storage_metrics_calculation(temp_storage):
     """Verify metrics are calculated correctly from time-weighted rollups"""
-    # Use current time so snapshots fall within the metrics window
+    # Use recent past time so snapshots fall within the metrics window
     now = int(time.time() * 1000)
+    base_time = now - 10000  # Start 10 seconds ago
 
     # Store snapshots: 3 ok intervals, 1 degraded interval, then a final fail snapshot
     for i, (ok, warn, fail) in enumerate([(5, 0, 0), (5, 0, 0), (5, 0, 0), (4, 1, 0), (4, 0, 1)]):
-        result = create_test_result(timestamp=now + i * 1000, ok=ok, warn=warn, fail=fail)
+        result = create_test_result(timestamp=base_time + i * 1000, ok=ok, warn=warn, fail=fail)
         await temp_storage.handle_result(result)
 
     metrics = temp_storage.get_metrics(window_minutes=60)
@@ -228,12 +229,14 @@ async def test_bit_storage_metrics_window_less_than_requested(temp_storage):
 
 @pytest.mark.asyncio
 async def test_bit_storage_metrics_window_exceeds_requested(temp_storage):
-    """Verify windowMinutes is capped to requested window when more data exists"""
+    """Verify windowMinutes reflects requested window when more historical data exists"""
     now = int(time.time() * 1000)
 
-    # Store snapshots spanning 2 hours (120 minutes)
+    # Store snapshots spanning 2 hours in the PAST (120 minutes ago to now)
     for i in range(13):
-        result = create_test_result(timestamp=now + i * 10 * 60 * 1000, ok=5)  # 10min apart
+        # Create snapshots going backwards: now, now-10min, now-20min, ..., now-120min
+        timestamp = now - (12 - i) * 10 * 60 * 1000
+        result = create_test_result(timestamp=timestamp, ok=5)
         await temp_storage.handle_result(result)
 
     # Request only 10 minute window, even though 2 hours of data exists

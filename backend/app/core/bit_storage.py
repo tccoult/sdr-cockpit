@@ -397,11 +397,20 @@ class BitStorage:
 
     def get_metrics(self, window_minutes: int = 240) -> BitHealthMetrics:
         """Calculate health metrics from rollup tables"""
-        now = (
-            self._latest_result.timestamp
-            if self._latest_result is not None
-            else int(time.time() * 1000)
-        )
+        # Use the most recent BIT timestamp as the reference point for the window
+        # This ensures metrics remain valid even when system clock jumps
+        # (e.g., when clock starts old and jumps forward after time sync)
+        wall_clock_now = int(time.time() * 1000)
+
+        if self._latest_result is not None:
+            # Use BIT timestamp, but cap it to not be more than 1 hour in the future
+            # relative to wall clock (prevents issues if BIT clock is ahead)
+            max_allowed_future = wall_clock_now + 60 * 60 * 1000  # 1 hour ahead
+            now = min(self._latest_result.timestamp, max_allowed_future)
+        else:
+            # No BIT data yet, use wall clock
+            now = wall_clock_now
+
         since = now - (window_minutes * 60 * 1000)
         bucket_ms = self.settings.bit_rollup_bucket_ms
         bucket_floor = since - (since % bucket_ms)
@@ -459,18 +468,28 @@ class BitStorage:
                 """
                 SELECT
                     r.test_id,
-                    COALESCE(SUM(r.fail_ms), 0) as fail_ms,
+                    SUM(r.fail_ms) as fail_ms,
                     COALESCE(t.test_name, r.test_id) as test_name
                 FROM bit_test_rollups r
                 LEFT JOIN bit_tests t ON t.test_id = r.test_id
                 WHERE r.bucket_start >= ?
-                GROUP BY r.test_id
-                HAVING fail_ms > 0
+                GROUP BY r.test_id, t.test_name
+                HAVING SUM(r.fail_ms) > 0
                 ORDER BY fail_ms DESC
                 LIMIT ?
                 """,
                 (bucket_floor, self.settings.bit_top_failing_tests),
             ).fetchall()
+
+            # Log when we return 0 to help debug intermittent issue
+            if len(rows) == 0:
+                bucket_info = conn.execute(
+                    "SELECT MIN(bucket_start) as min_bucket, MAX(bucket_start) as max_bucket FROM bit_test_rollups WHERE fail_ms > 0"
+                ).fetchone()
+                logger.warning(
+                    f"top_failing_tests returned 0 results. bucket_floor={bucket_floor}, "
+                    f"fail buckets range: [{bucket_info['min_bucket']}, {bucket_info['max_bucket']}]"
+                )
 
             return [
                 TestFailureCount(
