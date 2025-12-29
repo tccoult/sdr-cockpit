@@ -211,11 +211,16 @@ export function SystemHealthPanel({
     view === "function" ? highlighted.function : highlighted.hardware;
 
   return (
-    <div className={cn("flex flex-col p-3", !isMobile && "h-full")}>
+    <div
+      className={cn(
+        "flex flex-col p-3",
+        !isMobile && "h-full min-h-0 box-border"
+      )}
+    >
       <div
         className={cn(
           "flex flex-col rounded-sm border border-border/70 bg-card shadow-lg shadow-black/15",
-          !isMobile && "h-full overflow-hidden"
+          !isMobile && "min-h-0 flex-1"
         )}
       >
         <div className="px-4 pt-4 pb-2">
@@ -244,10 +249,15 @@ export function SystemHealthPanel({
         </div>
         <MetricsSummary metrics={metrics} isExpanded={metricsExpanded} />
         <div className="border-t border-border/70" />
-        <AlertsSection alerts={alerts.alerts} isMobile={isMobile} />
+        <AlertsSection
+          alerts={alerts.alerts}
+          isMobile={isMobile}
+          maxHeightClassName={!isMobile ? "max-h-48" : undefined}
+          listClassName={!isMobile ? "max-h-48" : undefined}
+        />
         <div className="border-t border-border/70" />
-        <div className={cn("flex-1", !isMobile && "overflow-hidden")}>
-          <div className="flex items-center justify-between gap-3 px-4 pb-1 pt-3">
+        <div className={cn("flex flex-col flex-1", !isMobile && "min-h-0")}>
+          <div className="flex items-center justify-between gap-2 px-4 pb-1 pt-3">
             <div className="inline-flex rounded-md border border-border/80 bg-muted/60 p-0.5 shadow-sm">
               {(["tests", "function", "hardware"] as PanelView[]).map(
                 (mode, index) => (
@@ -257,7 +267,7 @@ export function SystemHealthPanel({
                     size="sm"
                     onClick={() => setView(mode)}
                     className={cn(
-                      "px-3 text-sm font-medium transition",
+                      "px-2.5 text-xs font-medium transition",
                       "rounded-none first:rounded-l-md last:rounded-r-md",
                       index > 0 && "-ml-px"
                     )}
@@ -271,16 +281,16 @@ export function SystemHealthPanel({
                 )
               )}
             </div>
-            <div className="relative" ref={menuRef}>
+            <div className="relative shrink-0" ref={menuRef}>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-10 p-0"
+                className="h-8 w-8 p-0"
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
-                <MoreVertical className="h-5 w-5" />
+                <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Built-In Test actions</span>
               </Button>
               {menuOpen && (

@@ -1,19 +1,21 @@
 import {
+  AlertCircle,
   AlertTriangle,
   CheckCircle2,
-  AlertCircle,
   ChevronDown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import { BitAlert } from "../../services/api";
 import { STATUS_TOKENS } from "./statusTokens";
 import { formatRelativeTimestamp } from "./utils";
-import { cn } from "@/lib/utils";
 
 interface AlertsSectionProps {
   alerts: BitAlert[];
   isMobile?: boolean;
+  maxHeightClassName?: string;
+  listClassName?: string;
 }
 
 const getAlertTone = (severity: BitAlert["severity"]) => {
@@ -45,7 +47,16 @@ const getAlertIcon = (severity: BitAlert["severity"]) => {
 const getLatestTimestamp = (alerts: BitAlert[]) =>
   alerts.reduce((latest, alert) => Math.max(latest, alert.timestamp), 0);
 
-export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) {
+export function AlertsSection({
+  alerts,
+  isMobile = false,
+  maxHeightClassName,
+  listClassName,
+}: AlertsSectionProps) {
+  const resolvedMaxHeight =
+    !isMobile && maxHeightClassName ? maxHeightClassName : "max-h-48";
+  const resolvedListMaxHeight =
+    !isMobile && listClassName ? listClassName : resolvedMaxHeight;
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [lastReadTimestamp, setLastReadTimestamp] = useState(0);
@@ -124,14 +135,16 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
           isExpanded
             ? "opacity-100 duration-200 ease-out"
             : "max-h-0 opacity-0 duration-150 ease-in",
-          isExpanded && !isMobile && "max-h-40",
+          isExpanded && !isMobile && resolvedMaxHeight,
           isExpanded && isMobile && "max-h-screen"
         )}
       >
         <div
           className={cn(
             "border-t border-border/60 bg-card/40",
-            !isMobile && "max-h-[120px] overflow-y-auto"
+            !isMobile && "overflow-y-auto",
+            !isMobile && resolvedListMaxHeight,
+            listClassName
           )}
         >
           {visibleAlerts.length === 0 ? (
@@ -158,7 +171,7 @@ export function AlertsSection({ alerts, isMobile = false }: AlertsSectionProps) 
                       <Icon className="h-3 w-3" />
                     </span>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground leading-snug">
+                      <p className="text-xs font-medium text-foreground leading-snug">
                         {alert.message}
                       </p>
                       <p className="mt-0.5 text-xs uppercase tracking-wide text-muted-foreground">

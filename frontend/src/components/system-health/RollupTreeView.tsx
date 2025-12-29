@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 
-import { TreeView } from "../common/TreeView";
+import { cn } from "@/lib/utils";
 import { BitSummary, BitTest } from "../../services/api";
-import { SummaryBanner, StatusBadge } from "./StatusIndicators";
+import { TreeView } from "../common/TreeView";
+import { StatusBadge, SummaryBanner } from "./StatusIndicators";
 import { STATUS_TOKENS } from "./statusTokens";
 import { RollupDisplayNode } from "./utils";
-import { cn } from "@/lib/utils";
 
 interface RollupTreeViewProps {
   tree: RollupDisplayNode;
@@ -42,9 +42,9 @@ export function RollupTreeView({
   }, [expandState]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const focusClearTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(
-    null
-  );
+  const focusClearTimerRef = useRef<ReturnType<
+    typeof window.setTimeout
+  > | null>(null);
 
   useEffect(() => {
     if (!focusNodeId) return;
@@ -82,12 +82,20 @@ export function RollupTreeView({
   );
 
   return (
-    <div className={cn("flex flex-col", !isMobile && "h-full overflow-hidden")}>
+    <div
+      className={cn(
+        "flex flex-col",
+        !isMobile && "flex-1 min-h-0 overflow-hidden"
+      )}
+    >
       <div className="px-4 pb-3 pt-4">
         <SummaryBanner summary={summary} />
       </div>
       <div
-        className={cn("px-2 pb-4", !isMobile && "flex-1 overflow-y-auto")}
+        className={cn(
+          "px-2 pb-6 scroll-pb-6",
+          !isMobile && "flex-1 min-h-0 overflow-y-auto"
+        )}
         ref={containerRef}
       >
         <TreeView<RollupDisplayNode>
@@ -136,7 +144,7 @@ function RollupTreeNode({
         title={test?.description ?? undefined}
         data-tree-node-id={node.testId}
         className={cn(
-          "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-sm transition",
+          "w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left text-xs transition",
           "hover:border-border hover:bg-muted/70",
           isActive && "border-accent/40 bg-accent/10 ring-1 ring-accent/50"
         )}
@@ -149,7 +157,7 @@ function RollupTreeNode({
                 STATUS_TOKENS[node.status].dot
               )}
             />
-            <span className="truncate text-sm font-medium text-foreground">
+            <span className="truncate text-xs font-medium text-foreground">
               {node.name}
             </span>
           </div>
@@ -165,7 +173,7 @@ function RollupTreeNode({
   return (
     <div
       className={cn(
-        "rounded-md px-2 py-1.5 text-sm transition",
+        "rounded-md px-2 py-1.5 text-xs transition",
         isHighlighted && "border border-accent/40 bg-accent/10",
         !isHighlighted && containsActiveTest && "bg-accent/10"
       )}
@@ -179,7 +187,7 @@ function RollupTreeNode({
               STATUS_TOKENS[node.status].dot
             )}
           />
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-xs font-medium text-foreground">
             {node.name}
           </span>
         </div>

@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import {
+  BitStatus,
   BitSummary,
   BitTest,
   BitTreeNode,
-  BitStatus,
 } from "../../services/api";
-import { SummaryBanner, StatusBadge } from "./StatusIndicators";
+import { StatusBadge, SummaryBanner } from "./StatusIndicators";
 import { STATUS_TOKENS } from "./statusTokens";
-import {
-  getTerminalNodeIds,
-  formatRelativeTimestamp,
-} from "./utils";
-import { cn } from "@/lib/utils";
+import { formatRelativeTimestamp, getTerminalNodeIds } from "./utils";
 
 interface HighlightState {
   function: string[];
@@ -96,12 +93,20 @@ export function TestsView({
   }, [openTestId, tests]);
 
   return (
-    <div className={cn("flex flex-col", !isMobile && "h-full overflow-hidden")}>
+    <div
+      className={cn(
+        "flex flex-col",
+        !isMobile && "flex-1 min-h-0 overflow-hidden"
+      )}
+    >
       <div className="px-4 pb-3 pt-3">
         <SummaryBanner summary={summary} />
       </div>
       <div
-        className={cn("px-2 pb-4", !isMobile && "flex-1 overflow-y-auto")}
+        className={cn(
+          "px-2 pb-6 scroll-pb-6",
+          !isMobile && "flex-1 min-h-0 overflow-y-auto"
+        )}
         ref={listRef}
       >
         <div className="overflow-hidden rounded-md border border-border/60 bg-card/40">
@@ -163,7 +168,7 @@ export function TestsView({
                           statusTokens.dot
                         )}
                       />
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-xs font-medium text-foreground">
                         {test.name}
                       </span>
                     </div>
