@@ -82,12 +82,12 @@ export function RollupTreeView({
   );
 
   return (
-    <div className={cn("flex flex-col", !isMobile && "h-full overflow-hidden")}>
+    <div className={cn("flex flex-col", !isMobile && "h-full min-h-0 overflow-hidden")}>
       <div className="px-4 pb-3 pt-4">
         <SummaryBanner summary={summary} />
       </div>
       <div
-        className={cn("px-2 pb-4", !isMobile && "flex-1 overflow-y-auto")}
+        className={cn("px-2 pb-4", !isMobile && "flex-1 min-h-0 overflow-y-auto")}
         ref={containerRef}
       >
         <TreeView<RollupDisplayNode>
