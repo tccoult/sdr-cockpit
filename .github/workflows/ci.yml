@@ -108,7 +108,7 @@ jobs:
         run: ./scripts/generate-docs.sh
 
       - name: Upload API documentation artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: api-documentation
           path: docs/api/index.html
@@ -296,7 +296,7 @@ jobs:
           docker save sdr-cockpit:latest -o /tmp/sdr-cockpit-image.tar
 
       - name: Upload image tar for RPM build
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: sdr-cockpit-image
           path: /tmp/sdr-cockpit-image.tar
@@ -388,7 +388,7 @@ jobs:
 
       - name: Upload RPM artifact
         if: github.ref == 'refs/heads/trunk'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: sdr-cockpit-rpm
           path: sdr-cockpit*.rpm
