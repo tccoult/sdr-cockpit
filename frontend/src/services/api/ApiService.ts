@@ -239,7 +239,7 @@ class OnlineApiService implements IApiService {
           try {
             const response = JSON.parse(xhr.responseText);
             resolve(response.uploadId);
-          } catch (error) {
+          } catch (_error) {
             reject(new Error('Failed to parse upload response'));
           }
         } else {
