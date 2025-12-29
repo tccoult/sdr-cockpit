@@ -27,7 +27,7 @@ export function MetricsSummary({ metrics, isExpanded }: MetricsSummaryProps) {
       className={cn(
         "overflow-hidden transition-[max-height,opacity]",
         isExpanded
-          ? "max-h-40 opacity-100 duration-200 ease-out"
+          ? "max-h-80 opacity-100 duration-200 ease-out"
           : "max-h-0 opacity-0 duration-150 ease-in"
       )}
     >
