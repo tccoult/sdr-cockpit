@@ -96,12 +96,20 @@ export function TestsView({
   }, [openTestId, tests]);
 
   return (
-    <div className={cn("flex flex-col", !isMobile && "h-full min-h-0 overflow-hidden")}>
+    <div
+      className={cn(
+        "flex flex-col",
+        !isMobile && "flex-1 min-h-0 overflow-hidden"
+      )}
+    >
       <div className="px-4 pb-3 pt-3">
         <SummaryBanner summary={summary} />
       </div>
       <div
-        className={cn("px-2 pb-4", !isMobile && "flex-1 min-h-0 overflow-y-auto")}
+        className={cn(
+          "px-2 pb-6 scroll-pb-6",
+          !isMobile && "flex-1 min-h-0 overflow-y-auto"
+        )}
         ref={listRef}
       >
         <div className="overflow-hidden rounded-md border border-border/60 bg-card/40">
