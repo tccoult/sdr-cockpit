@@ -212,7 +212,11 @@ class BitStorage:
         return False
 
     def _rotate_database(self) -> None:
-        """Rotate current database to timestamped file and create new one"""
+        """Rotate current database to timestamped file and create new one.
+
+        Copies recent alerts and rollup metrics from the old database to the new one
+        to preserve continuity across the metrics window.
+        """
         if not self.db_path.exists():
             logger.debug("No database file to rotate")
             return
@@ -228,11 +232,147 @@ class BitStorage:
         # Create new database
         self._init_db()
 
+        # Copy recent data from old database to new one
+        self._copy_recent_data_from_archive(rotated_path)
+
         # Update rotation timestamp
         self._last_rotation_check_monotonic = time.monotonic()
 
         # Clean up old rotated files
         self._cleanup_old_rotations()
+
+    def _copy_recent_data_from_archive(self, archive_path: Path) -> None:
+        """Copy recent alerts and rollup metrics from archived database.
+
+        Preserves data continuity across rollover by copying the last N hours
+        of alerts and metrics rollups into the new database.
+        """
+        overlap_ms = self.settings.bit_rollover_overlap_hours * 60 * 60 * 1000
+        cutoff = int(time.time() * 1000) - overlap_ms
+
+        archive_conn: Optional[sqlite3.Connection] = None
+        try:
+            archive_conn = sqlite3.connect(archive_path)
+            archive_conn.row_factory = sqlite3.Row
+
+            with self._get_connection() as new_conn:
+                # Copy recent alerts
+                alerts = archive_conn.execute(
+                    """
+                    SELECT timestamp, test_id, test_name, previous_status,
+                           new_status, severity, message
+                    FROM bit_alerts
+                    WHERE timestamp >= ?
+                    ORDER BY timestamp ASC
+                    """,
+                    (cutoff,),
+                ).fetchall()
+
+                for alert in alerts:
+                    new_conn.execute(
+                        """
+                        INSERT INTO bit_alerts
+                            (timestamp, test_id, test_name, previous_status,
+                             new_status, severity, message)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            alert["timestamp"],
+                            alert["test_id"],
+                            alert["test_name"],
+                            alert["previous_status"],
+                            alert["new_status"],
+                            alert["severity"],
+                            alert["message"],
+                        ),
+                    )
+
+                # Copy recent metrics rollups
+                metrics = archive_conn.execute(
+                    """
+                    SELECT bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
+                           sample_count, fail_alert_count
+                    FROM bit_metrics_rollups
+                    WHERE bucket_start >= ?
+                    """,
+                    (cutoff,),
+                ).fetchall()
+
+                for row in metrics:
+                    new_conn.execute(
+                        """
+                        INSERT INTO bit_metrics_rollups
+                            (bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
+                             sample_count, fail_alert_count)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            row["bucket_start"],
+                            row["bucket_ms"],
+                            row["ok_ms"],
+                            row["warn_ms"],
+                            row["fail_ms"],
+                            row["sample_count"],
+                            row["fail_alert_count"],
+                        ),
+                    )
+
+                # Copy recent test rollups
+                test_rollups = archive_conn.execute(
+                    """
+                    SELECT bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms
+                    FROM bit_test_rollups
+                    WHERE bucket_start >= ?
+                    """,
+                    (cutoff,),
+                ).fetchall()
+
+                for row in test_rollups:
+                    new_conn.execute(
+                        """
+                        INSERT INTO bit_test_rollups
+                            (bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            row["bucket_start"],
+                            row["bucket_ms"],
+                            row["test_id"],
+                            row["ok_ms"],
+                            row["warn_ms"],
+                            row["fail_ms"],
+                        ),
+                    )
+
+                # Copy all test names (small table, preserves name cache)
+                test_names = archive_conn.execute(
+                    "SELECT test_id, test_name FROM bit_tests"
+                ).fetchall()
+
+                for row in test_names:
+                    new_conn.execute(
+                        """
+                        INSERT INTO bit_tests (test_id, test_name)
+                        VALUES (?, ?)
+                        ON CONFLICT(test_id) DO UPDATE SET test_name = excluded.test_name
+                        """,
+                        (row["test_id"], row["test_name"]),
+                    )
+
+                new_conn.commit()
+
+                logger.info(
+                    f"Copied {len(alerts)} alerts, {len(metrics)} metrics buckets, "
+                    f"{len(test_rollups)} test rollups, {len(test_names)} test names "
+                    f"from archive (overlap: {self.settings.bit_rollover_overlap_hours}h)"
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to copy data from archive {archive_path}: {e}")
+
+        finally:
+            if archive_conn is not None:
+                archive_conn.close()
 
     def _cleanup_old_rotations(self) -> None:
         """Remove old rotated database files beyond max_files limit"""
