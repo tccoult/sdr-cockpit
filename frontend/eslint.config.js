@@ -56,10 +56,6 @@ export default [
       'no-unused-vars': 'off',
       // TypeScript handles these better
       'no-redeclare': 'off',
-      // These rules are too strict for valid React patterns
-      'react-hooks/set-state-in-effect': 'off',
-      'react-hooks/purity': 'off',
-      'react-hooks/refs': 'off',
     },
   },
   // Config files need Node.js globals

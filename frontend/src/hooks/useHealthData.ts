@@ -72,6 +72,7 @@ export function useHealthData(): HealthData {
         setMetrics(getMockBitMetrics());
       }, 10000);
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load
       setAlerts(getMockBitAlerts());
       setMetrics(getMockBitMetrics());
 

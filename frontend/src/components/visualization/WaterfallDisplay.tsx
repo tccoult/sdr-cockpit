@@ -264,6 +264,8 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
     };
   }, [plot, colormap, minDb, maxDb, rowCount]);
 
+  // Tooltip computation reads refs during render - necessary for visualization overlays
+  /* eslint-disable react-hooks/refs */
   let waterfallTooltip: { left: number; top: number; lines: string[] } | null =
     null;
   if (cursorInfo && canvasRef.current && rowCount > 0) {
@@ -332,6 +334,7 @@ export const WaterfallDisplay = memo(function WaterfallDisplay({
       }
     }
   }
+  /* eslint-enable react-hooks/refs */
 
   return (
     <div

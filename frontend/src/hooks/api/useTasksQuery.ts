@@ -35,6 +35,7 @@ function useTasksQuery() {
   // Sync with server data
   useEffect(() => {
     if (tasks.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local state with server data
       setClientTasks(tasks);
     }
   }, [tasks]);

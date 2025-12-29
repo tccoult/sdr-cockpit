@@ -37,6 +37,7 @@ export function TreeView<T extends TreeNodeData>({
 
   useEffect(() => {
     if (isForcedExpanded && !isExpanded) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync with forced expand prop
       setIsExpanded(true)
     }
   }, [isForcedExpanded, isExpanded])

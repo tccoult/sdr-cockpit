@@ -216,6 +216,8 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
     };
   }, [onRenderFpsChange]);
 
+  // Tooltip computation reads refs during render - necessary for visualization overlays
+  /* eslint-disable react-hooks/refs */
   let tooltip: { left: number; top: number; lines: string[] } | null = null;
   if (cursorInfo && canvasRef.current) {
     const freqLabel = formatFrequency(cursorInfo.dataX);
@@ -277,6 +279,7 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
       };
     }
   }
+  /* eslint-enable react-hooks/refs */
 
   return (
     <div

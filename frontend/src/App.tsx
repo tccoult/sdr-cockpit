@@ -110,6 +110,7 @@ function App() {
   // Reset render FPS when wizard opens
   useEffect(() => {
     if (isTaskWizardOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on prop change
       setRenderFps(0);
     }
   }, [isTaskWizardOpen]);
