@@ -553,3 +553,152 @@ async def test_alert_manager_recovery_suppressed_without_open_alert():
         BitAlertSeverity.failed,
         BitAlertSeverity.recovered,
     ]
+
+
+# --- Database Rollover Tests ---
+
+
+@pytest.fixture
+def temp_storage_short_rotation():
+    """Create a BitStorage with short rotation interval for testing rollover"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        settings = Settings(
+            bit_db_path=tmpdir,
+            bit_rotation_hours=24,
+            bit_max_file_size_mb=100,
+            bit_max_files=7,
+            bit_rollover_overlap_hours=2,  # 2 hours overlap for testing
+        )
+        storage = BitStorage(settings)
+        yield storage
+
+
+@pytest.mark.asyncio
+async def test_rollover_preserves_recent_alerts(temp_storage_short_rotation):
+    """Verify that recent alerts are preserved after database rollover"""
+    storage = temp_storage_short_rotation
+    now = int(time.time() * 1000)
+
+    # Create alerts: one recent (within overlap), one old (outside overlap)
+    old_alert = BitAlert(
+        id=0,
+        timestamp=now - 3 * 60 * 60 * 1000,  # 3 hours ago (outside 2h overlap)
+        testId="test-old",
+        testName="Old Test",
+        previousStatus=BitStatus.ok,
+        newStatus=BitStatus.fail,
+        severity=BitAlertSeverity.failed,
+        message="Old failure",
+    )
+    recent_alert = BitAlert(
+        id=0,
+        timestamp=now - 30 * 60 * 1000,  # 30 minutes ago (within 2h overlap)
+        testId="test-recent",
+        testName="Recent Test",
+        previousStatus=BitStatus.ok,
+        newStatus=BitStatus.fail,
+        severity=BitAlertSeverity.failed,
+        message="Recent failure",
+    )
+
+    await storage.handle_alert(old_alert)
+    await storage.handle_alert(recent_alert)
+
+    # Verify both alerts exist before rollover
+    alerts_before, _ = storage.get_alerts(since=0, limit=100)
+    assert len(alerts_before) == 2
+
+    # Force rollover
+    storage._rotate_database()
+
+    # Verify only recent alert is preserved after rollover
+    alerts_after, _ = storage.get_alerts(since=0, limit=100)
+    assert len(alerts_after) == 1
+    assert alerts_after[0].test_id == "test-recent"
+
+
+@pytest.mark.asyncio
+async def test_rollover_preserves_recent_metrics(temp_storage_short_rotation):
+    """Verify that recent metrics rollups are preserved after database rollover"""
+    storage = temp_storage_short_rotation
+    now = int(time.time() * 1000)
+
+    # Create snapshots spanning time: some old, some recent
+    # Old snapshots (3 hours ago - outside 2h overlap)
+    old_time = now - 3 * 60 * 60 * 1000
+    for i in range(3):
+        result = create_test_result(timestamp=old_time + i * 1000, ok=5)
+        await storage.handle_result(result)
+
+    # Recent snapshots (30 minutes ago - within 2h overlap)
+    recent_time = now - 30 * 60 * 1000
+    for i in range(3):
+        result = create_test_result(timestamp=recent_time + i * 1000, ok=4, fail=1)
+        await storage.handle_result(result)
+
+    # Get metrics before rollover
+    metrics_before = storage.get_metrics(window_minutes=240)
+    assert metrics_before.snapshot_count == 6
+
+    # Force rollover
+    storage._rotate_database()
+
+    # Get metrics after rollover - should only have recent data
+    metrics_after = storage.get_metrics(window_minutes=240)
+
+    # Should have 3 recent snapshots (from sample_count in rollups)
+    assert metrics_after.snapshot_count == 3
+
+    # Operational percent should reflect only recent data (4 ok, 1 fail per snapshot)
+    # Recent snapshots have fail status, so operational_percent should be < 100
+    assert metrics_after.operational_percent < 100
+
+
+@pytest.mark.asyncio
+async def test_rollover_preserves_test_names(temp_storage_short_rotation):
+    """Verify that test name cache is preserved after database rollover"""
+    storage = temp_storage_short_rotation
+    now = int(time.time() * 1000)
+
+    # Create a result with named tests
+    result = create_test_result(timestamp=now, ok=3)
+    await storage.handle_result(result)
+
+    # Verify test names are cached
+    assert storage.get_test_name("test-0") == "Test 0"
+    assert storage.get_test_name("test-1") == "Test 1"
+
+    # Force rollover
+    storage._rotate_database()
+
+    # Test names should be preserved from the archive
+    assert storage.get_test_name("test-0") == "Test 0"
+    assert storage.get_test_name("test-1") == "Test 1"
+
+
+@pytest.mark.asyncio
+async def test_rollover_preserves_top_failing_tests(temp_storage_short_rotation):
+    """Verify that top failing tests are still reported after rollover"""
+    storage = temp_storage_short_rotation
+    now = int(time.time() * 1000)
+
+    # Create sequence with failing tests (within overlap window)
+    recent_time = now - 30 * 60 * 1000
+
+    # Baseline ok
+    await storage.handle_result(create_test_result(timestamp=recent_time, ok=5))
+
+    # Some tests fail
+    await storage.handle_result(create_test_result(timestamp=recent_time + 1000, ok=3, fail=2))
+    await storage.handle_result(create_test_result(timestamp=recent_time + 2000, ok=3, fail=2))
+
+    # Get top failing tests before rollover
+    metrics_before = storage.get_metrics(window_minutes=240)
+    assert len(metrics_before.top_failing_tests) > 0
+
+    # Force rollover
+    storage._rotate_database()
+
+    # Top failing tests should still be reported
+    metrics_after = storage.get_metrics(window_minutes=240)
+    assert len(metrics_after.top_failing_tests) > 0

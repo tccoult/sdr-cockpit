@@ -212,7 +212,11 @@ class BitStorage:
         return False
 
     def _rotate_database(self) -> None:
-        """Rotate current database to timestamped file and create new one"""
+        """Rotate current database to timestamped file and create new one.
+
+        Copies recent alerts and rollup metrics from the old database to the new one
+        to preserve continuity across the metrics window.
+        """
         if not self.db_path.exists():
             logger.debug("No database file to rotate")
             return
@@ -228,11 +232,99 @@ class BitStorage:
         # Create new database
         self._init_db()
 
+        # Copy recent data from old database to new one
+        self._copy_recent_data_from_archive(rotated_path)
+
         # Update rotation timestamp
         self._last_rotation_check_monotonic = time.monotonic()
 
         # Clean up old rotated files
         self._cleanup_old_rotations()
+
+    def _copy_recent_data_from_archive(self, archive_path: Path) -> None:
+        """Copy recent alerts and rollup metrics from archived database.
+
+        Preserves data continuity across rollover by copying the last N hours
+        of alerts and metrics rollups into the new database.
+
+        Uses SQLite ATTACH for efficient bulk copying without Python loop overhead.
+        """
+        overlap_ms = self.settings.bit_rollover_overlap_hours * 60 * 60 * 1000
+        cutoff = int(time.time() * 1000) - overlap_ms
+
+        try:
+            with self._get_connection() as conn:
+                # Attach the archive database
+                conn.execute("ATTACH DATABASE ? AS archive", (str(archive_path),))
+
+                try:
+                    # Bulk copy recent alerts
+                    conn.execute(
+                        """
+                        INSERT INTO bit_alerts
+                            (timestamp, test_id, test_name, previous_status,
+                             new_status, severity, message)
+                        SELECT timestamp, test_id, test_name, previous_status,
+                               new_status, severity, message
+                        FROM archive.bit_alerts
+                        WHERE timestamp >= ?
+                        """,
+                        (cutoff,),
+                    )
+                    alerts_copied = conn.execute("SELECT changes()").fetchone()[0]
+
+                    # Bulk copy recent metrics rollups
+                    conn.execute(
+                        """
+                        INSERT INTO bit_metrics_rollups
+                            (bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
+                             sample_count, fail_alert_count)
+                        SELECT bucket_start, bucket_ms, ok_ms, warn_ms, fail_ms,
+                               sample_count, fail_alert_count
+                        FROM archive.bit_metrics_rollups
+                        WHERE bucket_start >= ?
+                        """,
+                        (cutoff,),
+                    )
+                    metrics_copied = conn.execute("SELECT changes()").fetchone()[0]
+
+                    # Bulk copy recent test rollups
+                    conn.execute(
+                        """
+                        INSERT INTO bit_test_rollups
+                            (bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms)
+                        SELECT bucket_start, bucket_ms, test_id, ok_ms, warn_ms, fail_ms
+                        FROM archive.bit_test_rollups
+                        WHERE bucket_start >= ?
+                        """,
+                        (cutoff,),
+                    )
+                    test_rollups_copied = conn.execute("SELECT changes()").fetchone()[0]
+
+                    # Bulk copy all test names (small table, upsert for conflicts)
+                    conn.execute(
+                        """
+                        INSERT INTO bit_tests (test_id, test_name)
+                        SELECT test_id, test_name FROM archive.bit_tests
+                        WHERE true
+                        ON CONFLICT(test_id) DO UPDATE SET test_name = excluded.test_name
+                        """
+                    )
+                    test_names_copied = conn.execute("SELECT changes()").fetchone()[0]
+
+                    conn.commit()
+
+                    logger.info(
+                        f"Copied {alerts_copied} alerts, {metrics_copied} metrics buckets, "
+                        f"{test_rollups_copied} test rollups, {test_names_copied} test names "
+                        f"from archive (overlap: {self.settings.bit_rollover_overlap_hours}h)"
+                    )
+
+                finally:
+                    conn.execute("DETACH DATABASE archive")
+
+        except Exception as e:
+            logger.error(f"Failed to copy data from archive {archive_path}: {e}")
 
     def _cleanup_old_rotations(self) -> None:
         """Remove old rotated database files beyond max_files limit"""

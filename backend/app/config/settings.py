@@ -75,6 +75,7 @@ class Settings:
     bit_top_failing_tests: int = 3
     bit_clock_forward_jump_ms: int = 60 * 60 * 1000
     bit_clock_backward_jump_ms: int = 30 * 1000
+    bit_rollover_overlap_hours: int = 4
 
 
 @lru_cache()
@@ -98,6 +99,7 @@ def get_settings() -> Settings:
         bit_clock_backward_jump_ms=_parse_int(
             os.getenv("SDR_BIT_CLOCK_BACKWARD_JUMP_MS"), 30 * 1000
         ),
+        bit_rollover_overlap_hours=_parse_int(os.getenv("SDR_BIT_ROLLOVER_OVERLAP_HOURS"), 4),
     )
 
 
