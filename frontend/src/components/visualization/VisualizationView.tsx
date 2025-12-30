@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { VisualizationMode } from "../../api/client";
 import { FrequencyRange } from "../../types/sdr";
 import { ColorMap } from "../../utils/colorMaps";
+import { computeDbRangeWithPadding } from "../../utils/dbRange";
 import { useTheme } from "../app/useTheme";
 import { FFTDisplay, type FFTRangeMetrics } from "./FFTDisplay";
 import { SpectrogramDisplay } from "./SpectrogramDisplay";
@@ -89,27 +90,11 @@ export const VisualizationView = memo(function VisualizationView({
 
   const handleFftRangeMetrics = useCallback(
     (metrics: FFTRangeMetrics | null) => {
-      if (!metrics) {
-        setMinDb(-100);
-        setMaxDb(-20);
-        return;
-      }
-      const { minDb: nextMin, maxDb: nextMax } = metrics;
-      if (!Number.isFinite(nextMin) || !Number.isFinite(nextMax)) {
-        setMinDb(-100);
-        setMaxDb(-20);
-        return;
-      }
-      if (nextMax > nextMin) {
-        const range = nextMax - nextMin;
-        const padding = range * 0.1;
-        setMinDb(Math.floor(nextMin - padding));
-        setMaxDb(Math.ceil(nextMax + padding));
-      } else {
-        const padding = Math.max(5, Math.abs(nextMin) * 0.1);
-        setMinDb(Math.floor(nextMin - padding));
-        setMaxDb(Math.ceil(nextMax + padding));
-      }
+      const { minDb: nextMin, maxDb: nextMax } = computeDbRangeWithPadding(
+        metrics
+      );
+      setMinDb(nextMin);
+      setMaxDb(nextMax);
     },
     []
   );

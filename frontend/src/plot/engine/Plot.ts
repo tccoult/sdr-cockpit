@@ -21,6 +21,11 @@ import type { CursorLayer } from "../layers/CursorLayer";
 import { createHeatmapLayer } from "../layers/HeatmapLayer";
 import { createLineLayer } from "../layers/LineLayer";
 import {
+  normalizeRangeOrNull,
+  rangesEqual,
+  rangeToTuple,
+} from "../math";
+import {
   type AnnotationLayerHandle,
   type AnnotationLayerOptions,
   type AxisRange,
@@ -96,8 +101,6 @@ function resolveSurfaceForLayer(layer: Layer, phase: LayerPhase): PlotSurface {
 }
 const FALLBACK_CANVAS_WIDTH = 640;
 const FALLBACK_CANVAS_HEIGHT = 360;
-const MIN_SPAN = 1e-12;
-const RANGE_EPSILON = 1e-9;
 
 const now = () =>
   typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -745,7 +748,7 @@ class PlotEngine implements PlotHandle {
 
     let updated = false;
     if (xr) {
-      const range = normalizeRange(xr);
+      const range = normalizeRangeOrNull(xr);
       if (range) {
         this.viewport.setXRange(range);
         this.axisModelX.setRange(rangeToTuple(range));
@@ -753,7 +756,7 @@ class PlotEngine implements PlotHandle {
       }
     }
     if (yr) {
-      const range = normalizeRange(yr);
+      const range = normalizeRangeOrNull(yr);
       if (range) {
         this.viewport.setYRange(range);
         this.axisModelY.setRange(rangeToTuple(range));
@@ -806,7 +809,7 @@ class PlotEngine implements PlotHandle {
     range: AxisRange,
     source: "pan" | "zoom" | "manual"
   ) {
-    const normalized = normalizeRange(range);
+    const normalized = normalizeRangeOrNull(range);
     if (!normalized) {
       return;
     }
@@ -1265,44 +1268,15 @@ class PlotEngine implements PlotHandle {
   }
 }
 
-function normalizeRange(range: AxisRange | undefined | null): AxisRange | null {
-  if (!range) return null;
-  let { min, max } = range;
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    return null;
-  }
-  if (min > max) {
-    const tmp = min;
-    min = max;
-    max = tmp;
-  }
-  if (max - min < MIN_SPAN) {
-    const pad = min === 0 ? MIN_SPAN : Math.abs(min) * 1e-6;
-    min -= pad;
-    max += pad;
-  }
-  return { min, max };
-}
-
-function rangeToTuple(range: AxisRange): [number, number] {
-  return [range.min, range.max];
-}
-
-function rangesEqual(a: AxisRange, b: AxisRange): boolean {
-  return (
-    Math.abs(a.min - b.min) < RANGE_EPSILON &&
-    Math.abs(a.max - b.max) < RANGE_EPSILON
-  );
-}
-
 function cursorEquals(a: CursorState | null, b: CursorState | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
+  const epsilon = 1e-9;
   return (
     Math.abs(a.canvasX - b.canvasX) < 0.01 &&
     Math.abs(a.canvasY - b.canvasY) < 0.01 &&
-    Math.abs(a.dataX - b.dataX) < RANGE_EPSILON &&
-    Math.abs(a.dataY - b.dataY) < RANGE_EPSILON &&
+    Math.abs(a.dataX - b.dataX) < epsilon &&
+    Math.abs(a.dataY - b.dataY) < epsilon &&
     arraysEqual(a.values ?? null, b.values ?? null)
   );
 }

@@ -1,8 +1,8 @@
+import { normalizeRange } from "../math";
 import type { AxisRange, Viewport, ViewportOptions } from "../types";
 import { createDomRect } from "./domRect";
 
 const DEFAULT_RANGE: AxisRange = { min: 0, max: 1 };
-const MIN_SPAN = 1e-12;
 
 /**
  * Default margins for axes and labels (in CSS pixels).
@@ -17,8 +17,8 @@ export const DEFAULT_PLOT_MARGINS = {
 
 export function createViewport(options: ViewportOptions): Viewport {
   let rect: DOMRectReadOnly = createDomRect(0, 0, 1, 1);
-  let xRange = normalizeRange(options.initialXRange ?? DEFAULT_RANGE);
-  let yRange = normalizeRange(options.initialYRange ?? DEFAULT_RANGE);
+  let xRange = normalizeRange(options.initialXRange, DEFAULT_RANGE);
+  let yRange = normalizeRange(options.initialYRange, DEFAULT_RANGE);
 
   let spanX = xRange.max - xRange.min;
   let spanY = yRange.max - yRange.min;
@@ -96,23 +96,4 @@ export function createViewport(options: ViewportOptions): Viewport {
       updateScale();
     },
   };
-}
-
-function normalizeRange(range: AxisRange): AxisRange {
-  let { min, max } = range;
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    min = DEFAULT_RANGE.min;
-    max = DEFAULT_RANGE.max;
-  }
-  if (min > max) {
-    const tmp = min;
-    min = max;
-    max = tmp;
-  }
-  if (max - min < MIN_SPAN) {
-    const pad = min === 0 ? MIN_SPAN : Math.abs(min) * 1e-6;
-    min -= pad;
-    max += pad;
-  }
-  return { min, max };
 }
