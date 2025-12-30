@@ -1,4 +1,9 @@
 name: CI/CD
+# GitHub Actions CI/CD Pipeline
+#
+# Note: This workflow uses Docker buildx for multi-arch builds, which is the most
+# efficient approach for CI (parallel builds, GitHub cache integration). For local
+# development with Podman, use scripts/build-prod.sh which supports both runtimes.
 
 on:
   pull_request:
