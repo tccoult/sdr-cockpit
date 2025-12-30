@@ -669,8 +669,11 @@ export interface components {
             /** Name */
             name: string;
             status: components["schemas"]["BitStatus"];
-            /** Description */
-            description?: string | null;
+            /**
+             * Description
+             * @description Human-readable description of what this test verifies
+             */
+            description: string;
             /**
              * Lastrun
              * @description Unix timestamp in ms
@@ -683,15 +686,20 @@ export interface components {
             durationMs?: number | null;
             metrics?: components["schemas"]["BitMetrics"] | null;
             /**
+             * ExtraResultInfo
+             * @description Additional result information from the test run
+             */
+            extraResultInfo: string[];
+            /**
              * Functionnodes
              * @description Function node IDs
              */
-            functionNodes?: string[];
+            functionNodes: string[];
             /**
              * Hardwarenodes
              * @description Hardware node IDs
              */
-            hardwareNodes?: string[];
+            hardwareNodes: string[];
         };
         /**
          * BitTreeNode

@@ -191,6 +191,15 @@ export function TestsView({
                           {test.description}
                         </p>
                       )}
+                      {test.extraResultInfo && test.extraResultInfo.length > 0 && (
+                        <ul className="mt-2 list-disc pl-4 text-muted-foreground/90">
+                          {test.extraResultInfo.map((info, idx) => (
+                            <li key={idx} className="leading-snug">
+                              {info}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {metadata && (
                         <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/90">
                           {metadata}

@@ -161,15 +161,6 @@ export namespace sdr_cockpit {
         /** FFTFrameBatch sampleRate. */
         public sampleRate?: (number|null);
 
-        /** FFTFrameBatch _batchTimestamp. */
-        public _batchTimestamp?: "batchTimestamp";
-
-        /** FFTFrameBatch _centerFreq. */
-        public _centerFreq?: "centerFreq";
-
-        /** FFTFrameBatch _sampleRate. */
-        public _sampleRate?: "sampleRate";
-
         /**
          * Creates a new FFTFrameBatch instance using the specified properties.
          * @param [properties] Properties to set

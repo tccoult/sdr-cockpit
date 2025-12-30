@@ -263,10 +263,9 @@ BitTest:
     status:
       $ref: '#/BitStatus'
     description:
-      anyOf:
-      - type: string
-      - type: 'null'
+      type: string
       title: Description
+      description: Human-readable description of what this test verifies
     lastRun:
       anyOf:
       - type: integer
@@ -283,6 +282,12 @@ BitTest:
       anyOf:
       - $ref: '#/BitMetrics'
       - type: 'null'
+    extraResultInfo:
+      items:
+        type: string
+      type: array
+      title: ExtraResultInfo
+      description: Additional result information from the test run
     functionNodes:
       items:
         type: string
@@ -300,6 +305,10 @@ BitTest:
   - id
   - name
   - status
+  - description
+  - extraResultInfo
+  - functionNodes
+  - hardwareNodes
   title: BitTest
   description: Atomic BIT test definition with rollup mappings
 

@@ -1,35 +1,31 @@
-"""Mock BIT subscriber that simulates receiving BIT updates via ZMQ"""
+"""Mock BIT subscriber that simulates receiving BIT updates via ZMQ.
+
+This mock generates data in the same format as the real BIT rollup service
+would provide (proto dataclasses), then uses BitProtoMapper to convert to
+our internal BitResult format.
+
+When real ZMQ/protobuf integration is added, this class would be replaced
+with one that:
+1. Subscribes to ZMQ topics for TestResults and ReportRollupMsg
+2. Deserializes protobuf messages to the proto dataclasses
+3. Uses the same mapper to convert to BitResult
+"""
 
 import asyncio
 import logging
 import random
 import time
-from typing import Optional, TypedDict
+from typing import Optional
 
 from app.core.event_bus import EventBus, Topic
-from app.models.generated import (
-    BitMetrics,
-    BitResult,
-    BitStatus,
-    BitSummary,
-    BitTest,
-    BitTreeNode,
+from app.handlers.bit_mapper import BitProtoMapper
+from app.models.bit_proto import (
+    BitTestState,
+    FunctionStatusTree,
+    ReportRollupMsg,
+    TestResults,
+    TestStatus,
 )
-
-
-class TestConfig(TypedDict):
-    """Type definition for test configuration"""
-
-    id: str
-    name: str
-    description: str
-    fail_prob: float
-    warn_prob: float
-    recover_prob: float
-    metrics: Optional[dict[str, str]]
-    function_nodes: list[str]
-    hardware_nodes: list[str]
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +34,9 @@ class MockBitSubscriber:
     """
     Mock ZMQ subscriber that generates BIT updates every 2-3 seconds.
 
+    Generates TestResults and ReportRollupMsg in proto dataclass format,
+    then uses BitProtoMapper to convert to BitResult for publishing.
+
     In production, this would be replaced with an actual ZMQ subscriber
     that receives rollup messages from the BIT rollup service.
     """
@@ -45,8 +44,17 @@ class MockBitSubscriber:
     def __init__(self) -> None:
         self._running = False
         self._task: Optional[asyncio.Task[None]] = None
-        self._test_states: dict[str, BitStatus] = {}  # Persist states for continuity
         self._event_bus: Optional[EventBus] = None
+        self._mapper = BitProtoMapper()
+
+        # Track test states for continuity between updates
+        self._test_states: dict[str, BitTestState] = {}
+
+        # Track timestamps per test (simulates tests running at different intervals)
+        self._test_timestamps: dict[str, int] = {}
+
+        # How often each test runs (in seconds) - tests don't all run at same rate
+        self._test_intervals: dict[str, float] = {}
 
     def set_event_bus(self, event_bus: EventBus) -> None:
         """Set the event bus for publishing BIT results"""
@@ -82,10 +90,17 @@ class MockBitSubscriber:
                     await asyncio.sleep(1.0)
                     continue
 
-                result = self._generate_bit_result()
+                # Generate proto messages (simulating what ZMQ would provide)
+                test_results = self._generate_test_results()
+                rollup = self._generate_rollup(test_results)
+
+                # Map to internal format
+                now_ms = int(time.time() * 1000)
+                result = self._mapper.map_to_bit_result(test_results, rollup, now_ms)
+
                 await self._event_bus.publish(Topic.BIT_RESULT, result)
 
-                # Random interval between 2-3 seconds
+                # Random interval between 2-3 seconds (polling rate)
                 await asyncio.sleep(random.uniform(2.0, 3.0))
             except asyncio.CancelledError:
                 break
@@ -93,389 +108,253 @@ class MockBitSubscriber:
                 logger.exception(f"Error in MockBitSubscriber: {e}")
                 await asyncio.sleep(1.0)
 
-    def _generate_bit_result(self) -> BitResult:
-        """Generate a complete BIT result with tests and trees"""
-        now = int(time.time() * 1000)
+    def _generate_test_results(self) -> TestResults:
+        """Generate TestResults proto message with all test statuses."""
+        now_sec = int(time.time())
 
-        tests = self._generate_tests(now)
-        tests_by_id = {t.id: t for t in tests}
-
-        function_assignments = self._build_assignments(tests, "function")
-        hardware_assignments = self._build_assignments(tests, "hardware")
-
-        function_tree = self._rollup_tree(
-            self._create_function_tree(), function_assignments, tests_by_id
-        )
-        hardware_tree = self._rollup_tree(
-            self._create_hardware_tree(), hardware_assignments, tests_by_id
-        )
-
-        summary = BitSummary(
-            total=len(tests),
-            ok=sum(1 for t in tests if t.status == BitStatus.ok),
-            warn=sum(1 for t in tests if t.status == BitStatus.warn),
-            fail=sum(1 for t in tests if t.status == BitStatus.fail),
-        )
-
-        # Overall status is derived from function tree root rollup
-        overall_status = function_tree.status
-
-        return BitResult(
-            timestamp=now,
-            overallStatus=overall_status,
-            summary=summary,
-            tests=tests,
-            functionTree=function_tree,
-            hardwareTree=hardware_tree,
-        )
-
-    def _generate_tests(self, now: int) -> list[BitTest]:
-        """Generate test results with state continuity"""
-        configs: list[TestConfig] = [
-            {
-                "id": "rf-if-linearity",
-                "name": "IF Output Linearity",
-                "description": "Mixer IF output amplitude check",
-                "fail_prob": 0.03,
-                "warn_prob": 0.08,
-                "recover_prob": 0.15,
-                "metrics": {"expected": "1.0", "actual": "0.85", "threshold": "0.8", "unit": "V"},
-                "function_nodes": ["signal-flow", "rf-path", "conversion-stage"],
-                "hardware_nodes": ["rf-frontend", "mixer-stage", "if-output"],
-            },
-            {
-                "id": "clock-discipline",
-                "name": "Clock PLL Discipline",
-                "description": "PLL lock acquisition check",
-                "fail_prob": 0.02,
-                "warn_prob": 0.06,
-                "recover_prob": 0.20,
-                "metrics": {"expected": "12", "actual": "15", "threshold": "15", "unit": "ms"},
-                "function_nodes": ["timing-chain", "sync-control"],
-                "hardware_nodes": ["clocking", "pll-unit"],
-            },
-            {
-                "id": "gps-holdover",
-                "name": "GPS Holdover Stability",
-                "description": "Oscillator drift in holdover mode",
-                "fail_prob": 0.02,
-                "warn_prob": 0.10,
-                "recover_prob": 0.12,
-                "metrics": {
-                    "expected": "0.25",
-                    "actual": "0.35",
-                    "threshold": "0.35",
-                    "unit": "ppm",
-                },
-                "function_nodes": ["timing-chain", "frequency-distribution"],
-                "hardware_nodes": ["clocking", "oscillator-board"],
-            },
-            {
-                "id": "dsp-integrity",
-                "name": "DSP Pipeline Integrity",
-                "description": "FFT and decimation stage verification",
-                "fail_prob": 0.01,
-                "warn_prob": 0.03,
-                "recover_prob": 0.25,
-                "metrics": None,
-                "function_nodes": ["signal-flow", "baseband-processing", "dsp-pipeline"],
-                "hardware_nodes": ["processing-blade", "dsp-complex"],
-            },
-            {
-                "id": "memory-margin",
-                "name": "Memory Margin Test",
-                "description": "DDR burst transfer verification",
-                "fail_prob": 0.01,
-                "warn_prob": 0.02,
-                "recover_prob": 0.30,
-                "metrics": None,
-                "function_nodes": ["signal-flow", "baseband-processing", "memory-buffering"],
-                "hardware_nodes": ["processing-blade", "ddr-bank"],
-            },
-            {
-                "id": "telemetry-link",
-                "name": "Telemetry Channel Verification",
-                "description": "Downlink telemetry frame check",
-                "fail_prob": 0.005,
-                "warn_prob": 0.02,
-                "recover_prob": 0.35,
-                "metrics": None,
-                "function_nodes": ["system-services", "telemetry"],
-                "hardware_nodes": ["processing-blade", "fpga"],
-            },
-            {
-                "id": "firmware-handshake",
-                "name": "Firmware Interface Handshake",
-                "description": "Control plane firmware sync check",
-                "fail_prob": 0.005,
-                "warn_prob": 0.02,
-                "recover_prob": 0.35,
-                "metrics": None,
-                "function_nodes": ["system-services", "firmware-interfaces"],
-                "hardware_nodes": ["processing-blade", "fpga"],
-            },
+        # Test configurations: (name, fail_prob, warn_prob, recover_prob, interval_sec)
+        test_configs = [
+            ("IF Output Linearity", 0.03, 0.08, 0.15, 10.0),
+            ("Clock PLL Discipline", 0.02, 0.06, 0.20, 8.0),
+            ("GPS Holdover Stability", 0.02, 0.10, 0.12, 15.0),
+            ("DSP Pipeline Integrity", 0.01, 0.03, 0.25, 5.0),
+            ("Memory Margin Test", 0.01, 0.02, 0.30, 12.0),
+            ("Telemetry Channel Verification", 0.005, 0.02, 0.35, 20.0),
+            ("Firmware Interface Handshake", 0.005, 0.02, 0.35, 6.0),
         ]
 
-        tests: list[BitTest] = []
-        for config in configs:
-            test_id = config["id"]
-            current_status = self._test_states.get(test_id, BitStatus.ok)
+        tests: list[TestStatus] = []
+        for idx, (name, fail_prob, warn_prob, recover_prob, interval) in enumerate(test_configs):
+            # Initialize state and interval if first time seeing this test
+            if name not in self._test_states:
+                self._test_states[name] = BitTestState.FULLY_OPERATIONAL
+                self._test_intervals[name] = interval
+                # Stagger initial timestamps so tests don't all update at once
+                self._test_timestamps[name] = now_sec - random.randint(0, int(interval))
 
-            # Determine new status based on transition probabilities
-            new_status = self._transition_status(
-                current_status,
-                config["fail_prob"],
-                config["warn_prob"],
-                config["recover_prob"],
+            # Check if this test should run (based on its interval)
+            last_run = self._test_timestamps[name]
+            if now_sec - last_run >= self._test_intervals[name]:
+                # Test is running - transition state
+                current_state = self._test_states[name]
+                new_state = self._transition_state(
+                    current_state, fail_prob, warn_prob, recover_prob
+                )
+                self._test_states[name] = new_state
+                self._test_timestamps[name] = now_sec
+
+            # Build verbose_info based on status
+            verbose_info = self._generate_verbose_info(name, self._test_states[name])
+
+            tests.append(
+                TestStatus(
+                    name=name,
+                    test_id=idx + 1,
+                    status=self._test_states[name],
+                    timestamp_sec=self._test_timestamps[name],
+                    verbose_info=verbose_info,
+                )
             )
-            self._test_states[test_id] = new_status
 
-            # Build metrics if present
-            metrics: Optional[BitMetrics] = None
-            if config["metrics"]:
-                metrics_data = config["metrics"].copy()
-                if new_status == BitStatus.fail:
-                    metrics_data["actual"] = str(float(metrics_data["threshold"]) * 0.7)
-                elif new_status == BitStatus.warn:
-                    metrics_data["actual"] = str(float(metrics_data["threshold"]) * 0.95)
-                metrics = BitMetrics(**metrics_data)
+        return TestResults(node_id=1, tests=tests)
 
-            last_run = now - random.randint(1000, 5000)
-            duration = random.randint(500, 1500)
-
-            test = BitTest(
-                id=test_id,
-                name=config["name"],
-                status=new_status,
-                description=config["description"],
-                lastRun=last_run,
-                durationMs=duration,
-                metrics=metrics,
-                functionNodes=config["function_nodes"],
-                hardwareNodes=config["hardware_nodes"],
-            )
-            tests.append(test)
-
-        return tests
-
-    def _transition_status(
+    def _transition_state(
         self,
-        current: BitStatus,
+        current: BitTestState,
         fail_prob: float,
         warn_prob: float,
         recover_prob: float,
-    ) -> BitStatus:
-        """Determine new status based on current status and probabilities"""
+    ) -> BitTestState:
+        """Determine new state based on current state and probabilities."""
         rand = random.random()
 
-        if current == BitStatus.ok:
+        if current == BitTestState.FULLY_OPERATIONAL:
             if rand < fail_prob:
-                return BitStatus.fail
+                return BitTestState.NON_OPERATIONAL
             elif rand < fail_prob + warn_prob:
-                return BitStatus.warn
-            return BitStatus.ok
+                return BitTestState.DEGRADED_OPERATIONAL
+            return BitTestState.FULLY_OPERATIONAL
 
-        elif current == BitStatus.warn:
-            if rand < fail_prob * 2:  # More likely to fail from warn
-                return BitStatus.fail
+        elif current == BitTestState.DEGRADED_OPERATIONAL:
+            if rand < fail_prob * 2:  # More likely to fail from degraded
+                return BitTestState.NON_OPERATIONAL
             elif rand < fail_prob * 2 + recover_prob:
-                return BitStatus.ok
-            return BitStatus.warn
+                return BitTestState.FULLY_OPERATIONAL
+            return BitTestState.DEGRADED_OPERATIONAL
 
-        elif current == BitStatus.fail:
+        elif current == BitTestState.NON_OPERATIONAL:
             if rand < recover_prob:
-                return BitStatus.ok
+                return BitTestState.FULLY_OPERATIONAL
             elif rand < recover_prob + warn_prob:
-                return BitStatus.warn
-            return BitStatus.fail
+                return BitTestState.DEGRADED_OPERATIONAL
+            return BitTestState.NON_OPERATIONAL
 
         return current
 
-    def _build_assignments(self, tests: list[BitTest], key: str) -> dict[str, list[str]]:
-        """Build node -> test_id assignments"""
-        assignments: dict[str, list[str]] = {}
-        for test in tests:
-            nodes = test.function_nodes if key == "function" else test.hardware_nodes
-            if nodes:
-                for node_id in nodes:
-                    if node_id not in assignments:
-                        assignments[node_id] = []
-                    assignments[node_id].append(test.id)
-        return assignments
+    def _generate_verbose_info(self, test_name: str, state: BitTestState) -> list[str]:
+        """Generate realistic verbose_info for a test based on its state."""
+        if state == BitTestState.FULLY_OPERATIONAL:
+            return []
 
-    def _get_most_severe(self, a: BitStatus, b: BitStatus) -> BitStatus:
-        """Return the more severe status"""
-        order = {BitStatus.unknown: 0, BitStatus.ok: 1, BitStatus.warn: 2, BitStatus.fail: 3}
-        return a if order[a] >= order[b] else b
+        info: list[str] = []
 
-    def _rollup_tree(
-        self,
-        node: BitTreeNode,
-        assignments: dict[str, list[str]],
-        tests_by_id: dict[str, BitTest],
-    ) -> BitTreeNode:
-        """Recursively roll up status from children and assigned tests"""
-        children = None
-        if node.children:
-            children = [
-                self._rollup_tree(child, assignments, tests_by_id) for child in node.children
-            ]
+        if state == BitTestState.DEGRADED_OPERATIONAL:
+            if "Linearity" in test_name:
+                info.append("Measured: -1.2dB from nominal")
+                info.append("Threshold: -2.0dB")
+            elif "PLL" in test_name:
+                info.append("Lock time: 145ms (nominal: 100ms)")
+            elif "GPS" in test_name:
+                info.append("Holdover drift: 0.28ppm (limit: 0.35ppm)")
+            elif "DSP" in test_name:
+                info.append("Pipeline latency elevated: 12us (nominal: 8us)")
+            elif "Memory" in test_name:
+                info.append("Margin reduced to 15% (nominal: 25%)")
+            elif "Telemetry" in test_name:
+                info.append("Frame errors: 2 in last 1000")
+            elif "Firmware" in test_name:
+                info.append("Handshake latency: 45ms (nominal: 20ms)")
 
-        assigned_tests = assignments.get(node.id, [])
-        status = BitStatus.ok if assigned_tests else BitStatus.unknown
+        elif state == BitTestState.NON_OPERATIONAL:
+            if "Linearity" in test_name:
+                info.append("FAULT: IF output below threshold")
+                info.append("Measured: -4.5dB from nominal")
+                info.append("Threshold: -2.0dB")
+            elif "PLL" in test_name:
+                info.append("FAULT: PLL failed to acquire lock")
+                info.append("Timeout after 500ms")
+            elif "GPS" in test_name:
+                info.append("FAULT: GPS receiver not responding")
+                info.append("Last valid fix: 2 minutes ago")
+            elif "DSP" in test_name:
+                info.append("FAULT: DSP pipeline stalled")
+                info.append("Watchdog timeout on stage 3")
+            elif "Memory" in test_name:
+                info.append("FAULT: DDR ECC errors detected")
+                info.append("Uncorrectable errors: 3")
+            elif "Telemetry" in test_name:
+                info.append("FAULT: Telemetry link down")
+                info.append("No response from downstream")
+            elif "Firmware" in test_name:
+                info.append("FAULT: Firmware sync lost")
+                info.append("Control plane unresponsive")
 
-        for test_id in assigned_tests:
-            test = tests_by_id.get(test_id)
-            if test:
-                status = self._get_most_severe(status, test.status)
+        return info
 
-        if children:
-            for child in children:
-                status = self._get_most_severe(status, child.status)
+    def _generate_rollup(self, test_results: TestResults) -> ReportRollupMsg:
+        """Generate ReportRollupMsg with function tree matching tests."""
+        # Build lookup for test status by name
+        test_status_map = {t.name: t.status for t in test_results.tests}
 
-        return BitTreeNode(
-            id=node.id,
-            name=node.name,
-            status=status,
-            description=node.description,
-            children=children,
-            tests=assigned_tests if assigned_tests else None,
+        def get_status(name: str) -> BitTestState:
+            return test_status_map.get(name, BitTestState.UNKNOWN)
+
+        def rollup_status(*children_status: BitTestState) -> BitTestState:
+            """Roll up status from children (most severe wins)."""
+            severity = {
+                BitTestState.UNKNOWN: 0,
+                BitTestState.FULLY_OPERATIONAL: 1,
+                BitTestState.IN_PROGRESS: 2,
+                BitTestState.DEGRADED_OPERATIONAL: 3,
+                BitTestState.NON_OPERATIONAL: 4,
+            }
+            if not children_status:
+                return BitTestState.UNKNOWN
+            return max(children_status, key=lambda s: severity.get(s, 0))
+
+        # Build function tree matching our test structure
+        # Leaf nodes have names matching test names
+
+        # Signal Flow branch
+        rf_path = FunctionStatusTree(
+            name="RF Path",
+            status=get_status("IF Output Linearity"),
+            nodes=[
+                FunctionStatusTree(
+                    name="IF Output Linearity",
+                    status=get_status("IF Output Linearity"),
+                    nodes=[],
+                ),
+            ],
         )
 
-    def _create_function_tree(self) -> BitTreeNode:
-        """Create function hierarchy structure"""
-        return BitTreeNode(
-            id="system-functions",
+        dsp_pipeline = FunctionStatusTree(
+            name="DSP Pipeline",
+            status=rollup_status(
+                get_status("DSP Pipeline Integrity"),
+                get_status("Memory Margin Test"),
+            ),
+            nodes=[
+                FunctionStatusTree(
+                    name="DSP Pipeline Integrity",
+                    status=get_status("DSP Pipeline Integrity"),
+                    nodes=[],
+                ),
+                FunctionStatusTree(
+                    name="Memory Margin Test",
+                    status=get_status("Memory Margin Test"),
+                    nodes=[],
+                ),
+            ],
+        )
+
+        signal_flow = FunctionStatusTree(
+            name="Signal Flow",
+            status=rollup_status(rf_path.status, dsp_pipeline.status),
+            nodes=[rf_path, dsp_pipeline],
+        )
+
+        # Timing Chain branch
+        timing_chain = FunctionStatusTree(
+            name="Timing Chain",
+            status=rollup_status(
+                get_status("Clock PLL Discipline"),
+                get_status("GPS Holdover Stability"),
+            ),
+            nodes=[
+                FunctionStatusTree(
+                    name="Clock PLL Discipline",
+                    status=get_status("Clock PLL Discipline"),
+                    nodes=[],
+                ),
+                FunctionStatusTree(
+                    name="GPS Holdover Stability",
+                    status=get_status("GPS Holdover Stability"),
+                    nodes=[],
+                ),
+            ],
+        )
+
+        # System Services branch
+        system_services = FunctionStatusTree(
+            name="System Services",
+            status=rollup_status(
+                get_status("Telemetry Channel Verification"),
+                get_status("Firmware Interface Handshake"),
+            ),
+            nodes=[
+                FunctionStatusTree(
+                    name="Telemetry Channel Verification",
+                    status=get_status("Telemetry Channel Verification"),
+                    nodes=[],
+                ),
+                FunctionStatusTree(
+                    name="Firmware Interface Handshake",
+                    status=get_status("Firmware Interface Handshake"),
+                    nodes=[],
+                ),
+            ],
+        )
+
+        # Root
+        root = FunctionStatusTree(
             name="System Functions",
-            status=BitStatus.unknown,
-            children=[
-                BitTreeNode(
-                    id="signal-flow",
-                    name="Signal Flow",
-                    status=BitStatus.unknown,
-                    children=[
-                        BitTreeNode(
-                            id="rf-path",
-                            name="RF Path",
-                            status=BitStatus.unknown,
-                            children=[
-                                BitTreeNode(
-                                    id="conversion-stage",
-                                    name="Conversion Stage",
-                                    status=BitStatus.unknown,
-                                ),
-                                BitTreeNode(
-                                    id="gain-stabilization",
-                                    name="Gain Stabilization",
-                                    status=BitStatus.unknown,
-                                ),
-                            ],
-                        ),
-                        BitTreeNode(
-                            id="baseband-processing",
-                            name="Baseband Processing",
-                            status=BitStatus.unknown,
-                            children=[
-                                BitTreeNode(
-                                    id="dsp-pipeline", name="DSP Pipeline", status=BitStatus.unknown
-                                ),
-                                BitTreeNode(
-                                    id="memory-buffering",
-                                    name="Memory Buffering",
-                                    status=BitStatus.unknown,
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-                BitTreeNode(
-                    id="timing-chain",
-                    name="Timing Chain",
-                    status=BitStatus.unknown,
-                    children=[
-                        BitTreeNode(
-                            id="sync-control", name="Sync Control", status=BitStatus.unknown
-                        ),
-                        BitTreeNode(
-                            id="frequency-distribution",
-                            name="Frequency Distribution",
-                            status=BitStatus.unknown,
-                        ),
-                    ],
-                ),
-                BitTreeNode(
-                    id="system-services",
-                    name="System Services",
-                    status=BitStatus.unknown,
-                    children=[
-                        BitTreeNode(
-                            id="firmware-interfaces",
-                            name="Firmware Interfaces",
-                            status=BitStatus.unknown,
-                        ),
-                        BitTreeNode(
-                            id="telemetry", name="Telemetry Streams", status=BitStatus.unknown
-                        ),
-                    ],
-                ),
-            ],
+            status=rollup_status(signal_flow.status, timing_chain.status, system_services.status),
+            nodes=[signal_flow, timing_chain, system_services],
         )
 
-    def _create_hardware_tree(self) -> BitTreeNode:
-        """Create hardware hierarchy structure"""
-        return BitTreeNode(
-            id="chassis",
-            name="Chassis",
-            status=BitStatus.unknown,
-            children=[
-                BitTreeNode(
-                    id="rf-frontend",
-                    name="RF Frontend",
-                    status=BitStatus.unknown,
-                    children=[
-                        BitTreeNode(id="lna-module", name="LNA Module", status=BitStatus.unknown),
-                        BitTreeNode(
-                            id="attenuator-bank", name="Attenuator Bank", status=BitStatus.unknown
-                        ),
-                        BitTreeNode(
-                            id="mixer-stage",
-                            name="Mixer Stage",
-                            status=BitStatus.unknown,
-                            children=[
-                                BitTreeNode(
-                                    id="if-output",
-                                    name="IF Output Network",
-                                    status=BitStatus.unknown,
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-                BitTreeNode(
-                    id="clocking",
-                    name="Clocking",
-                    status=BitStatus.unknown,
-                    children=[
-                        BitTreeNode(id="pll-unit", name="PLL Unit", status=BitStatus.unknown),
-                        BitTreeNode(
-                            id="oscillator-board", name="Oscillator Board", status=BitStatus.unknown
-                        ),
-                        BitTreeNode(
-                            id="distribution-amplifier",
-                            name="Distribution Amplifier",
-                            status=BitStatus.unknown,
-                        ),
-                    ],
-                ),
-                BitTreeNode(
-                    id="processing-blade",
-                    name="Processing Blade",
-                    status=BitStatus.unknown,
-                    children=[
-                        BitTreeNode(id="fpga", name="FPGA Fabric", status=BitStatus.unknown),
-                        BitTreeNode(id="dsp-complex", name="DSP Complex", status=BitStatus.unknown),
-                        BitTreeNode(id="ddr-bank", name="DDR Bank", status=BitStatus.unknown),
-                    ],
-                ),
-            ],
+        return ReportRollupMsg(
+            verbose_info=[],
+            failed_hardware_components=[],
+            functions=root,
         )

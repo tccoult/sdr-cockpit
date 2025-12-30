@@ -34,8 +34,12 @@ def create_test_result(timestamp: int, ok: int = 5, warn: int = 0, fail: int = 0
             id=f"test-{i}",
             name=f"Test {i}",
             status=BitStatus.ok,
+            description="",
             lastRun=timestamp,
             durationMs=100,
+            extraResultInfo=[],
+            functionNodes=[],
+            hardwareNodes=[],
         )
         for i in range(ok + warn + fail)
     ]
@@ -46,16 +50,24 @@ def create_test_result(timestamp: int, ok: int = 5, warn: int = 0, fail: int = 0
             id=f"test-{i}",
             name=f"Test {i}",
             status=BitStatus.warn,
+            description="",
             lastRun=timestamp,
             durationMs=100,
+            extraResultInfo=[],
+            functionNodes=[],
+            hardwareNodes=[],
         )
     for i in range(ok + warn, ok + warn + fail):
         tests[i] = BitTest(
             id=f"test-{i}",
             name=f"Test {i}",
             status=BitStatus.fail,
+            description="",
             lastRun=timestamp,
             durationMs=100,
+            extraResultInfo=[],
+            functionNodes=[],
+            hardwareNodes=[],
         )
 
     # Determine overall status based on worst case
@@ -283,8 +295,12 @@ def create_simple_result(test_id: str, status: BitStatus, timestamp: int) -> Bit
                 id=test_id,
                 name=f"Test {test_id}",
                 status=status,
+                description="",
                 lastRun=timestamp,
                 durationMs=100,
+                extraResultInfo=[],
+                functionNodes=[],
+                hardwareNodes=[],
             )
         ],
         functionTree=BitTreeNode(id="root", name="Root", status=status),
