@@ -60,6 +60,10 @@ class BitStorage:
         self._last_snapshot_status: Optional[int] = None
         self._last_snapshot_mono_ms: Optional[float] = None
         self._last_test_status: dict[str, int] = {}
+        # Track last seen timestamp per test for deduplication.
+        # When receiving results more frequently than tests run, this prevents
+        # duplicate test_result rows in the database. Stored in milliseconds.
+        self._last_test_timestamp: dict[str, int] = {}
 
         self._init_db()
         self._load_last_snapshot_state()
@@ -161,7 +165,7 @@ class BitStorage:
             conn.commit()
 
     def _load_last_snapshot_state(self) -> None:
-        """Load latest snapshot state to seed rollup attribution"""
+        """Load latest snapshot state to seed rollup attribution and deduplication"""
         with self._get_connection() as conn:
             row = conn.execute(
                 "SELECT id, timestamp, overall_status FROM bit_snapshots ORDER BY timestamp DESC LIMIT 1"
@@ -179,6 +183,20 @@ class BitStorage:
             ).fetchall()
             for test_row in test_rows:
                 self._last_test_status[test_row["test_id"]] = test_row["status"]
+
+            # Load the latest timestamp for each test for deduplication.
+            # This finds the most recent snapshot containing each test and uses
+            # that snapshot's timestamp as the last seen timestamp for the test.
+            timestamp_rows = conn.execute(
+                """
+                SELECT r.test_id, MAX(s.timestamp) as last_timestamp
+                FROM bit_test_results r
+                JOIN bit_snapshots s ON r.snapshot_id = s.id
+                GROUP BY r.test_id
+                """
+            ).fetchall()
+            for ts_row in timestamp_rows:
+                self._last_test_timestamp[ts_row["test_id"]] = ts_row["last_timestamp"]
 
     def _load_test_names(self) -> None:
         """Load persisted test names"""
@@ -374,14 +392,22 @@ class BitStorage:
             )
             snapshot_id = cursor.lastrowid
 
+            # Insert test results, but only for tests with newer timestamps.
+            # This deduplicates when polling more frequently than tests run.
             for test in result.tests:
-                conn.execute(
-                    """
-                    INSERT INTO bit_test_results (snapshot_id, test_id, status, duration_ms)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (snapshot_id, test.id, STATUS_INT[test.status], test.duration_ms),
-                )
+                test_timestamp = test.last_run or 0
+                last_seen = self._last_test_timestamp.get(test.id, 0)
+
+                if test_timestamp > last_seen:
+                    conn.execute(
+                        """
+                        INSERT INTO bit_test_results (snapshot_id, test_id, status, duration_ms)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (snapshot_id, test.id, STATUS_INT[test.status], test.duration_ms),
+                    )
+                    # Update the cache
+                    self._last_test_timestamp[test.id] = test_timestamp
 
             for test in result.tests:
                 conn.execute(

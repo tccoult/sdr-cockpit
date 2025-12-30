@@ -400,34 +400,19 @@ export const sdr_cockpit = $root.sdr_cockpit = (() => {
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
-        /**
-         * FFTFrameBatch _batchTimestamp.
-         * @member {"batchTimestamp"|undefined} _batchTimestamp
-         * @memberof sdr_cockpit.FFTFrameBatch
-         * @instance
-         */
+        // Virtual OneOf for proto3 optional field
         Object.defineProperty(FFTFrameBatch.prototype, "_batchTimestamp", {
             get: $util.oneOfGetter($oneOfFields = ["batchTimestamp"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
-        /**
-         * FFTFrameBatch _centerFreq.
-         * @member {"centerFreq"|undefined} _centerFreq
-         * @memberof sdr_cockpit.FFTFrameBatch
-         * @instance
-         */
+        // Virtual OneOf for proto3 optional field
         Object.defineProperty(FFTFrameBatch.prototype, "_centerFreq", {
             get: $util.oneOfGetter($oneOfFields = ["centerFreq"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
-        /**
-         * FFTFrameBatch _sampleRate.
-         * @member {"sampleRate"|undefined} _sampleRate
-         * @memberof sdr_cockpit.FFTFrameBatch
-         * @instance
-         */
+        // Virtual OneOf for proto3 optional field
         Object.defineProperty(FFTFrameBatch.prototype, "_sampleRate", {
             get: $util.oneOfGetter($oneOfFields = ["sampleRate"]),
             set: $util.oneOfSetter($oneOfFields)

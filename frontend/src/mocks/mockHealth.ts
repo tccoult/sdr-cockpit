@@ -27,7 +27,7 @@ const getMostSevere = (a: BitStatus, b: BitStatus) =>
 export function getMockBitResult(): BitResult {
   const now = Date.now()
 
-  const tests = [
+  const tests: BitTest[] = [
     {
       id: 'rf-if-linearity',
       name: 'IF Output Linearity',
@@ -41,6 +41,11 @@ export function getMockBitResult(): BitResult {
         threshold: '0.8',
         unit: 'V',
       },
+      extraResultInfo: [
+        'FAULT: IF output below threshold',
+        'Measured: -4.5dB from nominal',
+        'Threshold: -2.0dB',
+      ],
       functionNodes: ['signal-flow', 'rf-path', 'conversion-stage'],
       hardwareNodes: ['rf-frontend', 'mixer-stage', 'if-output'],
     },
@@ -57,6 +62,7 @@ export function getMockBitResult(): BitResult {
         threshold: '15',
         unit: 'ms',
       },
+      extraResultInfo: ['Lock time: 145ms (nominal: 100ms)'],
       functionNodes: ['timing-chain', 'sync-control'],
       hardwareNodes: ['clocking', 'pll-unit'],
     },
@@ -73,6 +79,7 @@ export function getMockBitResult(): BitResult {
         threshold: '0.35',
         unit: 'ppm',
       },
+      extraResultInfo: ['Holdover drift: 0.28ppm (limit: 0.35ppm)'],
       functionNodes: ['timing-chain', 'frequency-distribution'],
       hardwareNodes: ['clocking', 'oscillator-board'],
     },
@@ -83,6 +90,7 @@ export function getMockBitResult(): BitResult {
       description: 'FFT and decimation stages produced expected reference signatures.',
       lastRun: now - 1000 * 60 * 2,
       durationMs: 760,
+      extraResultInfo: [],
       functionNodes: ['signal-flow', 'baseband-processing', 'dsp-pipeline'],
       hardwareNodes: ['processing-blade', 'dsp-complex'],
     },
@@ -93,6 +101,7 @@ export function getMockBitResult(): BitResult {
       description: 'DDR burst transfers completed without error at operational temperature.',
       lastRun: now - 1000 * 60 * 12,
       durationMs: 1120,
+      extraResultInfo: [],
       functionNodes: ['signal-flow', 'baseband-processing', 'memory-buffering'],
       hardwareNodes: ['processing-blade', 'ddr-bank'],
     },
@@ -103,6 +112,7 @@ export function getMockBitResult(): BitResult {
       description: 'Downlink telemetry frames were acknowledged across all priority queues.',
       lastRun: now - 1000 * 60 * 5,
       durationMs: 540,
+      extraResultInfo: [],
       functionNodes: ['system-services', 'telemetry'],
       hardwareNodes: ['processing-blade', 'fpga'],
     },
@@ -113,6 +123,7 @@ export function getMockBitResult(): BitResult {
       description: 'Control plane firmware responded with synchronized sequence IDs.',
       lastRun: now - 1000 * 60 * 9,
       durationMs: 680,
+      extraResultInfo: [],
       functionNodes: ['system-services', 'firmware-interfaces'],
       hardwareNodes: ['processing-blade', 'fpga'],
     },
