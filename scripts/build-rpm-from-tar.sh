@@ -42,15 +42,18 @@ echo "Release: $RELEASE"
 echo "Architecture: $TARGET_ARCH"
 echo ""
 
-# Detect container runtime
-if command -v docker &> /dev/null; then
-    CONTAINER_CMD="docker"
-elif command -v podman &> /dev/null; then
-    CONTAINER_CMD="podman"
-else
-    echo "❌ Neither docker nor podman found"
-    echo "Please install one of them to build RPM packages"
-    exit 1
+# Detect container runtime (only needed if rpmbuild not available)
+CONTAINER_CMD=""
+if ! command -v rpmbuild &> /dev/null; then
+    if command -v docker &> /dev/null; then
+        CONTAINER_CMD="docker"
+    elif command -v podman &> /dev/null; then
+        CONTAINER_CMD="podman"
+    else
+        echo "❌ rpmbuild not found and neither docker nor podman available"
+        echo "Please install rpm-build or a container runtime"
+        exit 1
+    fi
 fi
 
 # Create build directory
@@ -87,8 +90,8 @@ if [ "$TARGET_ARCH" != "noarch" ]; then
     RPMBUILD_DEFINES+=(--define "_target_arch $TARGET_ARCH")
 fi
 
-# Check if rpmbuild is available natively (e.g., in CI)
-if command -v rpmbuild &> /dev/null; then
+# Use native rpmbuild if available, otherwise use container
+if [ -z "$CONTAINER_CMD" ]; then
     echo "Using native rpmbuild"
     rpmbuild "${RPMBUILD_DEFINES[@]}" -bb "$BUILD_DIR/SPECS/sdr-cockpit.spec"
 else
