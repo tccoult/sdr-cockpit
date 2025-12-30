@@ -182,8 +182,8 @@ class TestMapToResult:
 
         result = map_to_bit_result(test_results, rollup)
 
-        # Should have path from root to leaf
-        assert result.tests[0].function_nodes == ["root", "branch", "leaf-test"]
+        # Should have all node IDs from root to leaf (sorted alphabetically)
+        assert result.tests[0].function_nodes == ["branch", "leaf-test", "root"]
 
     def test_leaf_nodes_become_test_references_not_children(self):
         """Leaf proto nodes should become test IDs in parent, not tree children.
@@ -499,3 +499,99 @@ class TestFunctionTreeStructure:
         assert subgroup.name == "Subgroup"
         assert subgroup.children is None
         assert subgroup.tests == ["Nested Test"]
+
+    def test_multi_function_mapping(self):
+        """A test can appear under multiple function branches.
+
+        When a test like "Memory Test" is relevant to both DSP Pipeline
+        and System Services, it should appear in both branches and its
+        functionNodes should include IDs from both paths.
+        """
+        test_results = TestResults(
+            node_id=1,
+            tests=[
+                TestStatus(
+                    name="Memory Test",
+                    test_id=1,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+                TestStatus(
+                    name="DSP Test",
+                    test_id=2,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+                TestStatus(
+                    name="Telemetry Test",
+                    test_id=3,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+            ],
+        )
+        rollup = ReportRollupMsg(
+            functions=FunctionStatusTree(
+                name="Root",
+                status=BitTestState.FULLY_OPERATIONAL,
+                nodes=[
+                    # DSP branch - has Memory Test
+                    FunctionStatusTree(
+                        name="DSP Pipeline",
+                        status=BitTestState.FULLY_OPERATIONAL,
+                        nodes=[
+                            FunctionStatusTree(
+                                name="DSP Test",
+                                status=BitTestState.FULLY_OPERATIONAL,
+                                nodes=[],
+                            ),
+                            FunctionStatusTree(
+                                name="Memory Test",
+                                status=BitTestState.FULLY_OPERATIONAL,
+                                nodes=[],
+                            ),
+                        ],
+                    ),
+                    # System Services branch - also has Memory Test
+                    FunctionStatusTree(
+                        name="System Services",
+                        status=BitTestState.FULLY_OPERATIONAL,
+                        nodes=[
+                            FunctionStatusTree(
+                                name="Telemetry Test",
+                                status=BitTestState.FULLY_OPERATIONAL,
+                                nodes=[],
+                            ),
+                            FunctionStatusTree(
+                                name="Memory Test",
+                                status=BitTestState.FULLY_OPERATIONAL,
+                                nodes=[],
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        )
+
+        result = map_to_bit_result(test_results, rollup)
+
+        # Find Memory Test in results
+        memory_test = next(t for t in result.tests if t.name == "Memory Test")
+
+        # Memory Test should have nodes from BOTH branches
+        # Sorted alphabetically: dsp-pipeline, memory-test, root, system-services
+        assert "dsp-pipeline" in memory_test.function_nodes
+        assert "system-services" in memory_test.function_nodes
+        assert "root" in memory_test.function_nodes
+        assert "memory-test" in memory_test.function_nodes
+
+        # DSP Test should only have nodes from DSP branch
+        dsp_test = next(t for t in result.tests if t.name == "DSP Test")
+        assert "dsp-pipeline" in dsp_test.function_nodes
+        assert "system-services" not in dsp_test.function_nodes
+
+        # Function tree should have Memory Test in both branches
+        dsp_branch = result.function_tree.children[0]
+        services_branch = result.function_tree.children[1]
+        assert "Memory Test" in dsp_branch.tests
+        assert "Memory Test" in services_branch.tests

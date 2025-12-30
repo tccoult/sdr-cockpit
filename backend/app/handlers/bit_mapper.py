@@ -153,12 +153,13 @@ def _build_function_node_map(
     Build a mapping from test name to list of function node IDs.
 
     Walks the function tree and for each leaf node (no children),
-    treats the node name as a test name and records the path of
-    ancestor node IDs.
+    treats the node name as a test name and accumulates all ancestor
+    node IDs. A test may appear under multiple function branches,
+    so we collect all unique node IDs across all occurrences.
     """
-    result: dict[str, list[str]] = {}
+    result: dict[str, set[str]] = {}
     if tree is None:
-        return result
+        return {}
 
     def walk(node: FunctionStatusTree, path: list[str]) -> None:
         node_id = _slugify(node.name)
@@ -166,14 +167,18 @@ def _build_function_node_map(
 
         if not node.nodes:
             # Leaf node - name should match a test name
-            result[node.name] = current_path
+            # Accumulate node IDs (test may appear in multiple branches)
+            if node.name not in result:
+                result[node.name] = set()
+            result[node.name].update(current_path)
         else:
             # Non-leaf - recurse into children
             for child in node.nodes:
                 walk(child, current_path)
 
     walk(tree, [])
-    return result
+    # Convert sets to sorted lists for deterministic output
+    return {name: sorted(node_ids) for name, node_ids in result.items()}
 
 
 def _build_function_tree(

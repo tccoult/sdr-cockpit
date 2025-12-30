@@ -344,11 +344,15 @@ class MockBitSubscriber:
         )
 
         # System Services branch
+        # Note: "Memory Margin Test" appears here AND under DSP Pipeline
+        # to demonstrate multi-function mapping (memory is both a DSP
+        # resource and a system resource)
         system_services = FunctionStatusTree(
             name="System Services",
             status=rollup_status(
                 get_status("Telemetry Channel Verification"),
                 get_status("Firmware Interface Handshake"),
+                get_status("Memory Margin Test"),
             ),
             nodes=[
                 FunctionStatusTree(
@@ -359,6 +363,11 @@ class MockBitSubscriber:
                 FunctionStatusTree(
                     name="Firmware Interface Handshake",
                     status=get_status("Firmware Interface Handshake"),
+                    nodes=[],
+                ),
+                FunctionStatusTree(
+                    name="Memory Margin Test",
+                    status=get_status("Memory Margin Test"),
                     nodes=[],
                 ),
             ],
