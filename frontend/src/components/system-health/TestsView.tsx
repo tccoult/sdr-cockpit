@@ -191,19 +191,16 @@ export function TestsView({
                           {test.description}
                         </p>
                       )}
-                      {test.extraResultInfo && test.extraResultInfo.length > 0 && (
-                        <ul className="mt-2 list-disc pl-4 text-muted-foreground/90">
-                          {test.extraResultInfo.map((info, idx) => (
-                            <li key={idx} className="leading-snug">
-                              {info}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                       {metadata && (
-                        <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/90">
-                          {metadata}
-                        </p>
+                        <div className="mt-2">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Last Run
+                          </span>
+                          <p className="mt-0.5 text-muted-foreground/90">
+                            {lastRunLabel}
+                            {durationLabel && ` · ${durationLabel}`}
+                          </p>
+                        </div>
                       )}
                       <TagGroup
                         label="Function"
@@ -223,6 +220,20 @@ export function TestsView({
                         highlighted={highlighted.hardware}
                         onTagSelect={handleOpenFromTag}
                       />
+                      {test.extraResultInfo && test.extraResultInfo.length > 0 && (
+                        <div className="mt-2">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Extra Info
+                          </span>
+                          <ul className="mt-1 list-disc pl-4 text-muted-foreground/90">
+                            {test.extraResultInfo.map((info, idx) => (
+                              <li key={idx} className="leading-snug">
+                                {info}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
