@@ -263,7 +263,9 @@ BitTest:
     status:
       $ref: '#/BitStatus'
     description:
-      type: string
+      anyOf:
+      - type: string
+      - type: 'null'
       title: Description
       description: Human-readable description of what this test verifies
     lastRun:
@@ -305,7 +307,6 @@ BitTest:
   - id
   - name
   - status
-  - description
   - extraResultInfo
   - functionNodes
   - hardwareNodes

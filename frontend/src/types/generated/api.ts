@@ -673,7 +673,7 @@ export interface components {
              * Description
              * @description Human-readable description of what this test verifies
              */
-            description: string;
+            description?: string | null;
             /**
              * Lastrun
              * @description Unix timestamp in ms

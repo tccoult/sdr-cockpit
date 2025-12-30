@@ -18,7 +18,7 @@ import time
 from typing import Optional
 
 from app.core.event_bus import EventBus, Topic
-from app.handlers.bit_mapper import BitProtoMapper
+from app.handlers.bit_mapper import map_to_bit_result
 from app.models.bit_proto import (
     BitTestState,
     FunctionStatusTree,
@@ -45,7 +45,6 @@ class MockBitSubscriber:
         self._running = False
         self._task: Optional[asyncio.Task[None]] = None
         self._event_bus: Optional[EventBus] = None
-        self._mapper = BitProtoMapper()
 
         # Track test states for continuity between updates
         self._test_states: dict[str, BitTestState] = {}
@@ -96,7 +95,7 @@ class MockBitSubscriber:
 
                 # Map to internal format
                 now_ms = int(time.time() * 1000)
-                result = self._mapper.map_to_bit_result(test_results, rollup, now_ms)
+                result = map_to_bit_result(test_results, rollup, now_ms)
 
                 await self._event_bus.publish(Topic.BIT_RESULT, result)
 
