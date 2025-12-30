@@ -419,8 +419,8 @@ jobs:
       - name: Rename RPM with architecture suffix
         run: |
           for rpm in sdr-cockpit*.rpm; do
-            base=\$(basename "\$rpm" .rpm)
-            mv "\$rpm" "\${base}.${{ matrix.arch }}.rpm"
+            base=$(basename "$rpm" .rpm)
+            mv "$rpm" "${base}.${{ matrix.arch }}.rpm"
           done
 
       - name: Verify RPM contents
