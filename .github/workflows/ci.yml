@@ -368,33 +368,23 @@ jobs:
           cache-to: type=gha,mode=max
 
   build-rpm:
-    name: Build RPM Package (${{ matrix.arch }})
+    name: Build RPM Package
     needs: [frontend-checks, backend-checks, simulator-checks, integration-tests]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-            platform: linux/amd64
-          - arch: aarch64
-            platform: linux/arm64
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up QEMU for multi-arch builds
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build architecture-specific image
+      - name: Build x86_64 image for RPM
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64
           push: false
           load: true
           tags: sdr-cockpit:latest
@@ -412,29 +402,22 @@ jobs:
             -w /workspace \
             almalinux:9 \
             bash -c "
-              dnf install -y podman rpm-build
-              ./scripts/build-rpm-from-tar.sh sdr-cockpit-image.tar 0.1.0 1 ${{ matrix.arch }}
+              dnf install -y rpm-build
+              ./scripts/build-rpm-from-tar.sh sdr-cockpit-image.tar 0.1.0 1 x86_64
             "
-
-      - name: Rename RPM with architecture suffix
-        run: |
-          for rpm in sdr-cockpit*.rpm; do
-            base=$(basename "$rpm" .rpm)
-            mv "$rpm" "${base}.${{ matrix.arch }}.rpm"
-          done
 
       - name: Verify RPM contents
         run: |
           echo "=== RPM Package Info ==="
-          rpm -qip sdr-cockpit*.${{ matrix.arch }}.rpm
+          rpm -qip sdr-cockpit*.rpm
           echo ""
           echo "=== RPM File List ==="
-          rpm -qlp sdr-cockpit*.${{ matrix.arch }}.rpm
+          rpm -qlp sdr-cockpit*.rpm
 
       - name: Upload RPM artifact
         if: github.ref == 'refs/heads/trunk'
         uses: actions/upload-artifact@v6
         with:
-          name: sdr-cockpit-rpm-${{ matrix.arch }}
-          path: sdr-cockpit*.${{ matrix.arch }}.rpm
+          name: sdr-cockpit-rpm
+          path: sdr-cockpit*.rpm
           retention-days: 90
