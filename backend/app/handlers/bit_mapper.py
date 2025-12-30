@@ -183,9 +183,13 @@ def _build_function_tree(
     """
     Build the function tree from proto, using test status from TestResults.
 
+    Leaf proto nodes (those with no children) represent tests and should NOT
+    become tree node children. Instead, their test IDs are attached to the
+    parent node's `tests` field. This prevents duplicate rendering where a
+    test appears both as a tree node and as a test within that node.
+
     For non-leaf nodes, we use the status from the proto (rollup service
-    computed it). For leaf nodes, we look up the actual test status from
-    TestResults to ensure consistency with the definitive test list.
+    computed it).
     """
     if proto_tree is None:
         return BitTreeNode(
@@ -198,25 +202,23 @@ def _build_function_tree(
 
     def convert_node(node: FunctionStatusTree) -> BitTreeNode:
         node_id = _slugify(node.name)
-        is_leaf = not node.nodes
 
-        if is_leaf:
-            # Leaf node - look up test status from TestResults
-            # This handles potential desync between rollup and test results
-            test = tests_by_name.get(node.name)
-            if test:
-                status = test.status
-                tests_list = [test.id]
+        # Separate children into leaf nodes (tests) and non-leaf nodes (subtrees)
+        children: list[BitTreeNode] = []
+        tests_list: list[str] = []
+
+        for child in node.nodes:
+            if not child.nodes:
+                # Leaf node represents a test - add to tests list, not children
+                test = tests_by_name.get(child.name)
+                if test:
+                    tests_list.append(test.id)
             else:
-                # Test referenced in tree but not in TestResults
-                status = map_proto_status(node.status)
-                tests_list = []
-        else:
-            # Non-leaf - use rollup status from proto
-            status = map_proto_status(node.status)
-            tests_list = []
+                # Non-leaf node - recurse and add as child
+                children.append(convert_node(child))
 
-        children = [convert_node(child) for child in node.nodes] if node.nodes else []
+        # Use rollup status from proto for non-leaf nodes
+        status = map_proto_status(node.status)
 
         return BitTreeNode(
             id=node_id,

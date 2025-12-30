@@ -185,9 +185,12 @@ class TestMapToResult:
         # Should have path from root to leaf
         assert result.tests[0].function_nodes == ["root", "branch", "leaf-test"]
 
-    def test_uses_test_status_for_leaf_nodes(self):
-        """Leaf nodes should use status from TestResults, not tree."""
-        # Tree says FULLY_OPERATIONAL, but test says DEGRADED
+    def test_leaf_nodes_become_test_references_not_children(self):
+        """Leaf proto nodes should become test IDs in parent, not tree children.
+
+        This prevents duplicates where a test appears both as a tree node
+        and as a test listed within that node.
+        """
         test_results = TestResults(
             node_id=1,
             tests=[
@@ -196,21 +199,40 @@ class TestMapToResult:
                     test_id=1,
                     status=BitTestState.DEGRADED_OPERATIONAL,
                     timestamp_sec=1000,
-                )
+                ),
+                TestStatus(
+                    name="Test B",
+                    test_id=2,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
             ],
         )
         rollup = ReportRollupMsg(
             functions=FunctionStatusTree(
-                name="Test A",
-                status=BitTestState.FULLY_OPERATIONAL,  # Stale status
-                nodes=[],
+                name="Parent",
+                status=BitTestState.DEGRADED_OPERATIONAL,
+                nodes=[
+                    FunctionStatusTree(
+                        name="Test A",
+                        status=BitTestState.FULLY_OPERATIONAL,  # Stale
+                        nodes=[],  # Leaf
+                    ),
+                    FunctionStatusTree(
+                        name="Test B",
+                        status=BitTestState.FULLY_OPERATIONAL,
+                        nodes=[],  # Leaf
+                    ),
+                ],
             )
         )
 
         result = map_to_bit_result(test_results, rollup)
 
-        # Should use test status, not tree status
-        assert result.function_tree.status == BitStatus.warn
+        # Parent should have no children (leaf nodes aren't children)
+        assert result.function_tree.children is None
+        # Parent should reference tests by ID
+        assert result.function_tree.tests == ["Test A", "Test B"]
 
     def test_uses_rollup_status_for_non_leaf_nodes(self):
         """Non-leaf nodes should use status from the rollup tree."""
@@ -271,3 +293,209 @@ class TestMapToResult:
         result = map_to_bit_result(test_results, rollup)
 
         assert result.timestamp == 0
+
+
+class TestFunctionTreeStructure:
+    """Tests for function tree structure and hierarchy."""
+
+    def test_nested_tree_preserves_hierarchy(self):
+        """Nested non-leaf nodes should become tree children.
+
+        Structure:
+          System Functions
+            - Signal Flow (non-leaf)
+              - RF Path (non-leaf, has test children)
+                - tests: [IF Output Linearity]
+              - DSP Pipeline (non-leaf, has test children)
+                - tests: [DSP Integrity, Memory Test]
+        """
+        test_results = TestResults(
+            node_id=1,
+            tests=[
+                TestStatus(
+                    name="IF Output Linearity",
+                    test_id=1,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+                TestStatus(
+                    name="DSP Integrity",
+                    test_id=2,
+                    status=BitTestState.DEGRADED_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+                TestStatus(
+                    name="Memory Test",
+                    test_id=3,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+            ],
+        )
+        rollup = ReportRollupMsg(
+            functions=FunctionStatusTree(
+                name="System Functions",
+                status=BitTestState.DEGRADED_OPERATIONAL,
+                nodes=[
+                    FunctionStatusTree(
+                        name="Signal Flow",
+                        status=BitTestState.DEGRADED_OPERATIONAL,
+                        nodes=[
+                            FunctionStatusTree(
+                                name="RF Path",
+                                status=BitTestState.FULLY_OPERATIONAL,
+                                nodes=[
+                                    FunctionStatusTree(
+                                        name="IF Output Linearity",
+                                        status=BitTestState.FULLY_OPERATIONAL,
+                                        nodes=[],
+                                    ),
+                                ],
+                            ),
+                            FunctionStatusTree(
+                                name="DSP Pipeline",
+                                status=BitTestState.DEGRADED_OPERATIONAL,
+                                nodes=[
+                                    FunctionStatusTree(
+                                        name="DSP Integrity",
+                                        status=BitTestState.DEGRADED_OPERATIONAL,
+                                        nodes=[],
+                                    ),
+                                    FunctionStatusTree(
+                                        name="Memory Test",
+                                        status=BitTestState.FULLY_OPERATIONAL,
+                                        nodes=[],
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        )
+
+        result = map_to_bit_result(test_results, rollup)
+        tree = result.function_tree
+
+        # Root level
+        assert tree.name == "System Functions"
+        assert tree.status == BitStatus.warn
+        assert tree.tests is None  # No direct tests
+        assert len(tree.children) == 1
+
+        # Signal Flow level
+        signal_flow = tree.children[0]
+        assert signal_flow.name == "Signal Flow"
+        assert signal_flow.status == BitStatus.warn
+        assert signal_flow.tests is None
+        assert len(signal_flow.children) == 2
+
+        # RF Path level
+        rf_path = signal_flow.children[0]
+        assert rf_path.name == "RF Path"
+        assert rf_path.status == BitStatus.ok
+        assert rf_path.children is None  # No non-leaf children
+        assert rf_path.tests == ["IF Output Linearity"]  # Test reference
+
+        # DSP Pipeline level
+        dsp_pipeline = signal_flow.children[1]
+        assert dsp_pipeline.name == "DSP Pipeline"
+        assert dsp_pipeline.status == BitStatus.warn
+        assert dsp_pipeline.children is None
+        assert dsp_pipeline.tests == ["DSP Integrity", "Memory Test"]
+
+    def test_no_duplicate_test_nodes(self):
+        """Leaf nodes should not appear as both children and test refs.
+
+        This was a bug where "DSP Pipeline Integrity" would appear twice:
+        once as a tree node child, and again as a test within that node.
+        """
+        test_results = TestResults(
+            node_id=1,
+            tests=[
+                TestStatus(
+                    name="Test Alpha",
+                    test_id=1,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+            ],
+        )
+        rollup = ReportRollupMsg(
+            functions=FunctionStatusTree(
+                name="Category",
+                status=BitTestState.FULLY_OPERATIONAL,
+                nodes=[
+                    FunctionStatusTree(
+                        name="Test Alpha",
+                        status=BitTestState.FULLY_OPERATIONAL,
+                        nodes=[],
+                    ),
+                ],
+            )
+        )
+
+        result = map_to_bit_result(test_results, rollup)
+
+        # Category should have test reference, not child node
+        assert result.function_tree.name == "Category"
+        assert result.function_tree.children is None
+        assert result.function_tree.tests == ["Test Alpha"]
+
+    def test_mixed_children_and_tests(self):
+        """A node can have both non-leaf children and leaf test references."""
+        test_results = TestResults(
+            node_id=1,
+            tests=[
+                TestStatus(
+                    name="Nested Test",
+                    test_id=1,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+                TestStatus(
+                    name="Direct Test",
+                    test_id=2,
+                    status=BitTestState.FULLY_OPERATIONAL,
+                    timestamp_sec=1000,
+                ),
+            ],
+        )
+        rollup = ReportRollupMsg(
+            functions=FunctionStatusTree(
+                name="Root",
+                status=BitTestState.FULLY_OPERATIONAL,
+                nodes=[
+                    # Non-leaf child (has its own children)
+                    FunctionStatusTree(
+                        name="Subgroup",
+                        status=BitTestState.FULLY_OPERATIONAL,
+                        nodes=[
+                            FunctionStatusTree(
+                                name="Nested Test",
+                                status=BitTestState.FULLY_OPERATIONAL,
+                                nodes=[],
+                            ),
+                        ],
+                    ),
+                    # Leaf child (test reference)
+                    FunctionStatusTree(
+                        name="Direct Test",
+                        status=BitTestState.FULLY_OPERATIONAL,
+                        nodes=[],
+                    ),
+                ],
+            )
+        )
+
+        result = map_to_bit_result(test_results, rollup)
+
+        # Root has both child node and direct test
+        assert len(result.function_tree.children) == 1
+        assert result.function_tree.tests == ["Direct Test"]
+
+        # Subgroup has nested test
+        subgroup = result.function_tree.children[0]
+        assert subgroup.name == "Subgroup"
+        assert subgroup.children is None
+        assert subgroup.tests == ["Nested Test"]
