@@ -192,12 +192,31 @@ class MockBitSubscriber:
 
     def _generate_verbose_info(self, test_name: str, state: BitTestState) -> list[str]:
         """Generate realistic verbose_info for a test based on its state."""
-        if state == BitTestState.FULLY_OPERATIONAL:
-            return []
-
         info: list[str] = []
 
-        if state == BitTestState.DEGRADED_OPERATIONAL:
+        if state == BitTestState.FULLY_OPERATIONAL:
+            # Add nominal measurements for passing tests
+            if "Linearity" in test_name:
+                info.append("Measured: +0.1dB from nominal")
+                info.append("Within specification")
+            elif "PLL" in test_name:
+                info.append("Lock time: 82ms (nominal: 100ms)")
+                info.append("Phase noise: -112dBc/Hz")
+            elif "GPS" in test_name:
+                info.append("Holdover drift: 0.05ppm (limit: 0.35ppm)")
+                info.append("Satellites tracked: 12")
+            elif "DSP" in test_name:
+                info.append("Pipeline latency: 7.2us (nominal: 8us)")
+            elif "Memory" in test_name:
+                info.append("Margin: 28% (nominal: 25%)")
+                info.append("ECC corrections: 0")
+            elif "Telemetry" in test_name:
+                info.append("Frame errors: 0 in last 1000")
+                info.append("Link quality: 99.8%")
+            elif "Firmware" in test_name:
+                info.append("Handshake latency: 18ms (nominal: 20ms)")
+
+        elif state == BitTestState.DEGRADED_OPERATIONAL:
             if "Linearity" in test_name:
                 info.append("Measured: -1.2dB from nominal")
                 info.append("Threshold: -2.0dB")
