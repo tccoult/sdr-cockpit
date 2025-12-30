@@ -4,7 +4,7 @@
 # Works with both Docker and Podman
 #
 # Usage:
-#   ./build-prod.sh                    # Single-arch build for local use
+#   ./build-prod.sh                    # Build for local use
 #   ./build-prod.sh --multiarch --push # Multi-arch build with registry push
 #
 # Environment variables:
@@ -27,7 +27,6 @@ PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
 # Parse arguments
 MULTIARCH=false
 PUSH=false
-LOAD=false
 PLATFORM_OVERRIDE=""
 
 show_usage() {
@@ -40,8 +39,7 @@ Supports both Docker and Podman container runtimes.
 Options:
     --multiarch         Build for multiple architectures (amd64 + arm64)
     --push              Push image/manifest to registry
-    --load              Load image into local daemon (single-arch only)
-    --platform PLAT     Override platform(s) (e.g., linux/amd64,linux/arm64)
+    --platform PLAT     Build for specific platform (e.g., linux/arm64)
     -h, --help          Show this help message
 
 Environment Variables:
@@ -51,17 +49,17 @@ Environment Variables:
     PLATFORMS           Default platforms for --multiarch (default: linux/amd64,linux/arm64)
 
 Examples:
-    # Build single-arch for local development
-    $0 --load
+    # Build for local development (native arch)
+    $0
+
+    # Build for specific platform
+    $0 --platform linux/arm64
 
     # Build multi-arch and push manifest to registry
     $0 --multiarch --push
 
-    # Build specific platform
-    $0 --platform linux/arm64 --load
-
-    # Build multi-arch with custom registry
-    REGISTRY=myregistry.io/myorg $0 --multiarch --push
+    # Build and push single-arch to registry
+    $0 --push
 EOF
 }
 
@@ -73,10 +71,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --push)
             PUSH=true
-            shift
-            ;;
-        --load)
-            LOAD=true
             shift
             ;;
         --platform)
@@ -96,12 +90,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validation
-if [[ "$MULTIARCH" == true && "$LOAD" == true ]]; then
-    echo "Error: --multiarch and --load cannot be used together."
-    echo "   Multi-arch builds must be pushed to a registry (--push)."
-    exit 1
-fi
-
 if [[ "$MULTIARCH" == true && "$PUSH" != true ]]; then
     echo "Error: --multiarch requires --push."
     echo "   Multi-arch manifests must be pushed to a registry."
@@ -155,7 +143,6 @@ if [[ -n "$BUILD_PLATFORMS" ]]; then
     echo "Platforms:  $BUILD_PLATFORMS"
 fi
 echo "Push:       $PUSH"
-echo "Load:       $LOAD"
 echo ""
 
 cd "$PROJECT_ROOT"
