@@ -9,13 +9,9 @@ Source0:        sdr-cockpit-image.tar
 Source1:        sdr-cockpit.service
 
 # Container images are architecture-specific
-# This can be overridden via --define "_target_arch x86_64" or similar
-# Common values: x86_64, aarch64
-%if "%{?_target_arch}" == ""
-BuildArch:      noarch
-%else
-ExclusiveArch:  %{_target_arch}
-%endif
+# Override via --define "_target_arch x86_64" (or aarch64)
+# When not specified, builds as noarch (legacy behavior)
+BuildArch:      %{?_target_arch}%{!?_target_arch:noarch}
 
 Requires:       podman >= 3.0
 Requires:       redis >= 6.0
