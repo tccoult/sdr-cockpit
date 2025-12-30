@@ -6,3 +6,11 @@ export {
   clearTickCache,
 } from "./ticks";
 export { createScale } from "./scales";
+export {
+  MIN_SPAN,
+  normalizeRange,
+  normalizeRangeOrNull,
+  rangesEqual,
+  rangeToTuple,
+  tupleToRange,
+} from "./ranges";
