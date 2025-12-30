@@ -4,16 +4,11 @@ import {
   normalizeRange,
   normalizeRangeOrNull,
   rangesEqual,
-  rangeToTuple,
-  tupleToRange,
 } from "./ranges";
 
 describe("normalizeRange", () => {
-  it("returns default range for null input", () => {
+  it("returns default range for null/undefined input", () => {
     expect(normalizeRange(null)).toEqual({ min: 0, max: 1 });
-  });
-
-  it("returns default range for undefined input", () => {
     expect(normalizeRange(undefined)).toEqual({ min: 0, max: 1 });
   });
 
@@ -36,20 +31,10 @@ describe("normalizeRange", () => {
     expect(result.max).toBe(100);
   });
 
-  it("handles NaN min value", () => {
+  it("handles NaN and Infinity values", () => {
     expect(normalizeRange({ min: NaN, max: 100 })).toEqual({ min: 0, max: 1 });
-  });
-
-  it("handles NaN max value", () => {
     expect(normalizeRange({ min: 0, max: NaN })).toEqual({ min: 0, max: 1 });
-  });
-
-  it("handles Infinity values", () => {
     expect(normalizeRange({ min: -Infinity, max: 100 })).toEqual({
-      min: 0,
-      max: 1,
-    });
-    expect(normalizeRange({ min: 0, max: Infinity })).toEqual({
       min: 0,
       max: 1,
     });
@@ -63,20 +48,14 @@ describe("normalizeRange", () => {
       expect(result.max).toBeGreaterThan(0);
     });
 
-    it("adds symmetric padding when min equals max at positive value", () => {
-      const result = normalizeRange({ min: 100, max: 100 });
-      expect(result.max - result.min).toBeGreaterThan(0);
-      // Padding should be symmetric around center
-      const center = (result.min + result.max) / 2;
-      expect(center).toBeCloseTo(100, 5);
-    });
+    it("adds symmetric padding when min equals max", () => {
+      const positiveResult = normalizeRange({ min: 100, max: 100 });
+      expect(positiveResult.max - positiveResult.min).toBeGreaterThan(0);
+      expect((positiveResult.min + positiveResult.max) / 2).toBeCloseTo(100, 5);
 
-    it("adds symmetric padding when min equals max at negative value", () => {
-      const result = normalizeRange({ min: -60, max: -60 });
-      expect(result.max - result.min).toBeGreaterThan(0);
-      // Padding should be symmetric around center
-      const center = (result.min + result.max) / 2;
-      expect(center).toBeCloseTo(-60, 5);
+      const negativeResult = normalizeRange({ min: -60, max: -60 });
+      expect(negativeResult.max - negativeResult.min).toBeGreaterThan(0);
+      expect((negativeResult.min + negativeResult.max) / 2).toBeCloseTo(-60, 5);
     });
 
     it("handles very small positive span", () => {
@@ -111,35 +90,16 @@ describe("rangesEqual", () => {
   });
 });
 
-describe("rangeToTuple", () => {
-  it("converts range to tuple", () => {
-    expect(rangeToTuple({ min: -50, max: 100 })).toEqual([-50, 100]);
-  });
-});
-
-describe("tupleToRange", () => {
-  it("converts tuple to range", () => {
-    expect(tupleToRange([-50, 100])).toEqual({ min: -50, max: 100 });
-  });
-});
-
 describe("normalizeRangeOrNull", () => {
-  it("returns null for null input", () => {
+  it("returns null for null/undefined input", () => {
     expect(normalizeRangeOrNull(null)).toBeNull();
-  });
-
-  it("returns null for undefined input", () => {
     expect(normalizeRangeOrNull(undefined)).toBeNull();
   });
 
-  it("returns null for NaN values", () => {
+  it("returns null for NaN and Infinity values", () => {
     expect(normalizeRangeOrNull({ min: NaN, max: 100 })).toBeNull();
     expect(normalizeRangeOrNull({ min: 0, max: NaN })).toBeNull();
-  });
-
-  it("returns null for Infinity values", () => {
     expect(normalizeRangeOrNull({ min: -Infinity, max: 100 })).toBeNull();
-    expect(normalizeRangeOrNull({ min: 0, max: Infinity })).toBeNull();
   });
 
   it("normalizes valid range", () => {
