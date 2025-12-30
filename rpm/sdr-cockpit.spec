@@ -1,6 +1,6 @@
 Name:           sdr-cockpit
-Version:        0.1.0
-Release:        1%{?dist}
+Version:        %{?_version}%{!?_version:0.1.0}
+Release:        %{?_release}%{!?_release:1}%{?dist}
 Summary:        SDR Cockpit Web Application
 
 License:        TBD
@@ -8,7 +8,11 @@ URL:            https://github.com/tccoult/sdr-cockpit
 Source0:        sdr-cockpit-image.tar
 Source1:        sdr-cockpit.service
 
-BuildArch:      noarch
+# Container images are architecture-specific
+# Override via --define "_target_arch x86_64" (or aarch64)
+# When not specified, builds as noarch (legacy behavior)
+BuildArch:      %{?_target_arch}%{!?_target_arch:noarch}
+
 Requires:       podman >= 3.0
 Requires:       redis >= 6.0
 Requires(post): systemd
@@ -20,6 +24,9 @@ SDR Cockpit provides a modern web interface for controlling and monitoring
 Software Defined Radio (SDR) systems with real-time visualizations and
 multi-user support. This package contains the containerized application
 for air-gapped deployment.
+
+Note: This package contains architecture-specific container images. Ensure
+you install the package matching your system architecture (x86_64 or aarch64).
 
 %prep
 # No prep needed - sources are already in the right format

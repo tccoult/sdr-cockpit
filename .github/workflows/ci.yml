@@ -1,4 +1,9 @@
 name: CI/CD
+# GitHub Actions CI/CD Pipeline
+#
+# Note: This workflow uses Docker buildx for multi-arch builds, which is the most
+# efficient approach for CI (parallel builds, GitHub cache integration). For local
+# development with Podman, use scripts/build-prod.sh which supports both runtimes.
 
 on:
   pull_request:
@@ -241,7 +246,7 @@ jobs:
           docker compose -f docker-compose.ci.yml down -v
 
   build-and-push-app:
-    name: Build and Push App Image
+    name: Build and Push App Image (Multi-Arch)
     needs: [frontend-checks, backend-checks, simulator-checks, integration-tests]
     runs-on: ubuntu-latest
     permissions:
@@ -251,6 +256,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Set up QEMU for multi-arch builds
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -272,38 +280,34 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build image
+      - name: Build and push multi-arch image
+        if: github.ref == 'refs/heads/trunk'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build image (PR validation only)
+        if: github.ref != 'refs/heads/trunk'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/sdr-cockpit.Dockerfile
+          platforms: linux/amd64
           push: false
           load: true
           tags: sdr-cockpit:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag and push to registry
-        if: github.ref == 'refs/heads/trunk'
-        run: |
-          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
-            docker tag sdr-cockpit:latest "$tag"
-            docker push "$tag"
-          done
-
-      - name: Save image as tar for RPM build
-        run: |
-          docker save sdr-cockpit:latest -o /tmp/sdr-cockpit-image.tar
-
-      - name: Upload image tar for RPM build
-        uses: actions/upload-artifact@v6
-        with:
-          name: sdr-cockpit-image
-          path: /tmp/sdr-cockpit-image.tar
-          retention-days: 1
-
   build-and-push-simulator:
-    name: Build and Push Simulator Image
+    name: Build and Push Simulator Image (Multi-Arch)
     needs: [frontend-checks, backend-checks, simulator-checks, integration-tests]
     runs-on: ubuntu-latest
     permissions:
@@ -313,6 +317,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Set up QEMU for multi-arch builds
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -326,7 +333,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
-        if: github.ref == 'refs/heads/trunk'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -335,48 +341,70 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build image
+      - name: Build and push multi-arch image
+        if: github.ref == 'refs/heads/trunk'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/simulator.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build image (PR validation only)
+        if: github.ref != 'refs/heads/trunk'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/simulator.Dockerfile
+          platforms: linux/amd64
           push: false
           load: true
           tags: sdr-cockpit-simulator:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag and push to registry
-        if: github.ref == 'refs/heads/trunk'
-        run: |
-          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
-            docker tag sdr-cockpit-simulator:test "$tag"
-            docker push "$tag"
-          done
-
   build-rpm:
     name: Build RPM Package
-    needs: [frontend-checks, backend-checks, simulator-checks, integration-tests, build-and-push-app]
+    needs: [frontend-checks, backend-checks, simulator-checks, integration-tests]
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:9
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Download container image tar
-        uses: actions/download-artifact@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build x86_64 image for RPM
+        uses: docker/build-push-action@v6
         with:
-          name: sdr-cockpit-image
+          context: .
+          file: docker/sdr-cockpit.Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: sdr-cockpit:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install dependencies
+      - name: Export image as tar for RPM
         run: |
-          dnf install -y podman rpm-build
+          docker save sdr-cockpit:latest -o sdr-cockpit-image.tar
 
-      - name: Build RPM
+      - name: Build RPM in AlmaLinux container
         run: |
-          ./scripts/build-rpm-from-tar.sh sdr-cockpit-image.tar 0.1.0 1
+          docker run --rm \
+            -v "$PWD":/workspace:Z \
+            -w /workspace \
+            almalinux:9 \
+            bash -c "
+              dnf install -y rpm-build
+              ./scripts/build-rpm-from-tar.sh sdr-cockpit-image.tar 0.1.0 1 x86_64
+            "
 
       - name: Verify RPM contents
         run: |
