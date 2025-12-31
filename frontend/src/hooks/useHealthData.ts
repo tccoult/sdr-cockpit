@@ -34,10 +34,10 @@ const METRICS_WINDOW_MINUTES = 240;
 const ALERTS_INITIAL_LOOKBACK_MS = 60 * 60 * 1000;
 const ALERTS_POLL_LOOKBACK_MS = 30 * 1000;
 
-const getLatestAlertTimestamp = (alerts: BitAlert[]) =>
+export const getLatestAlertTimestamp = (alerts: BitAlert[]) =>
   alerts.reduce((latest, alert) => Math.max(latest, alert.timestamp), 0);
 
-const mergeAlerts = (current: BitAlertList, incoming: BitAlertList): BitAlertList => {
+export const mergeAlerts = (current: BitAlertList, incoming: BitAlertList): BitAlertList => {
   const alertMap = new Map<number, BitAlert>();
   current.alerts.forEach((alert) => alertMap.set(alert.id, alert));
   incoming.alerts.forEach((alert) => alertMap.set(alert.id, alert));
