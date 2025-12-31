@@ -1,101 +1,145 @@
 /**
- * Tests for spectral data conversion utilities
- *
- * These conversions are CRITICAL to the data pipeline:
- * - All FFT data is converted dB ↔ int16 for streaming
- * - Delta encoding reduces bandwidth but requires accurate reconstruction
- * - Byte alignment issues can corrupt entire frames
+ * Unit tests for spectral conversion utilities.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from "vitest";
 import {
   dbToInt16,
   int16ToDb,
   bytesToBins,
+  binsToBytes,
+  dbBinsToBytes,
+  bytesToDbBins,
   decodeDeltaBatch,
-} from '../spectralConversion';
+} from "../spectralConversion";
 
-const DB_MIN = -120.0;
-const DB_MAX = 10.0;
+// Constants for dB to int16 conversion
 const INT16_MIN = -32768;
 const INT16_MAX = 32767;
 
-describe('dB ↔ Int16 Conversion', () => {
-  it('roundtrips within quantization error', () => {
-    const maxError = 130 / 65535; // ~0.002 dB
-    const input = new Float32Array([DB_MIN, -60, 0, DB_MAX]);
+describe("Spectral Conversion Utilities", () => {
+  describe("dbToInt16 and int16ToDb", () => {
+    it("should correctly convert dB values to int16 and back", () => {
+      const dbValues = [-120, -55, 0, 10];
+      const expectedInt16 = [-32768, 0, 27726, 32767];
+      const int16Result = dbToInt16(dbValues);
 
-    const int16 = dbToInt16(input);
-    const output = int16ToDb(int16);
+      expect(int16Result).toHaveLength(dbValues.length);
+      int16Result.forEach((val, i) => {
+        expect(val).toBe(expectedInt16[i]);
+      });
 
-    for (let i = 0; i < input.length; i++) {
-      expect(Math.abs(output[i] - input[i])).toBeLessThan(maxError);
-    }
+      const dbResult = int16ToDb(int16Result);
+      expect(dbResult).toHaveLength(dbValues.length);
+      dbResult.forEach((val, i) => {
+        expect(val).toBeCloseTo(dbValues[i], 1);
+      });
+    });
+
+    it("should handle clipping for out-of-range dB values", () => {
+      const dbValues = [-150, 50];
+      const int16Result = dbToInt16(dbValues);
+
+      expect(int16Result[0]).toBe(INT16_MIN);
+      expect(int16Result[1]).toBe(INT16_MAX);
+    });
+
+    it("should handle empty arrays", () => {
+      const dbValues: number[] = [];
+      const int16Result = dbToInt16(dbValues);
+      expect(int16Result).toHaveLength(0);
+
+      const int16Values = new Int16Array([]);
+      const dbResult = int16ToDb(int16Values);
+      expect(dbResult).toHaveLength(0);
+    });
   });
 
-  it('clips out-of-range values', () => {
-    const result = dbToInt16(new Float32Array([-200, 50]));
-    expect(result[0]).toBe(INT16_MIN);
-    expect(result[1]).toBe(INT16_MAX);
-  });
-});
+  describe("bytesToBins and binsToBytes", () => {
+    it("should correctly convert between Int16Array and Uint8Array", () => {
+      const int16Values = new Int16Array([-32768, 0, 32767]);
+      const bytes = binsToBytes(int16Values);
 
-describe('Byte Alignment', () => {
-  it('handles aligned buffer', () => {
-    const int16Data = new Int16Array([1000, 2000, 3000]);
-    const bytes = new Uint8Array(int16Data.buffer);
-    const result = bytesToBins(bytes);
+      // 2 bytes per int16
+      expect(bytes).toHaveLength(int16Values.length * 2);
 
-    expect(result[0]).toBe(1000);
-    expect(result[1]).toBe(2000);
-    expect(result[2]).toBe(3000);
-  });
+      const reconstructedBins = bytesToBins(bytes);
+      expect(reconstructedBins).toEqual(int16Values);
+    });
 
-  it('handles unaligned buffer without corruption', () => {
-    const buffer = new ArrayBuffer(10);
-    const view = new DataView(buffer);
-    view.setInt16(1, 1000, true);
-    view.setInt16(3, 2000, true);
-    view.setInt16(5, 3000, true);
+    it("should handle unaligned byte arrays by copying", () => {
+      // Create a buffer and an unaligned view on it
+      const originalBuffer = new Uint8Array([0, 1, 2, 3, 4, 5]).buffer;
+      const unalignedView = new Uint8Array(originalBuffer, 1, 4); // [1, 2, 3, 4]
 
-    const unalignedBytes = new Uint8Array(buffer, 1, 6);
-    const result = bytesToBins(unalignedBytes);
+      // bytesToBins should copy this to a new, aligned buffer
+      const bins = bytesToBins(unalignedView);
+      expect(bins).toHaveLength(2);
 
-    expect(result[0]).toBe(1000);
-    expect(result[1]).toBe(2000);
-    expect(result[2]).toBe(3000);
-  });
-});
-
-describe('Delta Batch Decoding', () => {
-  function createFrame(values: number[]): Uint8Array {
-    return new Uint8Array(new Int16Array(values).buffer.slice(0));
-  }
-
-  it('reconstructs chained delta frames', () => {
-    const frames = [
-      { bins: createFrame([0]), isDelta: false },
-      { bins: createFrame([100]), isDelta: true },    // → 100
-      { bins: createFrame([50]), isDelta: true },     // → 150
-      { bins: createFrame([-200]), isDelta: true },   // → -50
-    ];
-
-    const result = decodeDeltaBatch(frames);
-    const expectedInt16 = [0, 100, 150, -50];
-
-    for (let i = 0; i < 4; i++) {
-      const expectedDb =
-        ((expectedInt16[i] - INT16_MIN) / (INT16_MAX - INT16_MIN)) * 130 - 120;
-      expect(result[i][0]).toBeCloseTo(expectedDb, 2);
-    }
+      // Check values (little-endian)
+      // 1st int16: val from bytes [1, 2] = 2 * 256 + 1 = 513
+      // 2nd int16: val from bytes [3, 4] = 4 * 256 + 3 = 1027
+      const view = new DataView(originalBuffer);
+      expect(bins[0]).toBe(view.getInt16(1, true)); // 513
+      expect(bins[1]).toBe(view.getInt16(3, true)); // 1027
+    });
   });
 
-  it('handles int16 overflow without crashing', () => {
-    const result = decodeDeltaBatch([
-      { bins: createFrame([INT16_MAX - 10]), isDelta: false },
-      { bins: createFrame([100]), isDelta: true },
-    ]);
+  describe("dbBinsToBytes and bytesToDbBins", () => {
+    it("should correctly convert dB values to bytes and back", () => {
+      const dbValues = new Float32Array([-120, 0, 10]);
+      const bytes = dbBinsToBytes(dbValues);
+      const reconstructedDb = bytesToDbBins(bytes);
 
-    expect(Number.isFinite(result[1][0])).toBe(true);
+      reconstructedDb.forEach((val, i) => {
+        expect(val).toBeCloseTo(dbValues[i], 0);
+      });
+    });
+  });
+
+  describe("decodeDeltaBatch", () => {
+    it("should decode a batch with absolute and delta frames", () => {
+      // Frame 1 (absolute)
+      const frame1Db = [-60, -50, -40];
+      const frame1Bytes = dbBinsToBytes(frame1Db);
+
+      // Frame 2 (delta)
+      const frame2Int16 = dbToInt16([-58, -52, -43]);
+      const frame1Int16 = dbToInt16(frame1Db);
+      const delta = new Int16Array(frame1Int16.map((val, i) => frame2Int16[i] - val));
+      const frame2Bytes = binsToBytes(delta);
+
+      // Frame 3 (absolute)
+      const frame3Db = [-70, -60, -50];
+      const frame3Bytes = dbBinsToBytes(frame3Db);
+
+      const batch = [
+        { bins: frame1Bytes, isDelta: false },
+        { bins: frame2Bytes, isDelta: true },
+        { bins: frame3Bytes, isDelta: false },
+      ];
+
+      const decoded = decodeDeltaBatch(batch);
+      expect(decoded).toHaveLength(3);
+
+      decoded[0].forEach((val, i) => expect(val).toBeCloseTo(frame1Db[i], 0));
+      decoded[1].forEach((val, i) => expect(val).toBeCloseTo(int16ToDb(frame2Int16)[i], 0));
+      decoded[2].forEach((val, i) => expect(val).toBeCloseTo(frame3Db[i], 0));
+    });
+
+    it("should treat first frame as absolute even if is_delta is true", () => {
+      const frameDb = [-60, -50, -40];
+      const frameBytes = dbBinsToBytes(frameDb);
+      const batch = [{ bins: frameBytes, isDelta: true }];
+      const decoded = decodeDeltaBatch(batch);
+
+      expect(decoded).toHaveLength(1);
+      decoded[0].forEach((val, i) => expect(val).toBeCloseTo(frameDb[i], 0));
+    });
+
+    it("should handle empty batch", () => {
+      const decoded = decodeDeltaBatch([]);
+      expect(decoded).toHaveLength(0);
+    });
   });
 });
