@@ -51,20 +51,18 @@ The expand/collapse controls (currently in a `⋮` menu next to the tabs) only a
 
 This removes a disabled control from Tests view and keeps tree-specific controls with the tree.
 
-## Layout Options (TBD)
+## Layout
 
-Two layout options are under consideration for the stacking order of UI elements:
-
-### Option A: Filters → Search → Tabs
+### Chosen: Filters → Search → Tabs
 
 ```
-┌────────────────────────────────────┐
-│ [●Fail 3] [●Warn 5] [●OK 42]       │  ← Status filter toggles
-│ [🔍 Filter tests...            ]   │  ← Search input
-│ [Tests] [Function] [Hardware]      │  ← View tabs
-├────────────────────────────────────┤
-│ (content: test list or tree)       │
-└────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ [●Fail 3] [●Warn 5] [○OK 42]            │  ← Status filter toggles
+│ [🔍 Filter tests...                  ]  │  ← Search input
+│ [Tests] [Function] [Hardware]           │  ← View tabs
+├─────────────────────────────────────────┤
+│ (content: test list or tree)            │
+└─────────────────────────────────────────┘
 ```
 
 **Rationale:**
@@ -74,23 +72,53 @@ Two layout options are under consideration for the stacking order of UI elements
 - Filter bar becomes a persistent "lens" affecting everything
 - Emphasizes that filters are global, tabs are just different views of filtered data
 
-### Option B: Tabs → Filters → Search
+### Full Panel: Tests View
 
 ```
-┌────────────────────────────────────┐
-│ [Tests] [Function] [Hardware]      │  ← View tabs
-│ [●Fail 3] [●Warn 5] [●OK 42]       │  ← Status filter toggles
-│ [🔍 Filter tests...            ]   │  ← Search input
-├────────────────────────────────────┤
-│ (content: test list or tree)       │
-└────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Built-In Test                           │
+│ Last updated 3m ago          [Metrics ▾]│
+├─────────────────────────────────────────┤
+│ [Alerts section...]                     │
+├─────────────────────────────────────────┤
+│ [●Fail 3] [●Warn 5] [○OK 42]            │
+│ [🔍 Filter tests...                  ]  │
+│ [Tests ✓] [Function] [Hardware]         │
+├─────────────────────────────────────────┤
+│ ┌─────────────────────────────────────┐ │
+│ │ ● RF Output Power Check      [FAIL] │ │
+│ │ ● IF Linearity Test          [FAIL] │ │
+│ │ ● Mixer Conversion Loss      [FAIL] │ │
+│ │ ● LO Lock Detect             [WARN] │ │
+│ │ ...                                 │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
 ```
 
-**Rationale:**
-- Tabs as primary navigation at top (you're always in one view)
-- Filters refine within the selected view
-- Standard app pattern: nav → filters → content
-- May feel more familiar to users
+### Full Panel: Hardware Tree View
+
+```
+┌─────────────────────────────────────────┐
+│ Built-In Test                           │
+│ Last updated 3m ago          [Metrics ▾]│
+├─────────────────────────────────────────┤
+│ [Alerts section...]                     │
+├─────────────────────────────────────────┤
+│ [●Fail 3] [●Warn 5] [○OK 42]            │
+│ [🔍 Filter tests...                  ]  │
+│ [Tests] [Function] [Hardware ✓]         │
+├─────────────────────────────────────────┤
+│ [Expand all]  [Collapse all]            │  ← tree-only controls
+│ ┌─────────────────────────────────────┐ │
+│ │ ▼ RF Frontend            [FAIL]     │ │
+│ │   ├─ ▶ LNA               [OK]       │ │  ← collapsed (only OK)
+│ │   └─ ▼ Mixer Stage       [FAIL]     │ │
+│ │       └─ ● IF Output     [FAIL]     │ │  ← test leaf
+│ │ ▼ Digital                [WARN]     │ │
+│ │   └─ ● FPGA Status       [WARN]     │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
 
 ## Implementation Notes
 
@@ -179,9 +207,55 @@ function pruneTreeToTests(
 - Clear button (×) when query is non-empty
 - No submit button - filters as you type
 
-## Future Considerations
+## Future Enhancements
 
-- **Keyboard shortcuts**: `f` to focus search, `1/2/3` to toggle status filters
+### Tree Find (Cmd+F)
+
+A local search feature for finding nodes by name within tree views, separate from the main test filter.
+
+**Trigger:** Cmd/Ctrl+F when a tree view (Function or Hardware) is focused
+
+**Behavior:**
+- Floating search bar appears at top of tree scroll area
+- Searches node names only (not test names)
+- Highlights matching nodes and scrolls to them
+- Does NOT affect the main filter state or prune the tree
+- Navigation: `[↑][↓]` buttons or Enter/Shift+Enter to cycle through matches
+- Shows match index: "2/5"
+- Dismissed with Esc or clicking outside
+
+**Visual:**
+```
+┌─────────────────────────────────────────┐
+│ [●Fail 3] [●Warn 5] [○OK 42]            │
+│ [🔍 Filter tests...                  ]  │
+│ [Tests] [Function] [Hardware ✓]         │
+├─────────────────────────────────────────┤
+│ [Expand all]  [Collapse all]            │
+│ ┌─────────────────────────────────────┐ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ Find: [adc       ] [↑][↓] 2/5   │ │ │  ← floating bar
+│ │ └─────────────────────────────────┘ │ │
+│ │ ▼ RF Frontend            [FAIL]     │ │
+│ │   └─ ▼ Mixer Stage       [FAIL]     │ │
+│ │       └─ ▶ ADC Interface [OK] ←     │ │  ← highlighted match
+│ │ ▼ Digital                [WARN]     │ │
+│ │   └─ ▼ ADC Module        [OK] ←     │ │  ← another match
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**Key distinction from main filter:**
+
+| Feature         | Main Filter Bar       | Tree Cmd+F           |
+|-----------------|-----------------------|----------------------|
+| Scope           | Tests (global)        | Node names (local)   |
+| Effect          | Prunes data           | Highlights + scrolls |
+| Persists        | Yes                   | Dismissed on Esc     |
+| Affects views   | All three views       | Current tree only    |
+
+### Other Future Considerations
+
+- **Keyboard shortcuts**: `f` to focus main search, `1/2/3` to toggle status filters
 - **Persist filter state**: Remember last filter in localStorage
 - **Virtualized list**: If performance becomes an issue with 100+ tests, add react-window
-- **Find in tree**: Separate Cmd+F feature for searching node names without affecting main filter
