@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
-    "@tanstack/react-query": "^5.90.15",
+    "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-query-devtools": "^5.91.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -26,10 +26,10 @@
     "fzstd": "^0.1.1",
     "lucide-react": "^0.562.0",
     "openapi-fetch": "^0.15.0",
-    "protobufjs": "^7.5.4",
+    "protobufjs": "^8.0.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.11.0",
+    "react-router-dom": "^7.12.0",
     "recharts": "^3.6.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7"
