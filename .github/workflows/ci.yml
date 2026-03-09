@@ -282,7 +282,7 @@ jobs:
 
       - name: Build and push multi-arch image
         if: github.ref == 'refs/heads/trunk'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
@@ -295,7 +295,7 @@ jobs:
 
       - name: Build image (PR validation only)
         if: github.ref != 'refs/heads/trunk'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
@@ -343,7 +343,7 @@ jobs:
 
       - name: Build and push multi-arch image
         if: github.ref == 'refs/heads/trunk'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/simulator.Dockerfile
@@ -356,7 +356,7 @@ jobs:
 
       - name: Build image (PR validation only)
         if: github.ref != 'refs/heads/trunk'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/simulator.Dockerfile
@@ -380,7 +380,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build x86_64 image for RPM
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/sdr-cockpit.Dockerfile
